@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(mkdir -p '\\\\\\\\wsl.localhost\\\\ubuntu\\\\home\\\\juliana\\\\workspace\\\\sandbox\\\\2026\\\\07\\\\06\\\\mockups')",
+      "Read(///wsl.localhost/ubuntu/home/juliana/workspace/sandbox/2026/07/**)"
+    ]
+  }
+}
