@@ -101,6 +101,8 @@ h1, h2, h3, p { margin: 0; }
   border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-secondary);
   font-size: var(--fs-2xs); font-weight: 500; }
 .chip.accent { background: var(--bg-accent); color: var(--text-accent); border-color: transparent; }
+.chip.sm { padding: 2px 8px; gap: 3px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 
 /* Empty states */
 .empty { text-align: center; color: var(--text-secondary); padding: 48px 24px; display: grid;

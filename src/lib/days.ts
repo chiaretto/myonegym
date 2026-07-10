@@ -35,3 +35,11 @@ export function daySubtitle(
   const cats = dayCategoryNames(day, exMap, catMap)
   return cats.length ? cats.join(' · ') : `${day.exerciseIds.length} exercícios`
 }
+
+/**
+ * Names of the training days an exercise belongs to, in the given days' order
+ * (`days` is expected already sorted for display).
+ */
+export function dayNamesForExercise(exerciseId: number, days: Day[]): string[] {
+  return days.filter((d) => d.exerciseIds.includes(exerciseId)).map((d) => d.name)
+}

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { createExercise, deleteExercise, updateExercise, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Exercise } from '../../db/types'
-import { useCategories, useCategoryMap, useExercises } from '../../lib/hooks'
+import { useCategories, useCategoryMap, useDays, useExercises } from '../../lib/hooks'
+import { dayNamesForExercise } from '../../lib/days'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -12,6 +13,7 @@ import { Sheet } from '../../ui/Sheet'
 export function ExercisesPage() {
   const exs = useExercises()
   const catMap = useCategoryMap()
+  const days = useDays()
   const toast = useToast()
   const confirm = useConfirm()
   const [editing, setEditing] = useState<Exercise | 'new' | null>(null)
@@ -41,7 +43,9 @@ export function ExercisesPage() {
         )}
 
         <div className="group">
-          {exs?.map((e) => (
+          {exs?.map((e) => {
+            const dayNames = dayNamesForExercise(e.id!, days ?? [])
+            return (
             <div key={e.id} className="row">
               <Media className="thumb" url={e.mediaUrl} alt={e.name} />
               <span className="row-body">
@@ -49,6 +53,19 @@ export function ExercisesPage() {
                 <span className="row-sub">
                   {e.categoryId != null ? catMap.get(e.categoryId)?.name ?? 'Sem categoria' : 'Sem categoria'}
                 </span>
+                {dayNames.length ? (
+                  <span className="chip-row">
+                    {dayNames.map((n, i) => (
+                      <span key={`${n}-${i}`} className="chip sm">
+                        <Icon name="calendar-event" /> {n}
+                      </span>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="row-sub" style={{ color: 'var(--text-muted)' }}>
+                    <Icon name="calendar-event" /> Nenhum dia
+                  </span>
+                )}
               </span>
               <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(e)}>
                 <Icon name="pencil" />
@@ -57,7 +74,8 @@ export function ExercisesPage() {
                 <Icon name="trash" />
               </button>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>

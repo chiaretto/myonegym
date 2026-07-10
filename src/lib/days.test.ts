@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayCategoryNames, daySubtitle } from './days'
+import { dayCategoryNames, dayNamesForExercise, daySubtitle } from './days'
 import type { Category, Day, Exercise } from '../db/types'
 
 const cats = new Map<number, Category>([
@@ -40,5 +40,20 @@ describe('daySubtitle', () => {
   })
   it('falls back to the exercise count when none are categorized', () => {
     expect(daySubtitle(day([14, 14]), exs, cats)).toBe('2 exercícios')
+  })
+})
+
+describe('dayNamesForExercise', () => {
+  const days: Day[] = [
+    { id: 1, name: 'Dia 1', exerciseIds: [10, 12] },
+    { id: 2, name: 'Dia 2', exerciseIds: [11] },
+    { id: 3, name: 'Dia 3', exerciseIds: [10, 13] },
+  ]
+  it('returns the day names an exercise is in, in the given order', () => {
+    expect(dayNamesForExercise(10, days)).toEqual(['Dia 1', 'Dia 3'])
+    expect(dayNamesForExercise(11, days)).toEqual(['Dia 2'])
+  })
+  it('returns empty when the exercise is in no day', () => {
+    expect(dayNamesForExercise(99, days)).toEqual([])
   })
 })
