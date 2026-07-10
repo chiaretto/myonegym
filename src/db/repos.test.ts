@@ -18,6 +18,7 @@ import {
   getWeight,
   listCategories,
   listDays,
+  reorderDays,
   listHistory,
   listSessionEntries,
   listSessionSummaries,
@@ -140,6 +141,21 @@ describe('days', () => {
     await createDay({ name: 'Dia 3', exerciseIds: [ex] }, d)
     const days = await listDays(d)
     expect(days.filter((day) => day.exerciseIds.includes(ex))).toHaveLength(2)
+  })
+
+  it('lists in insertion order by default, and reorderDays persists a new order', async () => {
+    const a = await createDay({ name: 'Dia 1' }, d)
+    const b = await createDay({ name: 'Dia 2' }, d)
+    const c = await createDay({ name: 'Dia 3' }, d)
+    expect((await listDays(d)).map((x) => x.name)).toEqual(['Dia 1', 'Dia 2', 'Dia 3'])
+
+    // Move "Dia 2" to the front.
+    await reorderDays([b, a, c], d)
+    expect((await listDays(d)).map((x) => x.name)).toEqual(['Dia 2', 'Dia 1', 'Dia 3'])
+
+    // A newly created day appends after the ordered ones.
+    await createDay({ name: 'Dia 4' }, d)
+    expect((await listDays(d)).map((x) => x.name)).toEqual(['Dia 2', 'Dia 1', 'Dia 3', 'Dia 4'])
   })
 })
 

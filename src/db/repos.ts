@@ -186,7 +186,21 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
 /* ------------------------------------------------------------------ days */
 
 export async function listDays(d: MyOneGymDB = db): Promise<Day[]> {
-  return d.days.orderBy('id').toArray()
+  const days = await d.days.toArray()
+  // User order when set; otherwise insertion order (by id). Explicit `order`
+  // values (0..n-1, assigned on reorder) always sort before id-fallback days.
+  return days.sort(
+    (a, b) => (a.order ?? a.id ?? 0) - (b.order ?? b.id ?? 0) || (a.id ?? 0) - (b.id ?? 0),
+  )
+}
+
+/** Persist the given day ids as the display order (order = index). */
+export async function reorderDays(orderedIds: number[], d: MyOneGymDB = db): Promise<void> {
+  await d.transaction('rw', d.days, async () => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      await d.days.update(orderedIds[i], { order: i })
+    }
+  })
 }
 
 export async function createDay(

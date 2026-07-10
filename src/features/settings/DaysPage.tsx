@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createDay, deleteDay, updateDay, ValidationError } from '../../db/repos'
+import { createDay, deleteDay, reorderDays, updateDay, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
 import { useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
@@ -26,6 +26,29 @@ export function DaysPage() {
     toast('Dia excluído.')
   }
 
+  const moveDay = async (i: number, dir: -1 | 1) => {
+    if (!days) return
+    const j = i + dir
+    if (j < 0 || j >= days.length) return
+    const ids = days.map((x) => x.id!)
+    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    await reorderDays(ids, db)
+  }
+
+  // The day's icon + name area doubles as the edit button (tap to edit).
+  const dayEditStyle = {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    background: 'none',
+    border: 0,
+    textAlign: 'left',
+    color: 'inherit',
+    padding: 0,
+  } as const
+
   return (
     <>
       <BackBar title="Dias de treino" to="/settings" />
@@ -39,19 +62,34 @@ export function DaysPage() {
         )}
 
         <div className="group">
-          {days?.map((day) => (
+          {days?.map((day, i) => (
             <div key={day.id} className="row">
-              <span className="row-ic">
-                <Icon name="calendar-event" />
-              </span>
-              <span className="row-body">
-                <span className="row-title">{day.name}</span>
-                <span className="row-sub">{daySubtitle(day, exMap, catMap)}</span>
-              </span>
-              <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(day)}>
-                <Icon name="pencil" />
+              <button style={dayEditStyle} aria-label={`Editar ${day.name}`} onClick={() => setEditing(day)}>
+                <span className="row-ic">
+                  <Icon name="calendar-event" />
+                </span>
+                <span className="row-body">
+                  <span className="row-title">{day.name}</span>
+                  <span className="row-sub">{daySubtitle(day, exMap, catMap)}</span>
+                </span>
               </button>
-              <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(day)}>
+              <button
+                className="icon-btn ghost"
+                aria-label={`Subir ${day.name}`}
+                disabled={i === 0}
+                onClick={() => moveDay(i, -1)}
+              >
+                <Icon name="chevron-up" />
+              </button>
+              <button
+                className="icon-btn ghost"
+                aria-label={`Descer ${day.name}`}
+                disabled={i === days.length - 1}
+                onClick={() => moveDay(i, 1)}
+              >
+                <Icon name="chevron-down" />
+              </button>
+              <button className="icon-btn ghost" aria-label={`Excluir ${day.name}`} onClick={() => onDelete(day)}>
                 <Icon name="trash" />
               </button>
             </div>

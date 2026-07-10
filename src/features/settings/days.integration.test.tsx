@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
-import { createCategory, createDay, createExercise, updateDay } from '../../db/repos'
+import { createCategory, createDay, createExercise, listDays, updateDay } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
 
 afterEach(async () => {
@@ -38,5 +39,36 @@ describe('Home day header — derived categories', () => {
     await updateDay(dayId, { name: 'Dia 1', exerciseIds: [supino, crucifixo] }, db)
     await waitFor(() => expect(screen.getByText('Peito')).toBeInTheDocument())
     expect(screen.queryByText('Peito · Tríceps')).not.toBeInTheDocument()
+  })
+})
+
+describe('Reorder training days', () => {
+  it('moves a day down in Settings and the order persists (and shows on Home)', async () => {
+    await createDay({ name: 'Dia 1' }, db)
+    await createDay({ name: 'Dia 2' }, db)
+    await createDay({ name: 'Dia 3' }, db)
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/settings/days']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    // Move "Dia 1" down → order becomes Dia 2, Dia 1, Dia 3.
+    await user.click(await screen.findByRole('button', { name: 'Descer Dia 1' }))
+    await waitFor(async () =>
+      expect((await listDays(db)).map((x) => x.name)).toEqual(['Dia 2', 'Dia 1', 'Dia 3']),
+    )
+
+    // The Home accordion reflects the new order (fresh mount reading the DB).
+    cleanup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    const titles = await screen.findAllByText(/^Dia [123]$/)
+    expect(titles.map((t) => t.textContent)).toEqual(['Dia 2', 'Dia 1', 'Dia 3'])
   })
 })

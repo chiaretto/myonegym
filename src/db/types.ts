@@ -31,6 +31,9 @@ export interface Day {
    *  A day has no manual category — its categories are derived from these
    *  exercises' categories (see dayCategoryNames). */
   exerciseIds: number[]
+  /** User-controlled position among days. Absent = insertion order (by id).
+   *  Set for all days on the first reorder (see reorderDays). */
+  order?: number
 }
 
 /** Current target weight for an exercise within a gym — one per (gymId, exerciseId). */
