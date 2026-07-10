@@ -133,12 +133,32 @@ describe('exercises share', () => {
 })
 
 describe('generate example', () => {
-  it('creates a usable routine with days and a gym', async () => {
+  it('creates the bundled sample routine (gym, categories, exercises, days, weights)', async () => {
     await generateExample(d)
-    expect(await d.categories.count()).toBeGreaterThanOrEqual(5)
-    expect((await d.days.toArray()).length).toBe(3)
+    expect(await d.categories.count()).toBe(8)
+    expect(await d.exercises.count()).toBe(27)
+    expect(await d.days.count()).toBe(6)
     expect(await d.gyms.count()).toBe(1)
-    expect(await d.weights.count()).toBeGreaterThan(0)
+    expect((await d.gyms.toArray())[0].name).toBe('Fit Park')
+    expect(await d.weights.count()).toBe(18)
+    // exercises carry media; day categories are derived (day has no categoryId)
+    expect((await d.exercises.toArray()).some((e) => e.mediaUrl)).toBe(true)
+    expect((await d.days.toArray()).every((day) => !('categoryId' in day))).toBe(true)
+  })
+
+  it('is additive and reference-safe with existing data (remapped ids)', async () => {
+    // Pre-existing category (shared name) + a gym, so the run must dedup + skip gym.
+    await createCategory('Peito', d)
+    await createGym('Casa', undefined, d)
+    await generateExample(d)
+    // "Peito" not duplicated; a fresh gym is NOT added (one already existed)
+    expect((await d.categories.where('name').equalsIgnoreCase('Peito').count())).toBe(1)
+    expect(await d.gyms.count()).toBe(1)
+    // day → exercise references all resolve to real exercises
+    const exIds = new Set((await d.exercises.toArray()).map((e) => e.id))
+    for (const day of await d.days.toArray()) {
+      for (const id of day.exerciseIds) expect(exIds.has(id)).toBe(true)
+    }
   })
 })
 

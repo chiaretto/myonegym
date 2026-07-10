@@ -1,8 +1,18 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
-import type { Category, Day, Exercise, Gym, Session, SessionEntry, Weight } from '../db/types'
+import type { Category, Day, Exercise, Gym, Session, SessionEntry, Unit, Weight } from '../db/types'
+import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
 export const SCHEMA_VERSION = 2
+
+/** Bundled sample routine (issue #4) used by "Gerar exemplo". */
+const EXAMPLE_DATA = exampleBackup as unknown as {
+  gyms: { id?: number; name: string }[]
+  categories: { id?: number; name: string }[]
+  exercises: { id?: number; name: string; mediaUrl?: string; categoryId?: number }[]
+  days: { id?: number; name: string; exerciseIds?: number[] }[]
+  weights: { gymId: number; exerciseId: number; value: number; unit: Unit }[]
+}
 
 export class PortabilityError extends Error {}
 
@@ -166,42 +176,51 @@ async function getOrCreateCategory(name: string, d: MyOneGymDB): Promise<number>
   return d.categories.add({ name })
 }
 
-/** Populate a small demo routine so the app is usable immediately. */
+/**
+ * Populate a realistic sample routine from the bundled dataset (issue #4).
+ * Inserted additively with remapped ids so existing data is never overwritten
+ * and references stay intact. The example gym + weights are seeded only when no
+ * gym exists yet; the day's own category (from the dataset) is ignored — day
+ * categories are derived from the day's exercises.
+ */
 export async function generateExample(d: MyOneGymDB = db): Promise<void> {
-  const peito = await getOrCreateCategory('Peito', d)
-  const costas = await getOrCreateCategory('Costas', d)
-  const biceps = await getOrCreateCategory('Bíceps', d)
-  const triceps = await getOrCreateCategory('Tríceps', d)
-  const pernas = await getOrCreateCategory('Pernas', d)
+  const catRemap = new Map<number, number>() // dataset categoryId -> local id
+  for (const c of EXAMPLE_DATA.categories) {
+    const id = await getOrCreateCategory(c.name, d)
+    if (c.id != null) catRemap.set(c.id, id)
+  }
 
-  const mk = (name: string, categoryId: number) => d.exercises.add({ name, categoryId })
-  const supino = await mk('Supino Reto', peito)
-  const crucifixo = await mk('Crucifixo', peito)
-  const tricepsCorda = await mk('Tríceps Corda', triceps)
-  const puxada = await mk('Puxada Frontal', costas)
-  const remada = await mk('Remada Curvada', costas)
-  const rosca = await mk('Rosca Direta', biceps)
-  const agachamento = await mk('Agachamento Livre', pernas)
-  const legPress = await mk('Leg Press', pernas)
+  const exRemap = new Map<number, number>() // dataset exerciseId -> local id
+  for (const e of EXAMPLE_DATA.exercises) {
+    const categoryId = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
+    const id = await d.exercises.add({ name: e.name, mediaUrl: e.mediaUrl, categoryId })
+    if (e.id != null) exRemap.set(e.id, id)
+  }
 
-  await d.days.add({ name: 'Dia 1', exerciseIds: [supino, crucifixo, tricepsCorda] })
-  await d.days.add({ name: 'Dia 2', exerciseIds: [puxada, remada, rosca] })
-  await d.days.add({ name: 'Dia 3', exerciseIds: [agachamento, legPress] })
+  for (const day of EXAMPLE_DATA.days) {
+    const exerciseIds = (day.exerciseIds ?? [])
+      .map((exId) => exRemap.get(exId))
+      .filter((x): x is number => x != null)
+    await d.days.add({ name: day.name, exerciseIds })
+  }
 
-  // Seed a demo gym with a few weights if none exists yet.
+  // Seed the example gym + per-gym weights (with a history entry) only when no
+  // gym exists yet — don't add a second gym over the user's own.
   const gymCount = await d.gyms.count()
-  if (gymCount === 0) {
-    const gymId = await d.gyms.add({ name: 'Minha Academia', createdAt: Date.now() })
-    const seed: Array<[number, number]> = [
-      [supino, 40],
-      [crucifixo, 15],
-      [puxada, 50],
-      [rosca, 20],
-      [agachamento, 60],
-    ]
-    for (const [exerciseId, value] of seed) {
-      await d.weights.add({ gymId, exerciseId, value, unit: 'KG' })
-      await d.weightHistory.add({ gymId, exerciseId, value, unit: 'KG', changedAt: Date.now(), kind: 'first' })
+  if (gymCount === 0 && EXAMPLE_DATA.gyms.length) {
+    const gymId = await d.gyms.add({ name: EXAMPLE_DATA.gyms[0].name, createdAt: Date.now() })
+    for (const w of EXAMPLE_DATA.weights) {
+      const exerciseId = exRemap.get(w.exerciseId)
+      if (exerciseId == null) continue
+      await d.weights.add({ gymId, exerciseId, value: w.value, unit: w.unit })
+      await d.weightHistory.add({
+        gymId,
+        exerciseId,
+        value: w.value,
+        unit: w.unit,
+        changedAt: Date.now(),
+        kind: 'first',
+      })
     }
   }
 }

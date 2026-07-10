@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
-import { generateExample } from '../../data/portability'
+import { createCategory, createDay, createExercise, createGym, saveWeight } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
 
 afterEach(async () => {
@@ -17,7 +17,12 @@ afterEach(async () => {
 
 describe('Home end-to-end', () => {
   it('shows seeded days and the per-gym weight badge after expanding', async () => {
-    await generateExample(db)
+    // Seed a controlled fixture (independent of the sample-data content).
+    const gym = await createGym('Academia A', undefined, db)
+    const cat = await createCategory('Peito', db)
+    const supino = await createExercise({ name: 'Supino Reto', categoryId: cat }, db)
+    await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
+    await saveWeight(gym, supino, 40, 'KG', db)
     const user = userEvent.setup()
 
     render(
@@ -28,12 +33,11 @@ describe('Home end-to-end', () => {
 
     // day headers appear from live data
     const day1 = await screen.findByText('Dia 1')
-    // badge only after expanding
+    // exercises + badge only after expanding
     expect(screen.queryByText('Supino Reto')).not.toBeInTheDocument()
     await user.click(day1)
 
     expect(await screen.findByText('Supino Reto')).toBeInTheDocument()
-    // Minha Academia seeded Supino at 40 KG
     await waitFor(() => expect(screen.getByText('40 KG')).toBeInTheDocument())
   })
 })

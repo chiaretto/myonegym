@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
-import { generateExample } from '../../data/portability'
+import { createCategory, createDay, createExercise, createGym, saveWeight } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
 
 afterEach(async () => {
@@ -24,9 +24,23 @@ afterEach(async () => {
   useActiveGym.setState({ activeGymId: null })
 })
 
+/** Controlled fixture: gym + "Dia 1" (3 named exercises, Supino at 40 KG) and a
+ *  second "Dia 2", independent of the sample-data content so these tests stay
+ *  stable (Dia 2 provides another day to exercise the resume/second-session path). */
+async function seedDia1() {
+  const gym = await createGym('Academia A', undefined, db)
+  const peito = await createCategory('Peito', db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryId: peito }, db)
+  const crucifixo = await createExercise({ name: 'Crucifixo', categoryId: peito }, db)
+  const corda = await createExercise({ name: 'Tríceps Corda', categoryId: peito }, db)
+  await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, corda] }, db)
+  await createDay({ name: 'Dia 2', exerciseIds: [crucifixo, corda] }, db)
+  await saveWeight(gym, supino, 40, 'KG', db)
+}
+
 describe('Workout session end-to-end', () => {
   it('starts from a day, completes, appears in history, and deletes', async () => {
-    await generateExample(db) // creates days + gym "Minha Academia"
+    await seedDia1()
     const user = userEvent.setup()
 
     render(
@@ -67,7 +81,7 @@ describe('Workout session end-to-end', () => {
   })
 
   it('detail: edit used weight, then Concluído marks done and advances', async () => {
-    await generateExample(db) // Supino Reto seeded at 40 KG; Dia 1 = Supino, Crucifixo, Tríceps Corda
+    await seedDia1()
     const user = userEvent.setup()
 
     render(
@@ -111,7 +125,7 @@ describe('Workout session end-to-end', () => {
   })
 
   it('steps between exercises (Voltar/Avançar) and guards Concluir treino', async () => {
-    await generateExample(db)
+    await seedDia1()
     const user = userEvent.setup()
 
     render(
@@ -146,7 +160,7 @@ describe('Workout session end-to-end', () => {
   })
 
   it('prevents a second active session and resumes instead', async () => {
-    await generateExample(db)
+    await seedDia1()
     const user = userEvent.setup()
 
     render(

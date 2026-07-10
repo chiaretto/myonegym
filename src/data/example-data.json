@@ -1,0 +1,413 @@
+{
+  "app": "myonegym",
+  "kind": "backup",
+  "version": 1,
+  "exportedAt": 1783650949648,
+  "gyms": [
+    {
+      "name": "Fit Park",
+      "createdAt": 1783649786281,
+      "id": 1
+    }
+  ],
+  "categories": [
+    {
+      "name": "Peito",
+      "id": 1
+    },
+    {
+      "name": "Costas",
+      "id": 2
+    },
+    {
+      "name": "Bíceps",
+      "id": 3
+    },
+    {
+      "name": "Tríceps",
+      "id": 4
+    },
+    {
+      "name": "Ombros",
+      "id": 5
+    },
+    {
+      "name": "Core",
+      "id": 6
+    },
+    {
+      "name": "Cardio",
+      "id": 7
+    },
+    {
+      "name": "Trapézio",
+      "id": 8
+    }
+  ],
+  "exercises": [
+    {
+      "name": "Supino Reto com Barra",
+      "categoryId": 1,
+      "id": 1,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-reto.gif"
+    },
+    {
+      "name": "Supino Inclinado com Barra",
+      "categoryId": 1,
+      "id": 2,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-inclinado-com-barra.gif"
+    },
+    {
+      "name": "Crucifixo Reto",
+      "categoryId": 1,
+      "id": 3,
+      "mediaUrl": "https://static1.minhavida.com.br/articles/5b/21/98/c7/makatserchykshutterstock-orig-1.jpg"
+    },
+    {
+      "name": "Tríceps Pulley (Barra Reta)",
+      "categoryId": 4,
+      "id": 4,
+      "mediaUrl": "https://i0.wp.com/meutreinador.com/wp-content/uploads/2024/04/Passo-03_Extensao-de-Triceps-na-Polia.png?resize=675%2C811&ssl=1"
+    },
+    {
+      "name": "Tríceps Testa com Barra Reta",
+      "categoryId": 4,
+      "id": 5,
+      "mediaUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2024/02/barbell-lying-triceps-extension-skull-crusher.gif"
+    },
+    {
+      "name": "Mergulho em Paralelas",
+      "categoryId": 4,
+      "id": 6,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/paralelas.gif"
+    },
+    {
+      "name": "Prancha Abdominal (Isometria)",
+      "categoryId": 6,
+      "id": 7,
+      "mediaUrl": "https://treinomestre.com.br/wp-content/uploads/2017/01/prancha-isometrica-abdominal.jpg"
+    },
+    {
+      "name": "Elevação de Pernas na Barra Fixa",
+      "categoryId": 6,
+      "id": 8,
+      "mediaUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2019/10/c.jpg"
+    },
+    {
+      "name": "Abdominal Oblíquo com Anilha",
+      "categoryId": 6,
+      "id": 9,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2021/09/abdominal-obliquo-rotacao-russa-com-anilha-e-pernas-parra-cima.gif"
+    },
+    {
+      "name": "HIIT (Esteira ou Bike)",
+      "categoryId": 7,
+      "id": 10
+    },
+    {
+      "name": "Barra Fixa Braço Fechado",
+      "categoryId": 2,
+      "id": 11,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2016/08/costas-barra-fixa-fechada-chinup.gif"
+    },
+    {
+      "name": "Remada Curvada com Barra",
+      "categoryId": 2,
+      "id": 12,
+      "mediaUrl": "https://treinomestre.com.br/wp-content/uploads/2015/03/remada-curvada-capa.jpg"
+    },
+    {
+      "name": "Pulldown na Polia",
+      "categoryId": 2,
+      "id": 13,
+      "mediaUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2024/09/pulldown-corda.gif"
+    },
+    {
+      "name": "Rosca Direta com Barra",
+      "categoryId": 3,
+      "id": 14,
+      "mediaUrl": "https://grandeatleta.com.br/wp-content/uploads/2018/07/rosca-direta.gif"
+    },
+    {
+      "name": "Rosca Martelo com Halteres",
+      "categoryId": 3,
+      "id": 15,
+      "mediaUrl": "https://treinomestre.com.br/wp-content/uploads/2017/12/Rosca-Martelo-com-halteres.jpg"
+    },
+    {
+      "name": "Rosca Concentrada (1 Braço)",
+      "categoryId": 3,
+      "id": 16,
+      "mediaUrl": "https://treinomestre.com.br/wp-content/uploads/2018/09/rosca-concentrada-erros-.jpg"
+    },
+    {
+      "name": "Barra Fixa Braço Aberto",
+      "categoryId": 2,
+      "id": 17,
+      "mediaUrl": "https://grandeatleta.com.br/wp-content/uploads/2018/09/na-maquina-auxilio.jpg"
+    },
+    {
+      "name": "Desenvolvimento com Halteres",
+      "categoryId": 5,
+      "id": 18,
+      "mediaUrl": "https://i0.wp.com/meutreinador.com/wp-content/uploads/2023/12/03_Desenvolvimento-com-Halteres-Sentado.gif?fit=1080%2C1080&ssl=1"
+    },
+    {
+      "name": "Elevação Lateral",
+      "categoryId": 5,
+      "id": 19,
+      "mediaUrl": "https://i0.wp.com/meutreinador.com/wp-content/uploads/2023/11/elevacao-lateral-com-halteres.gif?fit=720%2C720&ssl=1"
+    },
+    {
+      "name": "Elevação Frontal com Anilha",
+      "categoryId": 5,
+      "id": 20,
+      "mediaUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2018/09/elevacao-frontal-com-anilha-v2.gif"
+    },
+    {
+      "name": "Remada Alta com Barra",
+      "categoryId": 5,
+      "id": 21,
+      "mediaUrl": "https://treinototal.com.br/wp-content/uploads/2023/04/trapezio-1.jpg"
+    },
+    {
+      "name": "Encolhimento para Trapézio (Halteres)",
+      "categoryId": 8,
+      "id": 22,
+      "mediaUrl": "https://www.hipertrofia.org/blog/wp-content/uploads/2024/01/dumbbell-shrug.gif"
+    },
+    {
+      "name": "Puxada Frontal Aberta na Polia",
+      "categoryId": 2,
+      "id": 23,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/costas-puxada-aberta-com-barra-no-pulley.gif"
+    },
+    {
+      "name": "Puxada com Triângulo (Pegada Fechada)",
+      "categoryId": 2,
+      "id": 24,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/costas-puxada-para-frente-no-pulley-com-triangulo.gif"
+    },
+    {
+      "name": "Remada Sentada na Polia (Triangulo Neutro)",
+      "categoryId": 2,
+      "id": 25,
+      "mediaUrl": "https://fitcron.com/wp-content/uploads/2021/04/26611301-Cable-Seated-Row-with-V-bar_Back_720.gif"
+    },
+    {
+      "name": "Puxada Articulada Unilateral",
+      "categoryId": 2,
+      "id": 26,
+      "mediaUrl": "https://meutreinador.com/wp-content/uploads/2023/11/145_Puxada-alta-unilateral.jpg"
+    },
+    {
+      "name": "Voador Inverso (Peck Deck Reverso)",
+      "categoryId": 2,
+      "id": 27,
+      "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/ombros-voador-invertido-na-maquina.gif"
+    }
+  ],
+  "days": [
+    {
+      "name": "Dia 1 - Peito e Tríceps",
+      "categoryId": 1,
+      "exerciseIds": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "id": 1
+    },
+    {
+      "name": "Dia 2 - Core e HIIT",
+      "categoryId": 6,
+      "exerciseIds": [
+        7,
+        8,
+        9,
+        10
+      ],
+      "id": 2
+    },
+    {
+      "name": "Dia 3 - Costas e Bíceps",
+      "categoryId": 2,
+      "exerciseIds": [
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "id": 3
+    },
+    {
+      "name": "Dia 4 - Full Upper",
+      "categoryId": 1,
+      "exerciseIds": [
+        1,
+        12,
+        14,
+        4,
+        17
+      ],
+      "id": 4
+    },
+    {
+      "name": "Dia 5 - Ombros e Trapézio",
+      "categoryId": 5,
+      "exerciseIds": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ],
+      "id": 5
+    },
+    {
+      "name": "Dia 6 - Costas (Máquina)",
+      "categoryId": 2,
+      "exerciseIds": [
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "id": 6
+    }
+  ],
+  "weights": [
+    {
+      "gymId": 1,
+      "exerciseId": 1,
+      "value": 20,
+      "unit": "KG",
+      "id": 1
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 2,
+      "value": 15,
+      "unit": "KG",
+      "id": 2
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 3,
+      "value": 80,
+      "unit": "KG",
+      "id": 3
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 4,
+      "value": 35,
+      "unit": "KG",
+      "id": 4
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 5,
+      "value": 8,
+      "unit": "KG",
+      "id": 5
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 6,
+      "value": 40,
+      "unit": "KG",
+      "id": 6
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 11,
+      "value": 40,
+      "unit": "KG",
+      "id": 7
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 12,
+      "value": 45,
+      "unit": "KG",
+      "id": 8
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 13,
+      "value": 24.5,
+      "unit": "KG",
+      "id": 9
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 14,
+      "value": 15,
+      "unit": "KG",
+      "id": 10
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 15,
+      "value": 17.5,
+      "unit": "KG",
+      "id": 11
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 16,
+      "value": 12.5,
+      "unit": "KG",
+      "id": 12
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 17,
+      "value": 57,
+      "unit": "KG",
+      "id": 13
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 18,
+      "value": 16,
+      "unit": "KG",
+      "id": 14
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 19,
+      "value": 7,
+      "unit": "KG",
+      "id": 15
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 20,
+      "value": 20,
+      "unit": "KG",
+      "id": 16
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 21,
+      "value": 30,
+      "unit": "KG",
+      "id": 17
+    },
+    {
+      "gymId": 1,
+      "exerciseId": 22,
+      "value": 16,
+      "unit": "KG",
+      "id": 18
+    }
+  ]
+}
