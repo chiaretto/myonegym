@@ -1,7 +1,12 @@
-.hero { aspect-ratio: 16 / 10; background: var(--bg-accent); border-radius: 14px; overflow: hidden;
+/* Media box sizes to the image's natural proportions (no fixed aspect ratio),
+   so portrait/square exercise media shows at full height instead of being
+   shrunk into a short landscape box. Very tall media is capped to the viewport. */
+.hero { background: var(--bg-accent); border-radius: 14px; overflow: hidden;
   display: grid; place-items: center; margin-bottom: 14px; }
-.hero-media { width: 100%; height: 100%; object-fit: contain; }
-.media-fallback.hero-media { color: var(--text-accent); font-size: var(--fs-7xl); }
+img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contain; display: block; }
+/* Placeholder has no intrinsic size — keep it a tidy landscape box. */
+.media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
+  color: var(--text-accent); font-size: var(--fs-7xl); }
 
 .ex-head { margin-bottom: 14px; }
 .ex-title { font-size: var(--fs-3xl); font-weight: 500; margin-bottom: 8px; }
