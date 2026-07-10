@@ -27,8 +27,9 @@ export interface Exercise {
 export interface Day {
   id?: number
   name: string
-  categoryId?: number
-  /** Ordered exercise ids; the same id may appear in multiple days. */
+  /** Ordered exercise ids; the same id may appear in multiple days.
+   *  A day has no manual category — its categories are derived from these
+   *  exercises' categories (see dayCategoryNames). */
   exerciseIds: number[]
 }
 

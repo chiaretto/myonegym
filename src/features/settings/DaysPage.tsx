@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { createDay, deleteDay, updateDay, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
-import type { Day } from '../../db/types'
-import { useCategories, useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
+import type { Day, Exercise } from '../../db/types'
+import { useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
+import { daySubtitle } from '../../lib/days'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
+import { Media } from '../../ui/Media'
 import { Sheet } from '../../ui/Sheet'
+import '../exercise/exercise.css'
 
 export function DaysPage() {
   const days = useDays()
   const catMap = useCategoryMap()
+  const exMap = useExerciseMap()
   const toast = useToast()
   const confirm = useConfirm()
   const [editing, setEditing] = useState<Day | 'new' | null>(null)
@@ -42,10 +46,7 @@ export function DaysPage() {
               </span>
               <span className="row-body">
                 <span className="row-title">{day.name}</span>
-                <span className="row-sub">
-                  {(day.categoryId != null ? catMap.get(day.categoryId)?.name + ' · ' : '') +
-                    `${day.exerciseIds.length} exercícios`}
-                </span>
+                <span className="row-sub">{daySubtitle(day, exMap, catMap)}</span>
               </span>
               <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(day)}>
                 <Icon name="pencil" />
@@ -68,14 +69,17 @@ export function DaysPage() {
 }
 
 function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
-  const cats = useCategories()
   const exs = useExercises()
   const exMap = useExerciseMap()
+  const catMap = useCategoryMap()
   const toast = useToast()
   const [name, setName] = useState(day?.name ?? '')
-  const [categoryId, setCategoryId] = useState<number | ''>(day?.categoryId ?? '')
   const [selected, setSelected] = useState<number[]>(day?.exerciseIds ?? [])
+  const [preview, setPreview] = useState<Exercise | null>(null)
   const [err, setErr] = useState('')
+
+  const catNameOf = (ex?: Exercise) =>
+    ex?.categoryId != null ? catMap.get(ex.categoryId)?.name : undefined
 
   const toggle = (id: number) =>
     setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
@@ -92,7 +96,7 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
 
   const submit = async () => {
     try {
-      const input = { name, categoryId: categoryId === '' ? undefined : Number(categoryId), exerciseIds: selected }
+      const input = { name, exerciseIds: selected }
       if (day) {
         await updateDay(day.id!, input, db)
         toast('Dia atualizado.')
@@ -107,43 +111,46 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
   }
 
   return (
+    <>
     <Sheet title={day ? 'Editar dia' : 'Novo dia'} onClose={onClose}>
       <div className="field">
         <label htmlFor="day-name">Nome</label>
         <input id="day-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Dia 1" />
-      </div>
-      <div className="field">
-        <label htmlFor="day-cat">Categoria (opcional)</label>
-        <select id="day-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}>
-          <option value="">Sem categoria</option>
-          {cats?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
       </div>
 
       <div className="field">
         <label>Exercícios do dia ({selected.length})</label>
         <div className="group">
           {selected.length === 0 && <div className="row" style={{ color: 'var(--text-muted)', fontSize: 13 }}>Nenhum selecionado</div>}
-          {selected.map((id, i) => (
-            <div key={id} className="row">
-              <span className="row-body">
-                <span className="row-title">{exMap.get(id)?.name ?? '—'}</span>
-              </span>
-              <button className="icon-btn ghost" aria-label="Subir" disabled={i === 0} onClick={() => move(i, -1)}>
-                <Icon name="chevron-up" />
-              </button>
-              <button className="icon-btn ghost" aria-label="Descer" disabled={i === selected.length - 1} onClick={() => move(i, 1)}>
-                <Icon name="chevron-down" />
-              </button>
-              <button className="icon-btn ghost" aria-label="Remover" onClick={() => toggle(id)}>
-                <Icon name="x" />
-              </button>
-            </div>
-          ))}
+          {selected.map((id, i) => {
+            const ex = exMap.get(id)
+            const cat = catNameOf(ex)
+            return (
+              <div key={id} className="row">
+                <span className="row-body">
+                  <span className="row-title">{ex?.name ?? '—'}</span>
+                  {cat && <span className="row-sub">{cat}</span>}
+                </span>
+                <button
+                  className="icon-btn ghost"
+                  aria-label={`Detalhes de ${ex?.name ?? 'exercício'}`}
+                  disabled={!ex}
+                  onClick={() => ex && setPreview(ex)}
+                >
+                  <Icon name="info-circle" />
+                </button>
+                <button className="icon-btn ghost" aria-label="Subir" disabled={i === 0} onClick={() => move(i, -1)}>
+                  <Icon name="chevron-up" />
+                </button>
+                <button className="icon-btn ghost" aria-label="Descer" disabled={i === selected.length - 1} onClick={() => move(i, 1)}>
+                  <Icon name="chevron-down" />
+                </button>
+                <button className="icon-btn ghost" aria-label="Remover" onClick={() => toggle(id)}>
+                  <Icon name="x" />
+                </button>
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -151,16 +158,44 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
         <div className="field">
           <label>Adicionar exercício</label>
           <div className="group">
-            {available.map((e) => (
-              <button key={e.id} className="row" onClick={() => toggle(e.id!)}>
-                <span className="row-ic">
-                  <Icon name="plus" />
-                </span>
-                <span className="row-body">
-                  <span className="row-title">{e.name}</span>
-                </span>
-              </button>
-            ))}
+            {available.map((e) => {
+              const cat = catNameOf(e)
+              return (
+                <div key={e.id} className="row">
+                  <button
+                    aria-label={`Adicionar ${e.name}`}
+                    onClick={() => toggle(e.id!)}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      background: 'none',
+                      border: 0,
+                      textAlign: 'left',
+                      color: 'inherit',
+                      padding: 0,
+                    }}
+                  >
+                    <span className="row-ic">
+                      <Icon name="plus" />
+                    </span>
+                    <span className="row-body">
+                      <span className="row-title">{e.name}</span>
+                      {cat && <span className="row-sub">{cat}</span>}
+                    </span>
+                  </button>
+                  <button
+                    className="icon-btn ghost"
+                    aria-label={`Detalhes de ${e.name}`}
+                    onClick={() => setPreview(e)}
+                  >
+                    <Icon name="info-circle" />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -175,5 +210,23 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
         </button>
       </div>
     </Sheet>
+
+      {preview && (
+        <Sheet title={preview.name} onClose={() => setPreview(null)}>
+          <div className="hero" style={{ marginBottom: 14 }}>
+            <Media url={preview.mediaUrl} alt={preview.name} className="hero-media" />
+          </div>
+          <div className="ex-chips">
+            {catNameOf(preview) ? (
+              <span className="chip">
+                <Icon name="tag" size={12} /> {catNameOf(preview)}
+              </span>
+            ) : (
+              <span className="chip">Sem categoria</span>
+            )}
+          </div>
+        </Sheet>
+      )}
+    </>
   )
 }

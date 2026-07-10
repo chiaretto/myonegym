@@ -184,9 +184,9 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
   const agachamento = await mk('Agachamento Livre', pernas)
   const legPress = await mk('Leg Press', pernas)
 
-  await d.days.add({ name: 'Dia 1', categoryId: peito, exerciseIds: [supino, crucifixo, tricepsCorda] })
-  await d.days.add({ name: 'Dia 2', categoryId: costas, exerciseIds: [puxada, remada, rosca] })
-  await d.days.add({ name: 'Dia 3', categoryId: pernas, exerciseIds: [agachamento, legPress] })
+  await d.days.add({ name: 'Dia 1', exerciseIds: [supino, crucifixo, tricepsCorda] })
+  await d.days.add({ name: 'Dia 2', exerciseIds: [puxada, remada, rosca] })
+  await d.days.add({ name: 'Dia 3', exerciseIds: [agachamento, legPress] })
 
   // Seed a demo gym with a few weights if none exists yet.
   const gymCount = await d.gyms.count()

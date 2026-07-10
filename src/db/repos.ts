@@ -107,22 +107,18 @@ export async function renameCategory(id: number, name: string, d: MyOneGymDB = d
 }
 
 /**
- * Delete a category. Exercises (and days) pointing at it are reassigned to the
- * reserved "Sem categoria" bucket — never orphaned. The reserved bucket itself
- * cannot be deleted.
+ * Delete a category. Exercises pointing at it are reassigned to the reserved
+ * "Sem categoria" bucket — never orphaned. Days reference exercises (not
+ * categories), so they need no reassignment. The reserved bucket itself cannot
+ * be deleted.
  */
 export async function deleteCategory(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.categories, d.exercises, d.days, async () => {
+  await d.transaction('rw', d.categories, d.exercises, async () => {
     const cat = await d.categories.get(id)
     if (!cat) return
     if (cat.reserved) throw new ValidationError('A categoria "Sem categoria" não pode ser excluída.')
     const fallback = await ensureUncategorizedTx(d)
     await d.exercises.where('categoryId').equals(id).modify({ categoryId: fallback })
-    await d.days
-      .filter((day) => day.categoryId === id)
-      .modify((day) => {
-        day.categoryId = undefined
-      })
     await d.categories.delete(id)
   })
 }
@@ -194,20 +190,20 @@ export async function listDays(d: MyOneGymDB = db): Promise<Day[]> {
 }
 
 export async function createDay(
-  input: { name: string; categoryId?: number; exerciseIds?: number[] },
+  input: { name: string; exerciseIds?: number[] },
   d: MyOneGymDB = db,
 ): Promise<number> {
   const name = requireName(input.name, 'nome do dia')
-  return d.days.add({ name, categoryId: input.categoryId, exerciseIds: input.exerciseIds ?? [] })
+  return d.days.add({ name, exerciseIds: input.exerciseIds ?? [] })
 }
 
 export async function updateDay(
   id: number,
-  input: { name: string; categoryId?: number; exerciseIds: number[] },
+  input: { name: string; exerciseIds: number[] },
   d: MyOneGymDB = db,
 ): Promise<void> {
   const name = requireName(input.name, 'nome do dia')
-  await d.days.update(id, { name, categoryId: input.categoryId, exerciseIds: input.exerciseIds })
+  await d.days.update(id, { name, exerciseIds: input.exerciseIds })
 }
 
 export async function deleteDay(id: number, d: MyOneGymDB = db): Promise<void> {

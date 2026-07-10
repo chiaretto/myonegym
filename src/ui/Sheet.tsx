@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect } from 'react'
+import { Icon } from './Icon'
 
 interface SheetProps {
   title: string
@@ -23,7 +24,12 @@ export function Sheet({ title, onClose, children }: SheetProps) {
         aria-label={title}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2>{title}</h2>
+        <div className="sheet-head">
+          <h2>{title}</h2>
+          <button className="icon-btn ghost sheet-close" aria-label="Fechar" onClick={onClose}>
+            <Icon name="x" />
+          </button>
+        </div>
         {children}
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   useGymWeights,
 } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
+import { daySubtitle } from '../../lib/days'
 import { fmtWeight } from '../../lib/format'
 import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -76,7 +77,6 @@ export function HomePage() {
         <ul className="accordion">
           {days?.map((day) => {
             const isOpen = openId === day.id
-            const cat = day.categoryId != null ? catMap.get(day.categoryId) : undefined
             return (
               <li key={day.id} className={`day${isOpen ? ' open' : ''}`}>
                 <div className="day-head">
@@ -86,9 +86,7 @@ export function HomePage() {
                     onClick={() => setOpenId(isOpen ? null : day.id!)}
                   >
                     <span className="day-title">{day.name}</span>
-                    <span className="day-sub">
-                      {cat ? cat.name : `${day.exerciseIds.length} exercícios`}
-                    </span>
+                    <span className="day-sub">{daySubtitle(day, exMap, catMap)}</span>
                   </button>
                   {(() => {
                     const isResume = activeSession != null && activeSession.dayId === day.id

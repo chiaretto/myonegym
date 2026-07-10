@@ -88,6 +88,17 @@ describe('backup export/import', () => {
     expect(() => parseBackup('{"app":"other"}')).toThrow(PortabilityError)
     expect(await d.gyms.count()).toBe(1) // untouched
   })
+
+  it('imports a legacy day that still carries categoryId (ignored)', async () => {
+    await seed() // creates "Dia 1"
+    const doc = await exportBackup(d)
+    // simulate a pre-change day record with the removed manual category field
+    const legacy = JSON.parse(JSON.stringify(doc))
+    legacy.days[0].categoryId = 999
+    await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
+    expect(await d.days.count()).toBe(1) // imports fine; categoryId is ignored
+    expect((await d.days.toArray())[0].name).toBe('Dia 1')
+  })
 })
 
 describe('exercises share', () => {
