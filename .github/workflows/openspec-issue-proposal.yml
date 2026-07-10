@@ -21,7 +21,10 @@ jobs:
   propose:
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Creating a PR with the default GITHUB_TOKEN requires the repo setting
+      # "Allow GitHub Actions to create and approve pull requests". If that is
+      # off, set a GH_PAT secret (a PAT with `repo` scope) and it is used instead.
+      GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       ISSUE_TITLE: ${{ github.event.issue.title }}
@@ -90,12 +93,15 @@ jobs:
             printf 'Closes #%s\n' "$ISSUE_NUMBER"
           } > "$RUNNER_TEMP/pr-body.md"
 
-          PR_URL="$(gh pr create \
+          if ! PR_URL="$(gh pr create \
             --draft \
             --base main \
             --head "$BRANCH" \
             --title "openspec: ${ISSUE_TITLE}" \
-            --body-file "$RUNNER_TEMP/pr-body.md")"
+            --body-file "$RUNNER_TEMP/pr-body.md")"; then
+            echo "::error::Failed to create the pull request. If the log says \"not permitted to create or approve pull requests\", enable Settings → Actions → General → \"Allow GitHub Actions to create and approve pull requests\", or add a GH_PAT secret (PAT with repo scope). The branch ${BRANCH} has already been pushed, so you can also open the PR manually."
+            exit 1
+          fi
           echo "url=${PR_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Comment on issue with PR link
