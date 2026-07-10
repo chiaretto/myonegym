@@ -43,9 +43,11 @@ npm run typecheck  # tsc --noEmit
   **Continuar**). The session snapshots that day's exercises with their current
   target weights. Each entry is a Home-style row (thumbnail + name + weight)
   with a done checkbox; tap it to open the **entry detail** — the exercise
-  image/GIF, the *weight used* (edit → save), the per-gym weight history, and a
-  **Marcar como concluído** toggle (done can be set from the list or the detail).
-  Finish with **Concluir treino**. Only one session runs at a time per gym.
+  image/GIF, the *weight used* (edit → save), and the per-gym weight history. The
+  detail is a **guided stepper**: **Concluído** marks the exercise done and jumps
+  to the next one, and **Voltar / Avançar** step between exercises. Finish with
+  **Concluir treino** (enabled once at least one exercise is marked). Only one
+  session runs at a time per gym.
   **Settings → Sessões** lists completed sessions for the active gym (grouped by
   month, with a done-count badge); open one for a read-only recap or delete it.
   Sessions store snapshots, so past sessions survive later edits/deletes.

@@ -141,9 +141,17 @@ export function SessionPage() {
         </ul>
 
         {!readOnly ? (
-          <button className="btn primary" style={{ marginTop: 14 }} onClick={onComplete}>
-            <Icon name="check" /> Concluir treino
-          </button>
+          <>
+            <button
+              className="btn primary"
+              style={{ marginTop: 14 }}
+              onClick={onComplete}
+              disabled={done === 0}
+            >
+              <Icon name="check" /> Concluir treino
+            </button>
+            {done === 0 && <p className="complete-hint">Marque ao menos um exercício para concluir.</p>}
+          </>
         ) : (
           session.completedAt != null && (
             <div className="session-done-ts">

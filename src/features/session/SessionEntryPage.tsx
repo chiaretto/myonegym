@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { setEntryDone, setEntryWeight } from '../../db/repos'
 import { UNITS, type Unit } from '../../db/types'
@@ -10,6 +10,7 @@ import {
   useGyms,
   useHistory,
   useSession,
+  useSessionEntries,
   useSessionEntry,
 } from '../../lib/hooks'
 import { BackBar } from '../../ui/Chrome'
@@ -26,10 +27,12 @@ export function SessionEntryPage() {
   const eId = Number(entryId)
   const session = useSession(sessionId)
   const entry = useSessionEntry(eId)
+  const entries = useSessionEntries(sessionId)
   const gyms = useGyms()
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
   const toast = useToast()
+  const nav = useNavigate()
 
   const gymId = session?.gymId ?? null
   const exerciseId = entry?.exerciseId ?? null
@@ -80,9 +83,17 @@ export function SessionEntryPage() {
     toast('Peso salvo.')
   }
 
-  const onToggleDone = async () => {
+  // Guided stepper over the session's exercises (in list order).
+  const idx = entries.findIndex((e) => e.id === eId)
+  const prevId = idx > 0 ? entries[idx - 1].id : undefined
+  const nextId = idx >= 0 && idx < entries.length - 1 ? entries[idx + 1].id : undefined
+  const goTo = (id: number) => nav(`/session/${sessionId}/entry/${id}`)
+
+  const onCompleteAndAdvance = async () => {
     if (readOnly) return
-    await setEntryDone(eId, !entry.done, db)
+    await setEntryDone(eId, true, db)
+    if (nextId != null) goTo(nextId)
+    else nav(`/session/${sessionId}`) // last exercise → back to the runner
   }
 
   return (
@@ -107,22 +118,37 @@ export function SessionEntryPage() {
           </div>
         </div>
 
-        {/* Done toggle — available here too, not only in the list */}
-        {readOnly ? (
-          <div className="session-done-ts" style={{ justifyContent: 'flex-start', padding: '0 0 14px' }}>
-            <Icon name={entry.done ? 'check' : 'minus'} size={12} />{' '}
-            {entry.done ? 'Concluído nesta sessão' : 'Não concluído'}
+        {/* Guided stepper: Concluído (mark + advance) on top, Voltar/Avançar below */}
+        <div className="entry-stepper">
+          {readOnly ? (
+            <span className={`entry-done-state${entry.done ? ' done' : ''}`}>
+              <Icon name={entry.done ? 'check' : 'minus'} size={14} />
+              {entry.done ? 'Concluído' : 'Não feito'}
+            </span>
+          ) : (
+            <button className="btn primary" onClick={onCompleteAndAdvance}>
+              <Icon name="check" /> Concluído
+            </button>
+          )}
+          <div className="entry-nav-row">
+            <button
+              className="btn subtle"
+              aria-label="Exercício anterior"
+              disabled={prevId == null}
+              onClick={() => prevId != null && goTo(prevId)}
+            >
+              <Icon name="chevron-left" /> Voltar
+            </button>
+            <button
+              className="btn subtle"
+              aria-label="Próximo exercício"
+              disabled={nextId == null}
+              onClick={() => nextId != null && goTo(nextId)}
+            >
+              Avançar <Icon name="chevron-right" />
+            </button>
           </div>
-        ) : (
-          <button
-            className={`btn ${entry.done ? 'primary' : 'subtle'}`}
-            style={{ marginBottom: 18 }}
-            aria-pressed={entry.done}
-            onClick={onToggleDone}
-          >
-            <Icon name={entry.done ? 'check' : 'circle'} /> {entry.done ? 'Concluído' : 'Marcar como concluído'}
-          </button>
-        )}
+        </div>
 
         {/* Used weight for this session entry */}
         <section className="weight-card">

@@ -66,8 +66,45 @@ describe('Workout session end-to-end', () => {
     expect(await db.sessionEntries.count()).toBe(0)
   })
 
-  it('opens an entry detail, marks done and edits the used weight there', async () => {
-    await generateExample(db) // Supino Reto seeded at 40 KG in the demo gym
+  it('detail: edit used weight, then Concluído marks done and advances', async () => {
+    await generateExample(db) // Supino Reto seeded at 40 KG; Dia 1 = Supino, Crucifixo, Tríceps Corda
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
+    await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
+    expect(await screen.findByText('Peso usado')).toBeInTheDocument()
+
+    // Edit the used weight here (40 → 42.5) — updates only the entry.
+    await user.click(screen.getByRole('button', { name: /Editar/ }))
+    const input = screen.getByLabelText('Peso usado')
+    await user.clear(input)
+    await user.type(input, '42.5')
+    await user.click(screen.getByRole('button', { name: /Salvar/ }))
+    await waitFor(async () =>
+      expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.usedValue).toBe(42.5),
+    )
+
+    // Concluído marks Supino done AND advances to the next exercise (Crucifixo).
+    await user.click(screen.getByRole('button', { name: 'Concluído' }))
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    await waitFor(async () =>
+      expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
+    )
+
+    // The exercise's target weight is unchanged (still 40 KG).
+    const supinoEx = (await db.exercises.toArray()).find((e) => e.name === 'Supino Reto')!
+    const w = await db.weights.where('exerciseId').equals(supinoEx.id!).first()
+    expect(w?.value).toBe(40)
+  })
+
+  it('steps between exercises (Voltar/Avançar) and guards Concluir treino', async () => {
+    await generateExample(db)
     const user = userEvent.setup()
 
     render(
@@ -78,36 +115,27 @@ describe('Workout session end-to-end', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
 
-    // Tap the row (link) to open the exercise detail.
+    // With nothing done, "Concluir treino" is disabled + hint is shown.
+    expect(await screen.findByRole('button', { name: /Concluir treino/ })).toBeDisabled()
+    expect(screen.getByText(/Marque ao menos um exercício/)).toBeInTheDocument()
+
+    // Open the first exercise, Avançar without marking → Crucifixo, nothing done.
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
-    expect(await screen.findByText('Peso usado')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Próximo exercício' }))
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect((await db.sessionEntries.toArray()).every((e) => !e.done)).toBe(true)
 
-    // Mark done from the detail.
-    await user.click(screen.getByRole('button', { name: /Marcar como concluído/ }))
-    expect(await screen.findByRole('button', { name: 'Concluído' })).toBeInTheDocument()
+    // Voltar back to Supino, then Concluído (marks + advances).
+    await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
+    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Concluído' }))
+    await waitFor(async () =>
+      expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
+    )
 
-    // Edit the used weight here (40 → 42.5) — updates only the entry.
-    await user.click(screen.getByRole('button', { name: /Editar/ }))
-    const input = screen.getByLabelText('Peso usado')
-    await user.clear(input)
-    await user.type(input, '42.5')
-    await user.click(screen.getByRole('button', { name: /Salvar/ }))
-
-    await waitFor(async () => {
-      const entries = await db.sessionEntries.toArray()
-      const supino = entries.find((e) => e.exerciseName === 'Supino Reto')!
-      expect(supino.usedValue).toBe(42.5)
-      expect(supino.done).toBe(true)
-    })
-    // The exercise's target weight is unchanged (still 40 KG).
-    const supinoEx = (await db.exercises.toArray()).find((e) => e.name === 'Supino Reto')!
-    const w = await db.weights.where('exerciseId').equals(supinoEx.id!).first()
-    expect(w?.value).toBe(40)
-
-    // Back to the runner: progress reflects the done entry.
+    // Back to the runner (BackBar): "Concluir treino" is now enabled.
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
-    expect(await screen.findByText(/de 3 concluídos/)).toBeInTheDocument()
-    expect(screen.getByText('33%')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /Concluir treino/ })).toBeEnabled()
   })
 
   it('prevents a second active session and resumes instead', async () => {

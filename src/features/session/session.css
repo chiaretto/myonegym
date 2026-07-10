@@ -49,6 +49,18 @@
 .used-weight .pencil { color: var(--text-muted); margin-left: 2px; }
 .used-weight.empty { border-style: dashed; border-color: var(--border-accent); color: var(--text-accent); font-size: var(--fs-2xs); }
 
+/* Guided stepper on the exercise detail: Concluído on top, Voltar/Avançar below
+   (stacks so all three labels fit at any font scale). */
+.entry-stepper { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.entry-nav-row { display: flex; gap: 8px; }
+.entry-nav-row .btn { flex: 1; }
+.entry-done-state { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px; font-size: var(--fs-sm); color: var(--text-secondary); }
+.entry-done-state.done { color: var(--text-accent); font-weight: 500; }
+
+/* "Marque ao menos um exercício" hint under a disabled Concluir treino */
+.complete-hint { text-align: center; font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 8px; }
+
 /* Completion footer (read-only detail) */
 .session-done-ts { text-align: center; font-size: var(--fs-2xs); color: var(--text-secondary);
   padding: 14px 0 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
