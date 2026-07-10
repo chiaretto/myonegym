@@ -25,6 +25,20 @@ export function relativeDate(ts: number, now = Date.now()): string {
   return `Há ${Math.floor(days / 365)} ano(s)`
 }
 
+/** Short pt-BR day + month, e.g. "6 jul". */
+export function fmtDayMonth(ts: number): string {
+  return new Date(ts).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')
+}
+
+/** Duration between two timestamps as "48 min" / "1 h 5 min". */
+export function fmtDuration(ms: number): string {
+  const min = Math.max(0, Math.round(ms / 60_000))
+  if (min < 60) return `${min} min`
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  return m ? `${h} h ${m} min` : `${h} h`
+}
+
 export interface DeltaLabel {
   text: string
   direction: 'up' | 'down' | 'first' | 'unit'

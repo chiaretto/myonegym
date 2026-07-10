@@ -1,8 +1,17 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useCategoryMap, useDays, useExerciseMap, useGymWeights } from '../../lib/hooks'
+import { Link, useNavigate } from 'react-router-dom'
+import { db } from '../../db/db'
+import { startSession, ValidationError } from '../../db/repos'
+import {
+  useActiveSession,
+  useCategoryMap,
+  useDays,
+  useExerciseMap,
+  useGymWeights,
+} from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
 import { fmtWeight } from '../../lib/format'
+import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { TabBar } from '../../ui/Chrome'
@@ -15,7 +24,29 @@ export function HomePage() {
   const catMap = useCategoryMap()
   const activeGymId = useActiveGym((s) => s.activeGymId)
   const weights = useGymWeights(activeGymId)
+  const activeSession = useActiveSession(activeGymId)
+  const nav = useNavigate()
+  const toast = useToast()
   const [openId, setOpenId] = useState<number | null>(null)
+
+  const onStart = async (dayId: number) => {
+    if (activeGymId == null) {
+      toast('Crie ou selecione uma academia primeiro.')
+      return
+    }
+    if (activeSession) {
+      // Only one active session per gym: resume it (whichever day it belongs to).
+      if (activeSession.dayId !== dayId) toast('Você já tem um treino em andamento.')
+      nav(`/session/${activeSession.id}`)
+      return
+    }
+    try {
+      const sid = await startSession(activeGymId, dayId, db)
+      nav(`/session/${sid}`)
+    } catch (e) {
+      toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar o treino.')
+    }
+  }
 
   return (
     <>
@@ -48,19 +79,36 @@ export function HomePage() {
             const cat = day.categoryId != null ? catMap.get(day.categoryId) : undefined
             return (
               <li key={day.id} className={`day${isOpen ? ' open' : ''}`}>
-                <button
-                  className="day-head"
-                  aria-expanded={isOpen}
-                  onClick={() => setOpenId(isOpen ? null : day.id!)}
-                >
-                  <span>
+                <div className="day-head">
+                  <button
+                    className="day-head-main"
+                    aria-expanded={isOpen}
+                    onClick={() => setOpenId(isOpen ? null : day.id!)}
+                  >
                     <span className="day-title">{day.name}</span>
                     <span className="day-sub">
                       {cat ? cat.name : `${day.exerciseIds.length} exercícios`}
                     </span>
-                  </span>
-                  <Icon name="chevron-down" className="chev day-chev" />
-                </button>
+                  </button>
+                  {(() => {
+                    const isResume = activeSession != null && activeSession.dayId === day.id
+                    return (
+                      <button
+                        className={`day-start${isResume ? ' resume' : ''}`}
+                        onClick={() => onStart(day.id!)}
+                      >
+                        <Icon name="player-play" size={12} /> {isResume ? 'Continuar' : 'Iniciar'}
+                      </button>
+                    )
+                  })()}
+                  <button
+                    className="chev-btn"
+                    aria-label={isOpen ? 'Recolher' : 'Expandir'}
+                    onClick={() => setOpenId(isOpen ? null : day.id!)}
+                  >
+                    <Icon name="chevron-down" className="chev day-chev" />
+                  </button>
+                </div>
 
                 {isOpen && (
                   <ul className="exercises">

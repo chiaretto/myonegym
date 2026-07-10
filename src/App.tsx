@@ -4,6 +4,9 @@ import { useActiveGym } from './state/activeGym'
 import { FeedbackProvider } from './ui/Feedback'
 import { HomePage } from './features/home/HomePage'
 import { ExerciseDetailPage } from './features/exercise/ExerciseDetailPage'
+import { SessionPage } from './features/session/SessionPage'
+import { SessionEntryPage } from './features/session/SessionEntryPage'
+import { SessionsPage } from './features/session/SessionsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { GymsPage } from './features/settings/GymsPage'
 import { CategoriesPage } from './features/settings/CategoriesPage'
@@ -24,6 +27,9 @@ export function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/exercise/:id" element={<ExerciseDetailPage />} />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/session/:id" element={<SessionPage />} />
+          <Route path="/session/:id/entry/:entryId" element={<SessionEntryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/gyms" element={<GymsPage />} />
           <Route path="/settings/categories" element={<CategoriesPage />} />

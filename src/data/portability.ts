@@ -1,12 +1,16 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
-import type { Category, Day, Exercise, Gym, Weight } from '../db/types'
+import type { Category, Day, Exercise, Gym, Session, SessionEntry, Weight } from '../db/types'
 
 export const APP_TAG = 'myonegym'
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export class PortabilityError extends Error {}
 
-/** Full backup document — current weights only, NO history log. */
+/**
+ * Full backup document — current weights only, NO weight-change history log.
+ * Workout sessions ARE included (durable training history). `sessions`/
+ * `sessionEntries` were added in schema v2; older documents omit them.
+ */
 export interface BackupDoc {
   app: typeof APP_TAG
   kind: 'backup'
@@ -17,6 +21,8 @@ export interface BackupDoc {
   exercises: Exercise[]
   days: Day[]
   weights: Weight[]
+  sessions: Session[]
+  sessionEntries: SessionEntry[]
 }
 
 /** Share document — exercises + categories only (no gyms, weights, history). */
@@ -32,12 +38,14 @@ export interface ShareDoc {
 /* ------------------------------------------------------------------ export */
 
 export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
-  const [gyms, categories, exercises, days, weights] = await Promise.all([
+  const [gyms, categories, exercises, days, weights, sessions, sessionEntries] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
     d.exercises.toArray(),
     d.days.toArray(),
     d.weights.toArray(), // current weights only; weightHistory is intentionally excluded
+    d.sessions.toArray(),
+    d.sessionEntries.toArray(),
   ])
   return {
     app: APP_TAG,
@@ -49,6 +57,8 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     exercises,
     days,
     weights,
+    sessions,
+    sessionEntries,
   }
 }
 
@@ -90,6 +100,9 @@ export function parseBackup(json: string): BackupDoc {
     throw new PortabilityError('Este arquivo não é um backup do MyOneGym.')
   }
   assertArrays(obj, ['gyms', 'categories', 'exercises', 'days', 'weights'])
+  // sessions arrived in v2 — treat older backups (without them) as empty.
+  if (!Array.isArray(obj.sessions)) obj.sessions = []
+  if (!Array.isArray(obj.sessionEntries)) obj.sessionEntries = []
   return obj as unknown as BackupDoc
 }
 
@@ -116,6 +129,8 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
+    if (doc.sessions.length) await d.sessions.bulkAdd(doc.sessions)
+    if (doc.sessionEntries.length) await d.sessionEntries.bulkAdd(doc.sessionEntries)
     // weightHistory stays empty by design
   })
 }

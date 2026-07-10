@@ -39,13 +39,23 @@ npm run typecheck  # tsc --noEmit
   an edit→save weight field with a unit toggle (**KG / LB / #**), and a
   per-gym **history timeline** with per-entry delete. Deleting the newest entry
   reverts the active weight to the previous one (or clears it).
+- **Workout sessions** — start a workout from a day on Home (**Iniciar** /
+  **Continuar**). The session snapshots that day's exercises with their current
+  target weights. Each entry is a Home-style row (thumbnail + name + weight)
+  with a done checkbox; tap it to open the **entry detail** — the exercise
+  image/GIF, the *weight used* (edit → save), the per-gym weight history, and a
+  **Marcar como concluído** toggle (done can be set from the list or the detail).
+  Finish with **Concluir treino**. Only one session runs at a time per gym.
+  **Settings → Sessões** lists completed sessions for the active gym (grouped by
+  month, with a done-count badge); open one for a read-only recap or delete it.
+  Sessions store snapshots, so past sessions survive later edits/deletes.
 - **Settings** — all CRUD: gyms (with *copy weights from another gym* on
   create), categories (rename; deleting one reassigns its exercises to
   "Sem categoria"), exercises (name, media URL, category), and training days
   (name, optional category, ordered exercise selection — exercises may repeat).
-- **Data** — generate an example routine, export a full backup JSON, import a
-  backup (**replaces all** local data, with confirmation), and export an
-  exercises-only JSON to share with other users.
+- **Data** — generate an example routine, export a full backup JSON (includes
+  workout sessions), import a backup (**replaces all** local data, with
+  confirmation), and export an exercises-only JSON to share with other users.
 
 ## Design decisions worth knowing
 

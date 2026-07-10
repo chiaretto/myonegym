@@ -53,3 +53,35 @@ export interface WeightHistory {
   changedAt: number
   kind: HistoryKind
 }
+
+export type SessionStatus = 'active' | 'completed'
+
+/**
+ * One workout visit, scoped to a gym (like weights). `dayName` is snapshotted at
+ * start time so the session survives renaming/deleting the source day.
+ */
+export interface Session {
+  id?: number
+  gymId: number
+  /** Source training day; kept for linking but may be deleted later. */
+  dayId?: number
+  dayName: string
+  startedAt: number
+  completedAt?: number
+  status: SessionStatus
+}
+
+/**
+ * A single exercise line within a session. `exerciseName` and `usedValue/Unit`
+ * are snapshots so past sessions are unaffected by later edits/deletes of the
+ * source exercise or its target weight.
+ */
+export interface SessionEntry {
+  id?: number
+  sessionId: number
+  exerciseId?: number
+  exerciseName: string
+  usedValue?: number
+  usedUnit?: Unit
+  done: boolean
+}

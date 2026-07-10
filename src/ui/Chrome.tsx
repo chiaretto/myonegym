@@ -1,12 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from './Icon'
 
-export function TabBar({ active }: { active: 'home' | 'settings' }) {
+export function TabBar({ active }: { active: 'home' | 'sessions' | 'settings' }) {
   return (
     <nav className="tabbar">
       <Link to="/" className={active === 'home' ? 'active' : ''}>
         <Icon name="home" className="ti" />
         Treinos
+      </Link>
+      <Link to="/sessions" className={active === 'sessions' ? 'active' : ''}>
+        <Icon name="history" className="ti" />
+        Sessões
       </Link>
       <Link to="/settings" className={active === 'settings' ? 'active' : ''}>
         <Icon name="settings" className="ti" />

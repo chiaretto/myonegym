@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from '../db/db'
-import { createDay, createExercise, createGym, createCategory, saveWeight } from '../db/repos'
+import {
+  completeSession,
+  createDay,
+  createExercise,
+  createGym,
+  createCategory,
+  listSessionEntries,
+  saveWeight,
+  setEntryDone,
+  startSession,
+} from '../db/repos'
 import {
   exportBackup,
   exportExercisesShare,
@@ -118,5 +128,54 @@ describe('generate example', () => {
     expect((await d.days.toArray()).length).toBe(3)
     expect(await d.gyms.count()).toBe(1)
     expect(await d.weights.count()).toBeGreaterThan(0)
+  })
+})
+
+describe('backup includes workout sessions', () => {
+  async function seedWithSession() {
+    const { g, ex } = await seed()
+    const day = (await d.days.toArray())[0].id!
+    const sid = await startSession(g, day, d)
+    const entries = await listSessionEntries(sid, d)
+    await setEntryDone(entries[0].id!, true, d)
+    await completeSession(sid, d)
+    return { g, ex, sid }
+  }
+
+  it('exports sessions and their entries', async () => {
+    await seedWithSession()
+    const doc = await exportBackup(d)
+    expect(doc.sessions).toHaveLength(1)
+    expect(doc.sessionEntries).toHaveLength(1)
+    expect(doc.sessions[0].status).toBe('completed')
+    expect(doc.sessionEntries[0].done).toBe(true)
+  })
+
+  it('round-trips sessions through export -> wipe -> import', async () => {
+    await seedWithSession()
+    const doc = await exportBackup(d)
+    await Promise.all(
+      [d.gyms, d.categories, d.exercises, d.days, d.weights, d.weightHistory, d.sessions, d.sessionEntries].map(
+        (t) => t.clear(),
+      ),
+    )
+    await importBackupReplaceAll(doc, d)
+    expect(await d.sessions.count()).toBe(1)
+    expect(await d.sessionEntries.count()).toBe(1)
+    expect((await d.sessions.toArray())[0].dayName).toBe('Dia 1')
+  })
+
+  it('imports an older backup (no sessions field) as zero sessions', async () => {
+    await seed()
+    const doc = await exportBackup(d)
+    // simulate a pre-v2 document: strip the session fields entirely
+    const legacy = JSON.parse(JSON.stringify(doc))
+    delete legacy.sessions
+    delete legacy.sessionEntries
+    const parsed = parseBackup(JSON.stringify(legacy))
+    expect(parsed.sessions).toEqual([])
+    await importBackupReplaceAll(parsed, d)
+    expect(await d.sessions.count()).toBe(0)
+    expect(await d.gyms.count()).toBe(1) // rest still imports
   })
 })

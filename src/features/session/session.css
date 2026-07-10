@@ -1,0 +1,97 @@
+/* Workout session runner + read-only detail + history.
+   Mirrors mockups/session-runner.html and mockups/session-history.html,
+   using the app's design tokens (colors + --fs-* typography scale). */
+
+/* Session hero */
+.session-hero {
+  background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;
+}
+.session-day { font-size: var(--fs-xl); font-weight: 500; line-height: 1.25; }
+.session-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.start-time { font-size: var(--fs-2xs); color: var(--text-secondary); display: inline-flex; align-items: center; gap: 4px; }
+
+/* Progress */
+.progress-row { padding: 0 2px 14px; display: flex; flex-direction: column; gap: 5px; }
+.progress-head { display: flex; justify-content: space-between; align-items: center;
+  font-size: var(--fs-2xs); color: var(--text-secondary); font-weight: 500; }
+.progress-head .num { color: var(--fill-accent); font-weight: 500; }
+.progress-bar { height: 4px; background: var(--surface-0); border-radius: 2px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--fill-accent); border-radius: 2px; transition: width 0.2s; }
+
+/* Entries (runner + read-only) — Home-style rows that tap through to a detail */
+.entries { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 8px;
+  border-radius: var(--r-btn); background: var(--surface-1); }
+.entry.done { opacity: 0.6; }
+.entry.done .entry-name { text-decoration: line-through; }
+.entry-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: inherit; }
+.checkbox {
+  font-size: var(--fs-xs); width: 1.9em; height: 1.9em; border-radius: 50%;
+  border: 1.5px solid var(--border-strong); background: var(--surface-2);
+  display: grid; place-items: center; color: transparent; flex-shrink: 0; padding: 0;
+}
+.checkbox.checked { background: var(--fill-accent); border-color: var(--fill-accent); color: var(--on-accent); }
+.checkbox.readonly { cursor: default; }
+.thumb { width: 44px; height: 44px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
+  background: var(--surface-0); border: 0.5px solid var(--border); }
+.media-fallback.thumb { display: grid; place-items: center; color: var(--text-muted); font-size: var(--fs-3xl); }
+.entry-body { flex: 1; min-width: 0; }
+.entry-name { font-size: var(--fs-sm); font-weight: 500; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-cat { font-size: var(--fs-2xs); color: var(--text-secondary); margin-top: 1px; }
+.used-weight {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--surface-2);
+  border: 0.5px solid var(--border); border-radius: 6px; font-size: var(--fs-xs); font-weight: 500;
+  color: var(--text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+.used-weight .unit { font-size: var(--fs-2xs); color: var(--text-secondary); font-weight: 500; }
+.used-weight .pencil { color: var(--text-muted); margin-left: 2px; }
+.used-weight.empty { border-style: dashed; border-color: var(--border-accent); color: var(--text-accent); font-size: var(--fs-2xs); }
+
+/* Completion footer (read-only detail) */
+.session-done-ts { text-align: center; font-size: var(--fs-2xs); color: var(--text-secondary);
+  padding: 14px 0 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* History */
+.context-strip { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
+.count-hint { font-size: var(--fs-2xs); color: var(--text-muted); }
+.month-label { font-size: var(--fs-2xs); letter-spacing: 0.6px; text-transform: uppercase;
+  color: var(--text-muted); font-weight: 500; padding: 12px 4px 4px; }
+.session-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.session-card {
+  background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 12px; display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  color: var(--text-primary);
+}
+.session-card:active { background: var(--surface-0); }
+.session-info { flex: 1; min-width: 0; }
+.session-name { font-size: var(--fs-sm); font-weight: 500; line-height: 1.25; }
+.session-sub { font-size: var(--fs-2xs); color: var(--text-secondary); margin-top: 3px; }
+.done-badge {
+  display: inline-flex; align-items: center; gap: 3px; padding: 5px 10px; border-radius: var(--r-pill);
+  font-size: var(--fs-2xs); font-weight: 500; background: var(--bg-accent); color: var(--text-accent);
+  white-space: nowrap; flex-shrink: 0;
+}
+.done-badge.full { background: var(--fill-accent); color: var(--on-accent); }
+
+/* Used-weight editor (bottom sheet) */
+.entry-edit { display: flex; flex-direction: column; gap: 12px; }
+.entry-edit .val {
+  width: 100%; padding: 12px; border-radius: var(--r-ctl); border: 0.5px solid var(--border-strong);
+  background: var(--surface-2); color: var(--text-primary); font-size: var(--fs-4xl); font-weight: 500;
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+.u-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px;
+  background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--r-btn); }
+.u-seg button { background: transparent; border: 0; padding: 10px 0; font-size: var(--fs-sm);
+  font-weight: 500; color: var(--text-secondary); border-radius: var(--r-ctl); }
+.u-seg button.on { background: var(--fill-accent); color: var(--on-accent); }
+
+/* Home day-header start/resume affordance */
+.day-start {
+  display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border-radius: var(--r-pill);
+  border: 0.5px solid var(--border-accent); background: var(--bg-accent); color: var(--text-accent);
+  font-size: var(--fs-2xs); font-weight: 500; white-space: nowrap; flex-shrink: 0;
+}
+.day-start.resume { background: var(--fill-accent); color: var(--on-accent); border-color: transparent; }

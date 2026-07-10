@@ -1,5 +1,14 @@
 import Dexie, { type Table } from 'dexie'
-import type { Category, Day, Exercise, Gym, Weight, WeightHistory } from './types'
+import type {
+  Category,
+  Day,
+  Exercise,
+  Gym,
+  Session,
+  SessionEntry,
+  Weight,
+  WeightHistory,
+} from './types'
 
 export class MyOneGymDB extends Dexie {
   gyms!: Table<Gym, number>
@@ -8,6 +17,8 @@ export class MyOneGymDB extends Dexie {
   days!: Table<Day, number>
   weights!: Table<Weight, number>
   weightHistory!: Table<WeightHistory, number>
+  sessions!: Table<Session, number>
+  sessionEntries!: Table<SessionEntry, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -19,6 +30,11 @@ export class MyOneGymDB extends Dexie {
       // one current weight per (gym, exercise)
       weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
       weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
+    })
+    // v2 — workout sessions. Additive: existing stores are carried over.
+    this.version(2).stores({
+      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
     })
   }
 }
@@ -34,5 +50,7 @@ export function allTables(database: MyOneGymDB = db) {
     database.days,
     database.weights,
     database.weightHistory,
+    database.sessions,
+    database.sessionEntries,
   ]
 }

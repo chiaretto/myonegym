@@ -5,6 +5,9 @@ import { VitePWA } from 'vite-plugin-pwa'
 // Served from https://chiaretto.github.io/myonegym/ in production; root in dev.
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/myonegym/' : '/',
+  // Expose the dev server on the LAN so the PWA can be opened from a phone.
+  // Fixed port keeps the Windows portproxy → WSL forwarding rule valid.
+  server: { host: true, port: 5173, strictPort: true },
   plugins: [
     react(),
     VitePWA({

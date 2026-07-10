@@ -5,6 +5,8 @@ import {
   type Day,
   type Exercise,
   type Gym,
+  type Session,
+  type SessionEntry,
   type Unit,
   type Weight,
   type WeightHistory,
@@ -311,5 +313,153 @@ export async function deleteHistoryEntry(entryId: number, d: MyOneGymDB = db): P
     } else if (current?.id != null) {
       await d.weights.delete(current.id)
     }
+  })
+}
+
+/* ------------------------------------------------------------- sessions */
+
+export interface SessionSummary {
+  session: Session
+  total: number
+  done: number
+}
+
+/** The in-progress session for a gym, if any (at most one). */
+export async function getActiveSession(
+  gymId: number,
+  d: MyOneGymDB = db,
+): Promise<Session | undefined> {
+  return d.sessions
+    .where('gymId')
+    .equals(gymId)
+    .filter((s) => s.status === 'active')
+    .first()
+}
+
+/**
+ * Start a workout session for a day in the given gym. Snapshots the day's
+ * exercises into entries, each pre-filled with the exercise's CURRENT target
+ * weight for the gym (or empty when unset). Rejects if the gym already has an
+ * in-progress session (only one active session per gym). Returns the new id.
+ */
+export async function startSession(
+  gymId: number,
+  dayId: number,
+  d: MyOneGymDB = db,
+): Promise<number> {
+  return d.transaction(
+    'rw',
+    d.sessions,
+    d.sessionEntries,
+    d.days,
+    d.exercises,
+    d.weights,
+    async () => {
+      const active = await d.sessions
+        .where('gymId')
+        .equals(gymId)
+        .filter((s) => s.status === 'active')
+        .first()
+      if (active) {
+        throw new ValidationError('Já existe um treino em andamento nesta academia.')
+      }
+      const day = await d.days.get(dayId)
+      if (!day) throw new ValidationError('Dia de treino não encontrado.')
+
+      const sessionId = await d.sessions.add({
+        gymId,
+        dayId,
+        dayName: day.name,
+        startedAt: Date.now(),
+        status: 'active',
+      })
+      for (const exId of day.exerciseIds) {
+        const ex = await d.exercises.get(exId)
+        if (!ex) continue
+        const w = await d.weights.where('[gymId+exerciseId]').equals([gymId, exId]).first()
+        await d.sessionEntries.add({
+          sessionId,
+          exerciseId: exId,
+          exerciseName: ex.name,
+          usedValue: w?.value,
+          usedUnit: w?.unit,
+          done: false,
+        })
+      }
+      return sessionId
+    },
+  )
+}
+
+export async function getSession(id: number, d: MyOneGymDB = db): Promise<Session | undefined> {
+  return d.sessions.get(id)
+}
+
+export async function getSessionEntry(
+  entryId: number,
+  d: MyOneGymDB = db,
+): Promise<SessionEntry | undefined> {
+  return d.sessionEntries.get(entryId)
+}
+
+/** Entries of a session in insertion order (matches the day's exercise order). */
+export async function listSessionEntries(
+  sessionId: number,
+  d: MyOneGymDB = db,
+): Promise<SessionEntry[]> {
+  const rows = await d.sessionEntries.where('sessionId').equals(sessionId).toArray()
+  return rows.sort((a, b) => (a.id ?? 0) - (b.id ?? 0))
+}
+
+/** Completed sessions for a gym, newest first, with done/total counts. */
+export async function listSessionSummaries(
+  gymId: number,
+  d: MyOneGymDB = db,
+): Promise<SessionSummary[]> {
+  const sessions = (
+    await d.sessions
+      .where('gymId')
+      .equals(gymId)
+      .filter((s) => s.status === 'completed')
+      .toArray()
+  ).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0) || (b.id ?? 0) - (a.id ?? 0))
+
+  const out: SessionSummary[] = []
+  for (const session of sessions) {
+    const entries = await d.sessionEntries.where('sessionId').equals(session.id!).toArray()
+    out.push({ session, total: entries.length, done: entries.filter((e) => e.done).length })
+  }
+  return out
+}
+
+export async function setEntryDone(
+  entryId: number,
+  done: boolean,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  await d.sessionEntries.update(entryId, { done })
+}
+
+/** Set the weight actually used for a session entry (does NOT touch the target). */
+export async function setEntryWeight(
+  entryId: number,
+  value: number,
+  unit: Unit,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  if (!Number.isFinite(value) || value < 0) throw new ValidationError('Peso inválido.')
+  await d.sessionEntries.update(entryId, { usedValue: value, usedUnit: unit })
+}
+
+/** Mark an in-progress session completed, stamping the completion time. */
+export async function completeSession(id: number, d: MyOneGymDB = db): Promise<void> {
+  await d.sessions.update(id, { status: 'completed', completedAt: Date.now() })
+}
+
+/** Delete a session and all of its entries. Does not affect other data. */
+export async function deleteSession(id: number, d: MyOneGymDB = db): Promise<void> {
+  await d.transaction('rw', d.sessions, d.sessionEntries, async () => {
+    await d.sessionEntries.where('sessionId').equals(id).delete()
+    await d.sessions.delete(id)
   })
 }

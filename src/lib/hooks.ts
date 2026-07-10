@@ -1,11 +1,16 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import {
+  getActiveSession,
+  getSession,
+  getSessionEntry,
   listCategories,
   listDays,
   listExercises,
   listGyms,
   listHistory,
+  listSessionEntries,
+  listSessionSummaries,
   weightsForGym,
 } from '../db/repos'
 import type { Category, Exercise } from '../db/types'
@@ -51,5 +56,45 @@ export function useHistory(gymId: number | null, exerciseId: number | null) {
       gymId == null || exerciseId == null ? [] : listHistory(gymId, exerciseId, db),
     [gymId, exerciseId],
     [],
+  )
+}
+
+/** The in-progress session for the gym (or null). Follows the active gym. */
+export function useActiveSession(gymId: number | null) {
+  return useLiveQuery(
+    async () => (gymId == null ? null : ((await getActiveSession(gymId, db)) ?? null)),
+    [gymId],
+    null,
+  )
+}
+
+/** Completed sessions (with done/total counts) for the gym, newest first. */
+export function useSessionSummaries(gymId: number | null) {
+  return useLiveQuery(
+    async () => (gymId == null ? [] : listSessionSummaries(gymId, db)),
+    [gymId],
+    [],
+  )
+}
+
+export function useSession(id: number | null) {
+  return useLiveQuery(
+    async () => (id == null ? undefined : ((await getSession(id, db)) ?? null)),
+    [id],
+  )
+}
+
+export function useSessionEntries(sessionId: number | null) {
+  return useLiveQuery(
+    async () => (sessionId == null ? [] : listSessionEntries(sessionId, db)),
+    [sessionId],
+    [],
+  )
+}
+
+export function useSessionEntry(entryId: number | null) {
+  return useLiveQuery(
+    async () => (entryId == null ? undefined : ((await getSessionEntry(entryId, db)) ?? null)),
+    [entryId],
   )
 }

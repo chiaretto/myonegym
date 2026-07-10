@@ -1,17 +1,11 @@
-# data-portability Specification
+# Delta: data-portability
 
-## Purpose
-TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
-## Requirements
-### Requirement: Generate Example Data
+**Change ID:** `add-workout-session-log`
+**Affects:** full-backup export and import — sessions become part of the backup
 
-From Settings, the user MUST be able to generate a sample set of exercises (and
-supporting categories) to explore the app quickly.
+---
 
-#### Scenario: Generate example
-- GIVEN the app has little or no data
-- WHEN the user taps "Generate example"
-- THEN a set of sample categories and exercises is created and visible in Settings
+## MODIFIED Requirements
 
 ### Requirement: Export Full Backup JSON
 
@@ -74,21 +68,14 @@ sessions (no `sessions` field) MUST import successfully with **zero sessions**
 - THEN import is rejected with a clear error before any replacement occurs
 - AND existing local data is left unchanged
 
-### Requirement: Export Exercises JSON for Sharing
+---
 
-From Settings, the user MUST be able to export a **share** document containing
-**exercises and their categories only** (no gyms, no weights), so another user
-can import the routine without personal weight data.
+## ADDED Requirements
 
-#### Scenario: Export exercises to share
-- GIVEN the user has exercises across several categories, plus gyms and weights
-- WHEN the user taps "Export exercises (share)"
-- THEN the produced JSON contains exercises and categories only
-- AND contains no gyms and no weight values
+(None)
 
-#### Scenario: Another user imports shared exercises
-- GIVEN a share JSON of exercises + categories
-- WHEN a different user imports it
-- THEN the exercises and categories are added to their app
-- AND their existing gyms and weights are unaffected
+---
 
+## REMOVED Requirements
+
+(None)

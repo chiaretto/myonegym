@@ -15,6 +15,8 @@ over 1:1.
 | `home.html` | Home | Active-gym selector, day accordion, exercise rows with inline weight badge |
 | `exercise-detail.html` | Exercise detail | Hero image, weight editor (stepper + unit toggle), history timeline with sparkline and per-entry delete affordance |
 | `settings.html` | Settings | Active-gym context, cadastros menu (academias/categorias/exercícios/dias), data actions (gerar exemplo, exportar backup, exportar exercícios, importar) |
+| `session-runner.html` | Active session runner | Session hero (day + gym + start time), progress bar, checklist entries with editable used-weight pill, primary "Concluir treino" CTA |
+| `session-history.html` | Session history | Per-active-gym sessions list grouped by month, per-session done-count badge (full when 100%), summary count in header |
 
 ## Design system
 
@@ -79,6 +81,14 @@ Same structure, mirrored:
 - **Sentence case** everywhere. Never Title Case, never ALL CAPS.
 - Two weights: **400** regular, **500** medium. Do not use 600/700.
 - Sizes (px): caption 11 · body 13–15 · title 20 · display 44 (weight value).
+- **All sizes route through one scale.** `src/styles/tokens.css` defines
+  `--font-scale` (default **2**) and `--fs-2xs … --fs-7xl` tokens computed as
+  `calc(<base>rem * var(--font-scale))` — the px above are the pre-scale bases.
+  Never hardcode a `font-size: <px>`; reference a token. Change `--font-scale`
+  in that one place to rescale all text (bumped to 2× for mobile legibility;
+  `rem` keeps the OS/browser text-size preference composable). Fixed icon boxes
+  (`.brand-mark`, `.icon-btn`, `.row-ic`, `.tl-delete`) are sized in `em` off
+  their own `font-size`, so glyphs stay contained as the scale changes.
 
 ### Icons
 
@@ -90,7 +100,8 @@ Tabler outline webfont. Install `@tabler/icons-webfont`; render as
 `ti-arrow-left` · `ti-arrow-up` · `ti-arrow-down` · `ti-dots-vertical` ·
 `ti-tag` · `ti-tags` · `ti-calendar-event` · `ti-minus` · `ti-plus` ·
 `ti-device-floppy` · `ti-history` · `ti-trash` · `ti-wand` · `ti-download` ·
-`ti-upload` · `ti-share-2` · `ti-wifi` · `ti-battery`
+`ti-upload` · `ti-share-2` · `ti-check` · `ti-clock` · `ti-pencil` ·
+`ti-filter` · `ti-player-play` · `ti-wifi` · `ti-battery`
 
 ### Spacing
 
@@ -117,3 +128,17 @@ Tabler outline webfont. Install `@tabler/icons-webfont`; render as
 - Delete affordance in the mockup is a small always-visible trash icon at the
   end of each row. A confirmation dialog is required before removal (not
   drawn in the mockup — implement per the spec).
+- The **session runner** and **session history** are both scoped to the
+  active gym — switching gyms during a workout is not supported. See
+  `openspec/changes/add-workout-session-log/specs/workout-sessions/spec.md`.
+- The **Home day header** gains a start affordance (not drawn in
+  `home.html` — layer it on top): a `▶ Iniciar` pill sits between the day
+  title and the accordion chevron; when a session is already in progress in
+  the active gym for that day, the pill switches to `● Continuar` filled with
+  `--fill-accent` on `--on-accent` to prioritize resuming. See
+  `openspec/changes/add-workout-session-log/specs/home-navigation/spec.md`.
+- The **completed session detail** is a read-only variant of
+  `session-runner.html`: checkboxes become non-interactive done/undone marks,
+  the used-weight pill loses the pencil, the progress bar is absent, and the
+  primary CTA is replaced with a completion timestamp ("finalizado às 10:18 ·
+  48 min"). The kebab holds only "Excluir sessão".
