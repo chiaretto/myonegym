@@ -1,0 +1,60 @@
+name: Setup Claude Code + OpenSpec skills
+description: >-
+  Installs Node, the Claude Code CLI (@anthropic-ai/claude-code) and the OpenSpec
+  skills (proposal / apply / archive) into .claude/skills so the CLI can run the
+  Spec-Driven-Development workflow headlessly in CI.
+
+inputs:
+  node-version:
+    description: Node.js version to use
+    required: false
+    default: "20"
+  skills-repo:
+    description: Git URL of the OpenSpec skills repository
+    required: false
+    default: https://github.com/chyiiiiiiiiiiii/openspec-skills
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+
+    - name: Install project dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Install Claude Code CLI
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
+    - name: Install OpenSpec skills
+      shell: bash
+      env:
+        SKILLS_REPO: ${{ inputs.skills-repo }}
+      run: |
+        set -euo pipefail
+        tmp="$(mktemp -d)"
+        git clone --depth 1 "$SKILLS_REPO" "$tmp"
+        mkdir -p .claude/skills
+        for skill in openspec-proposal openspec-apply openspec-archive; do
+          if [ -d "$tmp/$skill" ]; then
+            rm -rf ".claude/skills/$skill"
+            cp -R "$tmp/$skill" ".claude/skills/$skill"
+            # Keep the CI-only skills out of any commit made on the branch.
+            echo ".claude/skills/$skill" >> .git/info/exclude
+            echo "Installed skill: $skill"
+          else
+            echo "::warning::Skill '$skill' not found in $SKILLS_REPO"
+          fi
+        done
+        rm -rf "$tmp"
+
+    - name: Configure git identity
+      shell: bash
+      run: |
+        git config user.name  "openspec-bot[bot]"
+        git config user.email "openspec-bot@users.noreply.github.com"

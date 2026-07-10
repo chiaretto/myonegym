@@ -1,0 +1,142 @@
+name: OpenSpec · Apply on approval
+
+# When someone comments "aprovado" on the issue (or on the generated PR), apply
+# the OpenSpec change with the Claude Code CLI, archive it, push the updated
+# branch, and take the pull request out of draft (ready for review).
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: openspec-apply-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    # Cheap pre-filter; the exact match is enforced in the "Check approval" step.
+    if: contains(github.event.comment.body, 'aprovado')
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      COMMENT_BODY: ${{ github.event.comment.body }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      IS_PR: ${{ github.event.issue.pull_request != null }}
+    steps:
+      - name: Check approval keyword
+        id: gate
+        run: |
+          set -euo pipefail
+          normalized="$(printf '%s' "$COMMENT_BODY" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [ "$normalized" = "aprovado" ]; then
+            echo "approved=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Comment is not an exact 'aprovado' approval — skipping."
+            echo "approved=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.approved == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve pull request and branch
+        if: steps.gate.outputs.approved == 'true'
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [ "$IS_PR" = "true" ]; then
+            # Comment was posted on the PR itself.
+            PR_NUMBER="$ISSUE_NUMBER"
+          else
+            # Comment on the issue — find the open PR for the proposal branch.
+            BRANCH="openspec/issue-${ISSUE_NUMBER}"
+            PR_NUMBER="$(gh pr list --head "$BRANCH" --state open \
+              --json number -q '.[0].number')"
+          fi
+
+          if [ -z "${PR_NUMBER:-}" ]; then
+            echo "::error::No open pull request found for this issue/branch."
+            exit 1
+          fi
+
+          BRANCH="$(gh pr view "$PR_NUMBER" --json headRefName -q .headRefName)"
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          gh pr checkout "$PR_NUMBER"
+
+      - name: Setup Claude Code + OpenSpec skills
+        if: steps.gate.outputs.approved == 'true'
+        uses: ./.github/actions/setup-claude-openspec
+
+      - name: Identify active change
+        if: steps.gate.outputs.approved == 'true'
+        id: change
+        run: |
+          set -euo pipefail
+          # Exactly one non-archived change should exist on the proposal branch.
+          CHANGE_ID="$(find openspec/changes -mindepth 1 -maxdepth 1 -type d \
+            ! -name archive -printf '%f\n' | sort | head -1)"
+          if [ -z "$CHANGE_ID" ]; then
+            echo "::error::No active OpenSpec change found under openspec/changes/."
+            exit 1
+          fi
+          echo "Active change: $CHANGE_ID"
+          echo "change_id=${CHANGE_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Apply change with Claude Code
+        if: steps.gate.outputs.approved == 'true'
+        env:
+          CHANGE_ID: ${{ steps.change.outputs.change_id }}
+        run: |
+          set -euo pipefail
+          claude -p "Use the \`openspec-apply\` skill to implement the OpenSpec change \`$CHANGE_ID\`. Follow openspec/changes/$CHANGE_ID/tasks.md step by step, implement the delta specs, mark tasks complete as you go, and run the project's quality gates (npm run typecheck, npm test) before finishing. Do not run git, gh, or push commands — the workflow handles that." \
+            --dangerously-skip-permissions \
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+            --verbose
+
+      - name: Archive change with Claude Code
+        if: steps.gate.outputs.approved == 'true'
+        env:
+          CHANGE_ID: ${{ steps.change.outputs.change_id }}
+        run: |
+          set -euo pipefail
+          claude -p "Use the \`openspec-archive\` skill to archive the OpenSpec change \`$CHANGE_ID\`. Merge its delta specs into openspec/specs/ and move the change under openspec/changes/archive/ with a date prefix, per the skill. Do not run git, gh, or push commands — the workflow handles that." \
+            --dangerously-skip-permissions \
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+            --verbose
+
+      - name: Commit and push updated branch
+        if: steps.gate.outputs.approved == 'true'
+        env:
+          CHANGE_ID: ${{ steps.change.outputs.change_id }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git add -A
+          if git diff --cached --quiet; then
+            echo "::warning::No changes produced by apply/archive."
+          else
+            git commit -m "openspec: apply & archive ${CHANGE_ID} (issue #${ISSUE_NUMBER})"
+          fi
+          git push origin "HEAD:${BRANCH}"
+
+      - name: Mark pull request ready for review
+        if: steps.gate.outputs.approved == 'true'
+        env:
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+        run: |
+          set -euo pipefail
+          gh pr ready "$PR_NUMBER"
+          gh issue comment "$ISSUE_NUMBER" --body "✅ Mudança aplicada e arquivada. O PR #${PR_NUMBER} foi atualizado e retirado do modo rascunho — pronto para revisão."
+
+      - name: Report failure
+        if: failure() && steps.gate.outputs.approved == 'true'
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body "⚠️ Falha ao aplicar/arquivar a mudança OpenSpec. Veja os logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true

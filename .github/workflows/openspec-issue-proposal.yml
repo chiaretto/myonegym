@@ -1,0 +1,116 @@
+name: OpenSpec · Proposal from issue
+
+# When an issue is opened, generate an OpenSpec change proposal with the Claude
+# Code CLI on a fresh branch, open a DRAFT pull request against main, and comment
+# back on the issue with a link to the PR.
+on:
+  issues:
+    types: [opened]
+
+# Avoid two runs racing on the same issue/branch.
+concurrency:
+  group: openspec-proposal-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  propose:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      ISSUE_TITLE: ${{ github.event.issue.title }}
+      ISSUE_BODY: ${{ github.event.issue.body }}
+      BRANCH: openspec/issue-${{ github.event.issue.number }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup Claude Code + OpenSpec skills
+        uses: ./.github/actions/setup-claude-openspec
+
+      - name: Create working branch
+        run: git switch -c "$BRANCH"
+
+      - name: Stage the issue as a request file
+        run: |
+          set -euo pipefail
+          # Untrusted issue content reaches the shell only through env vars (never
+          # interpolated by Actions), so it can't be executed as a command.
+          {
+            printf '# Issue #%s — %s\n\n' "$ISSUE_NUMBER" "$ISSUE_TITLE"
+            printf '%s\n' "$ISSUE_BODY"
+          } > "$RUNNER_TEMP/issue-request.md"
+
+      - name: Generate proposal with Claude Code
+        run: |
+          set -euo pipefail
+          claude -p "You are running non-interactively in CI. Use the \`openspec-proposal\` skill to create a NEW OpenSpec change proposal for the feature request in the file $RUNNER_TEMP/issue-request.md (read it first). Also read openspec/project.md and the existing openspec/specs/ so the proposal matches this project's conventions and domain. Create the change directory under openspec/changes/<change-id>/ with proposal.md, tasks.md and the delta specs under specs/. Create ONLY the proposal artifacts — do NOT implement the feature, edit application source, or touch anything outside openspec/changes/. Do not run git, gh, or push commands; the workflow handles that." \
+            --dangerously-skip-permissions \
+            --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
+            --verbose
+
+      - name: Commit proposal
+        id: commit
+        run: |
+          set -euo pipefail
+          git add openspec
+          if git diff --cached --quiet; then
+            echo "::error::Claude did not produce any OpenSpec proposal files."
+            exit 1
+          fi
+          # Record which change directory was created for the PR body.
+          CHANGE_ID="$(git diff --cached --name-only \
+            | sed -n 's#^openspec/changes/\([^/]*\)/.*#\1#p' \
+            | grep -v '^archive$' | sort -u | head -1)"
+          echo "change_id=${CHANGE_ID}" >> "$GITHUB_OUTPUT"
+          git commit -m "openspec: proposal for issue #${ISSUE_NUMBER}" \
+            -m "Generated from GitHub issue #${ISSUE_NUMBER}: ${ISSUE_TITLE}"
+          git push --set-upstream origin "$BRANCH" --force-with-lease
+
+      - name: Open draft pull request
+        id: pr
+        env:
+          CHANGE_ID: ${{ steps.commit.outputs.change_id }}
+        run: |
+          set -euo pipefail
+          {
+            printf 'Automated OpenSpec proposal for issue #%s.\n\n' "$ISSUE_NUMBER"
+            printf -- '- **Change:** `%s`\n' "$CHANGE_ID"
+            printf -- '- **Source issue:** #%s\n\n' "$ISSUE_NUMBER"
+            printf 'This PR is a **draft**. Review the proposal under `openspec/changes/`, then comment **`aprovado`** on the issue (or on this PR) to have the change applied, archived, and this PR marked ready for review.\n\n'
+            printf 'Closes #%s\n' "$ISSUE_NUMBER"
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          PR_URL="$(gh pr create \
+            --draft \
+            --base main \
+            --head "$BRANCH" \
+            --title "openspec: ${ISSUE_TITLE}" \
+            --body-file "$RUNNER_TEMP/pr-body.md")"
+          echo "url=${PR_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on issue with PR link
+        env:
+          PR_URL: ${{ steps.pr.outputs.url }}
+        run: |
+          set -euo pipefail
+          {
+            printf '🤖 Proposta OpenSpec criada em %s\n\n' "$PR_URL"
+            printf 'Revise a proposta e comente **`aprovado`** para aplicar a mudança, arquivá-la e tirar o PR do modo rascunho.\n'
+          } > "$RUNNER_TEMP/issue-comment.md"
+          gh issue comment "$ISSUE_NUMBER" --body-file "$RUNNER_TEMP/issue-comment.md"
+
+      - name: Report failure on the issue
+        if: failure()
+        run: |
+          gh issue comment "$ISSUE_NUMBER" \
+            --body "⚠️ Falha ao gerar a proposta OpenSpec automaticamente. Logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" || true
