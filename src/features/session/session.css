@@ -58,6 +58,10 @@
   padding: 12px; font-size: var(--fs-sm); color: var(--text-secondary); }
 .entry-done-state.done { color: var(--text-accent); font-weight: 500; }
 
+/* Done-state variant of the primary action: a calm, confirmed look (accent-tinted,
+   not the bold solid CTA) so a completed exercise is visibly different. */
+.btn.done { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+
 /* "Marque ao menos um exercício" hint under a disabled Concluir treino */
 .complete-hint { text-align: center; font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 8px; }
 

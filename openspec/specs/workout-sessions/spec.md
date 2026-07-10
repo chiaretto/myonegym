@@ -168,35 +168,47 @@ entry**, never the target weight.
 
 The detail MUST act as a **guided stepper** over the session's exercises:
 
-- A primary **"Concluído"** button MUST **mark the current entry done** and then
-  **advance to the next exercise's detail**; on the **last** exercise it MUST
-  return to the session overview (runner).
+- The **done control** MUST **visually reflect whether the current entry is
+  already done**, so stepping between exercises makes each one's status obvious:
+  - **Not done** → a prominent **call-to-action** (e.g., "Concluir") that
+    **marks the entry done and advances** to the next exercise's detail (on the
+    **last** exercise it returns to the session overview / runner).
+  - **Already done** → a **distinct completed state** (e.g., "Concluído" with a
+    check and a calmer/confirmed styling), clearly different from the pending
+    call-to-action; activating it still advances.
+  - The detail SHOULD also show a **"Concluído" indicator** (e.g., a chip near
+    the title) when the entry is done, reinforcing the status at a glance.
 - **Voltar** and **Avançar** controls MUST navigate to the **previous / next**
   exercise **without changing the done state**, and MUST be disabled at the
   first / last exercise respectively.
 
 Un-marking an entry is done from the runner list (not the detail). When the
 parent session is **completed**, the detail MUST be **read-only** (no weight
-editing, no marking); Voltar/Avançar MAY still be used to browse. The detail MUST
-render from the entry's snapshot where live data is missing, so it still works if
-the source exercise was deleted.
+editing, no marking) and MUST show the static done state; Voltar/Avançar MAY
+still be used to browse. The detail MUST render from the entry's snapshot where
+live data is missing, so it still works if the source exercise was deleted.
 
-#### Scenario: Open the detail and see media + weight + history
-- GIVEN an in-progress session in gym "A" listing "Rosca Direta" with a media URL and per-gym weight history
-- WHEN the user opens the "Rosca Direta" entry detail
-- THEN the exercise media is rendered
-- AND the entry's used weight is shown
-- AND the per-gym weight-history timeline for gym "A" is shown
+#### Scenario: Pending exercise shows a call-to-action
+- GIVEN an in-progress session on the detail of an exercise that is **not** done
+- WHEN the user views the done control
+- THEN it shows a prominent "Concluir" call-to-action (not a "done" appearance)
 
-#### Scenario: Concluído marks done and advances to the next exercise
-- GIVEN an in-progress session on the detail of exercise 1 of 3, not done
-- WHEN the user taps "Concluído"
-- THEN exercise 1 is recorded as done
-- AND the detail of exercise 2 is shown
+#### Scenario: Done exercise shows a distinct completed state
+- GIVEN an in-progress session on the detail of an exercise that **is** done
+- WHEN the user views the detail
+- THEN the done control shows a distinct "Concluído" completed state
+- AND a "Concluído" indicator is shown near the title
 
-#### Scenario: Concluído on the last exercise returns to the runner
-- GIVEN the user is on the detail of the last exercise
-- WHEN the user taps "Concluído"
+#### Scenario: Concluir marks done and advances; returning shows it done
+- GIVEN the detail of exercise 1 of 3, not done
+- WHEN the user taps "Concluir"
+- THEN exercise 1 is recorded as done AND the detail of exercise 2 is shown
+- AND WHEN the user taps "Voltar" back to exercise 1
+- THEN exercise 1 now shows the distinct "Concluído" completed state
+
+#### Scenario: Concluir on the last exercise returns to the runner
+- GIVEN the user is on the detail of the last exercise, not done
+- WHEN the user taps "Concluir"
 - THEN the last exercise is marked done
 - AND the session overview (runner) is shown
 
@@ -205,11 +217,6 @@ the source exercise was deleted.
 - WHEN the user taps "Avançar"
 - THEN the detail of exercise 2 is shown
 - AND exercise 1 remains not done
-
-#### Scenario: Voltar navigates to the previous exercise
-- GIVEN the detail of exercise 2 of 3
-- WHEN the user taps "Voltar"
-- THEN the detail of exercise 1 is shown
 
 #### Scenario: Navigation is disabled at the ends
 - GIVEN the detail of the first exercise

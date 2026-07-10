@@ -107,6 +107,11 @@ export function SessionEntryPage() {
         <div className="ex-head">
           <h2 className="ex-title">{entry.exerciseName}</h2>
           <div className="ex-chips">
+            {entry.done && (
+              <span className="chip accent">
+                <Icon name="check" size={12} /> Concluído
+              </span>
+            )}
             {cat && (
               <span className="chip">
                 <Icon name="tag" size={12} /> {cat.name}
@@ -126,8 +131,11 @@ export function SessionEntryPage() {
               {entry.done ? 'Concluído' : 'Não feito'}
             </span>
           ) : (
-            <button className="btn primary" onClick={onCompleteAndAdvance}>
-              <Icon name="check" /> Concluído
+            <button
+              className={`btn ${entry.done ? 'done' : 'primary'}`}
+              onClick={onCompleteAndAdvance}
+            >
+              <Icon name={entry.done ? 'check' : 'circle'} /> {entry.done ? 'Concluído' : 'Concluir'}
             </button>
           )}
           <div className="entry-nav-row">

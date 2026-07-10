@@ -90,12 +90,19 @@ describe('Workout session end-to-end', () => {
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.usedValue).toBe(42.5),
     )
 
-    // Concluído marks Supino done AND advances to the next exercise (Crucifixo).
-    await user.click(screen.getByRole('button', { name: 'Concluído' }))
+    // Pending exercise shows the "Concluir" CTA; tapping it marks Supino done and
+    // advances to the next exercise (Crucifixo).
+    await user.click(screen.getByRole('button', { name: 'Concluir' }))
     expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
     await waitFor(async () =>
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
     )
+
+    // Voltar back to Supino → it now shows the distinct "Concluído" done state + chip.
+    await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
+    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Concluído' })).toBeInTheDocument()
+    expect(screen.getAllByText('Concluído').length).toBeGreaterThan(1) // button + chip
 
     // The exercise's target weight is unchanged (still 40 KG).
     const supinoEx = (await db.exercises.toArray()).find((e) => e.name === 'Supino Reto')!
@@ -125,10 +132,10 @@ describe('Workout session end-to-end', () => {
     expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
     expect((await db.sessionEntries.toArray()).every((e) => !e.done)).toBe(true)
 
-    // Voltar back to Supino, then Concluído (marks + advances).
+    // Voltar back to Supino, then Concluir (marks + advances).
     await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
     expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Concluído' }))
+    await user.click(screen.getByRole('button', { name: 'Concluir' }))
     await waitFor(async () =>
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
     )
