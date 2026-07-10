@@ -2,12 +2,9 @@ import { useRef, useState } from 'react'
 import { db } from '../../db/db'
 import {
   exportBackup,
-  exportExercisesShare,
   generateExample,
   importBackupReplaceAll,
-  importExercisesMerge,
   parseBackup,
-  parseShare,
   PortabilityError,
 } from '../../data/portability'
 import { useActiveGym } from '../../state/activeGym'
@@ -52,42 +49,20 @@ export function DataPage() {
     toast('Backup exportado.')
   }
 
-  const onExportShare = async () => {
-    download(`myonegym-exercicios-${stamp()}.json`, await exportExercisesShare(db))
-    toast('Exercícios exportados.')
-  }
-
   const onImportFile = async (file: File) => {
     const text = await file.text()
-    // Peek the kind to route: full backup (replace all) vs shared exercises (merge)
-    let kind: 'backup' | 'exercises'
     try {
-      const peek = JSON.parse(text)
-      kind = peek?.kind
-      if (kind !== 'backup' && kind !== 'exercises') throw new Error()
-    } catch {
-      toast('Arquivo inválido do MyOneGym.')
-      return
-    }
-
-    try {
-      if (kind === 'backup') {
-        const doc = parseBackup(text) // validates before touching the store
-        const ok = await confirm({
-          title: 'Importar backup?',
-          message: 'Isto substitui TODOS os dados atuais deste dispositivo. Não pode ser desfeito.',
-          confirmLabel: 'Substituir tudo',
-          danger: true,
-        })
-        if (!ok) return
-        await importBackupReplaceAll(doc, db)
-        await reconcile()
-        toast('Backup importado.')
-      } else {
-        const doc = parseShare(text)
-        const added = await importExercisesMerge(doc, db)
-        toast(`${added} exercício(s) importado(s).`)
-      }
+      const doc = parseBackup(text) // validates (rejects non-backups) before touching the store
+      const ok = await confirm({
+        title: 'Importar backup?',
+        message: 'Isto substitui TODOS os dados atuais deste dispositivo. Não pode ser desfeito.',
+        confirmLabel: 'Substituir tudo',
+        danger: true,
+      })
+      if (!ok) return
+      await importBackupReplaceAll(doc, db)
+      await reconcile()
+      toast('Backup importado.')
     } catch (e) {
       toast(e instanceof PortabilityError ? e.message : 'Falha ao importar.')
     }
@@ -95,7 +70,7 @@ export function DataPage() {
 
   return (
     <>
-      <BackBar title="Backup e compartilhamento" to="/settings" />
+      <BackBar title="Backup" to="/settings" />
       <main className="screen">
         <div className="group-label">Começar rápido</div>
         <div className="group">
@@ -121,15 +96,6 @@ export function DataPage() {
               <span className="row-sub">Tudo, exceto o histórico de peso</span>
             </span>
           </button>
-          <button className="row" onClick={onExportShare}>
-            <span className="row-ic">
-              <Icon name="share-2" />
-            </span>
-            <span className="row-body">
-              <span className="row-title">Exportar exercícios (JSON)</span>
-              <span className="row-sub">Exercícios + categorias, para compartilhar</span>
-            </span>
-          </button>
         </div>
 
         <div className="group-label">Importar</div>
@@ -139,8 +105,8 @@ export function DataPage() {
               <Icon name="upload" />
             </span>
             <span className="row-body">
-              <span className="row-title">Importar (JSON)</span>
-              <span className="row-sub warn">Backup substitui todos os dados; lista de exercícios é adicionada</span>
+              <span className="row-title">Importar backup (JSON)</span>
+              <span className="row-sub warn">Substitui TODOS os dados deste dispositivo</span>
             </span>
           </button>
         </div>

@@ -1,5 +1,5 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
-import type { Category, Day, Exercise, Gym, Session, SessionEntry, Unit, Weight } from '../db/types'
+import type { Category, Day, Exercise, Gym, Unit, Weight } from '../db/types'
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
@@ -17,9 +17,9 @@ const EXAMPLE_DATA = exampleBackup as unknown as {
 export class PortabilityError extends Error {}
 
 /**
- * Full backup document — current weights only, NO weight-change history log.
- * Workout sessions ARE included (durable training history). `sessions`/
- * `sessionEntries` were added in schema v2; older documents omit them.
+ * Full backup document — current weights only. Device-local data is NOT
+ * exported: the weight-change history log AND workout sessions/entries stay on
+ * the device (a backup carries no `sessions`).
  */
 export interface BackupDoc {
   app: typeof APP_TAG
@@ -31,31 +31,17 @@ export interface BackupDoc {
   exercises: Exercise[]
   days: Day[]
   weights: Weight[]
-  sessions: Session[]
-  sessionEntries: SessionEntry[]
-}
-
-/** Share document — exercises + categories only (no gyms, weights, history). */
-export interface ShareDoc {
-  app: typeof APP_TAG
-  kind: 'exercises'
-  version: number
-  exportedAt: number
-  categories: Pick<Category, 'id' | 'name'>[]
-  exercises: Pick<Exercise, 'name' | 'mediaUrl' | 'categoryId'>[]
 }
 
 /* ------------------------------------------------------------------ export */
 
 export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
-  const [gyms, categories, exercises, days, weights, sessions, sessionEntries] = await Promise.all([
+  const [gyms, categories, exercises, days, weights] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
     d.exercises.toArray(),
     d.days.toArray(),
-    d.weights.toArray(), // current weights only; weightHistory is intentionally excluded
-    d.sessions.toArray(),
-    d.sessionEntries.toArray(),
+    d.weights.toArray(), // current weights only; weightHistory + sessions are device-local
   ])
   return {
     app: APP_TAG,
@@ -67,20 +53,6 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     exercises,
     days,
     weights,
-    sessions,
-    sessionEntries,
-  }
-}
-
-export async function exportExercisesShare(d: MyOneGymDB = db): Promise<ShareDoc> {
-  const [categories, exercises] = await Promise.all([d.categories.toArray(), d.exercises.toArray()])
-  return {
-    app: APP_TAG,
-    kind: 'exercises',
-    version: SCHEMA_VERSION,
-    exportedAt: Date.now(),
-    categories: categories.map((c) => ({ id: c.id, name: c.name })),
-    exercises: exercises.map((e) => ({ name: e.name, mediaUrl: e.mediaUrl, categoryId: e.categoryId })),
   }
 }
 
@@ -110,26 +82,16 @@ export function parseBackup(json: string): BackupDoc {
     throw new PortabilityError('Este arquivo não é um backup do MyOneGym.')
   }
   assertArrays(obj, ['gyms', 'categories', 'exercises', 'days', 'weights'])
-  // sessions arrived in v2 — treat older backups (without them) as empty.
-  if (!Array.isArray(obj.sessions)) obj.sessions = []
-  if (!Array.isArray(obj.sessionEntries)) obj.sessionEntries = []
+  // Any `sessions`/`sessionEntries` in an older backup are ignored (device-local).
   return obj as unknown as BackupDoc
-}
-
-export function parseShare(json: string): ShareDoc {
-  const obj = parse(json)
-  if (!isRecord(obj) || obj.app !== APP_TAG || obj.kind !== 'exercises') {
-    throw new PortabilityError('Este arquivo não é uma lista de exercícios do MyOneGym.')
-  }
-  assertArrays(obj, ['categories', 'exercises'])
-  return obj as unknown as ShareDoc
 }
 
 /* ------------------------------------------------------------------ import */
 
 /**
  * Replace ALL local data with the backup. Validates first; on any failure the
- * store is left untouched. The imported side starts with an empty history log.
+ * store is left untouched. Device-local data (weight history AND workout
+ * sessions) is cleared and not restored — a backup never carries them.
  */
 export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db): Promise<void> {
   await d.transaction('rw', allTables(d), async () => {
@@ -139,32 +101,7 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
-    if (doc.sessions.length) await d.sessions.bulkAdd(doc.sessions)
-    if (doc.sessionEntries.length) await d.sessionEntries.bulkAdd(doc.sessionEntries)
-    // weightHistory stays empty by design
-  })
-}
-
-/**
- * Merge shared exercises + categories into the current data WITHOUT touching
- * gyms or weights. Categories are matched by name (created if missing);
- * exercises are appended with remapped category references.
- */
-export async function importExercisesMerge(doc: ShareDoc, d: MyOneGymDB = db): Promise<number> {
-  return d.transaction('rw', d.categories, d.exercises, async () => {
-    const remap = new Map<number, number>() // old categoryId -> new categoryId
-    for (const c of doc.categories) {
-      const existing = await d.categories.where('name').equalsIgnoreCase(c.name).first()
-      const newId = existing?.id ?? (await d.categories.add({ name: c.name }))
-      if (c.id != null) remap.set(c.id, newId)
-    }
-    let added = 0
-    for (const e of doc.exercises) {
-      const categoryId = e.categoryId != null ? remap.get(e.categoryId) : undefined
-      await d.exercises.add({ name: e.name, mediaUrl: e.mediaUrl, categoryId })
-      added++
-    }
-    return added
+    // weightHistory + sessions/sessionEntries stay empty by design (device-local)
   })
 }
 

@@ -50,7 +50,7 @@ export function SettingsPage() {
 
         <div className="group-label">Dados</div>
         <div className="group">
-          <NavRow to="/settings/data" icon="database" title="Backup e compartilhamento" sub="Gerar exemplo · exportar · importar" />
+          <NavRow to="/settings/data" icon="database" title="Backup" sub="Gerar exemplo · exportar · importar backup" />
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', padding: '16px 8px 0' }}>

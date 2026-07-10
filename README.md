@@ -60,9 +60,9 @@ npm run typecheck  # tsc --noEmit
 - **Appearance** — **Configurações → Aparência** has a **font-size** slider
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.
-- **Data** — generate an example routine, export a full backup JSON (includes
-  workout sessions), import a backup (**replaces all** local data, with
-  confirmation), and export an exercises-only JSON to share with other users.
+- **Data** — generate an example routine, export a full backup JSON, and import
+  a backup (**replaces all** local data, with confirmation). Device-local data
+  (weight-change history and workout sessions) is **not** included in backups.
 
 ## Design decisions worth knowing
 

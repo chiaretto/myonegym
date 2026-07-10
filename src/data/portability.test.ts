@@ -13,10 +13,8 @@ import {
 } from '../db/repos'
 import {
   exportBackup,
-  exportExercisesShare,
   generateExample,
   importBackupReplaceAll,
-  importExercisesMerge,
   parseBackup,
   PortabilityError,
 } from './portability'
@@ -101,37 +99,6 @@ describe('backup export/import', () => {
   })
 })
 
-describe('exercises share', () => {
-  it('share doc has no gyms or weights', async () => {
-    await seed()
-    const doc = await exportExercisesShare(d)
-    expect(doc.kind).toBe('exercises')
-    expect(doc.exercises).toHaveLength(1)
-    expect(JSON.stringify(doc)).not.toContain('gymId')
-    expect(JSON.stringify(doc)).not.toContain('"value"')
-  })
-
-  it('merge adds exercises+categories without touching gyms/weights', async () => {
-    const { g } = await seed()
-    const share = await exportExercisesShare(d)
-
-    // fresh db as "another user" with an existing gym + weight
-    const other = new MyOneGymDB(`ptest-other-${n++}`)
-    await other.open()
-    const og = await createGym('Casa', undefined, other)
-    const oex = await createExercise({ name: 'Local' }, other)
-    await saveWeight(og, oex, 10, 'KG', other)
-
-    const added = await importExercisesMerge(share, other)
-    expect(added).toBe(1)
-    expect(await other.exercises.count()).toBe(2) // Local + Supino
-    expect(await other.gyms.count()).toBe(1) // gyms untouched
-    expect((await other.weights.toArray())[0].value).toBe(10) // weights untouched
-    expect(g).toBeGreaterThan(0)
-    await other.delete()
-  })
-})
-
 describe('generate example', () => {
   it('creates the bundled sample routine (gym, categories, exercises, days, weights)', async () => {
     await generateExample(d)
@@ -162,7 +129,7 @@ describe('generate example', () => {
   })
 })
 
-describe('backup includes workout sessions', () => {
+describe('backup excludes workout sessions (device-local)', () => {
   async function seedWithSession() {
     const { g, ex } = await seed()
     const day = (await d.days.toArray())[0].id!
@@ -173,40 +140,26 @@ describe('backup includes workout sessions', () => {
     return { g, ex, sid }
   }
 
-  it('exports sessions and their entries', async () => {
+  it('does not export sessions or entries', async () => {
     await seedWithSession()
     const doc = await exportBackup(d)
-    expect(doc.sessions).toHaveLength(1)
-    expect(doc.sessionEntries).toHaveLength(1)
-    expect(doc.sessions[0].status).toBe('completed')
-    expect(doc.sessionEntries[0].done).toBe(true)
+    expect('sessions' in doc).toBe(false)
+    expect('sessionEntries' in doc).toBe(false)
+    expect(JSON.stringify(doc)).not.toContain('sessionId')
+    expect(JSON.stringify(doc)).not.toContain('startedAt')
   })
 
-  it('round-trips sessions through export -> wipe -> import', async () => {
+  it('import does not restore sessions (they stay device-local, like history)', async () => {
+    // Even if an older backup happens to carry sessions, they are ignored.
     await seedWithSession()
     const doc = await exportBackup(d)
-    await Promise.all(
-      [d.gyms, d.categories, d.exercises, d.days, d.weights, d.weightHistory, d.sessions, d.sessionEntries].map(
-        (t) => t.clear(),
-      ),
-    )
-    await importBackupReplaceAll(doc, d)
-    expect(await d.sessions.count()).toBe(1)
-    expect(await d.sessionEntries.count()).toBe(1)
-    expect((await d.sessions.toArray())[0].dayName).toBe('Dia 1')
-  })
-
-  it('imports an older backup (no sessions field) as zero sessions', async () => {
-    await seed()
-    const doc = await exportBackup(d)
-    // simulate a pre-v2 document: strip the session fields entirely
     const legacy = JSON.parse(JSON.stringify(doc))
-    delete legacy.sessions
-    delete legacy.sessionEntries
-    const parsed = parseBackup(JSON.stringify(legacy))
-    expect(parsed.sessions).toEqual([])
-    await importBackupReplaceAll(parsed, d)
+    legacy.sessions = [{ id: 99, gymId: 1, dayName: 'X', startedAt: 1, status: 'completed' }]
+    legacy.sessionEntries = [{ id: 99, sessionId: 99, exerciseName: 'Y', done: true }]
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
     expect(await d.sessions.count()).toBe(0)
-    expect(await d.gyms.count()).toBe(1) // rest still imports
+    expect(await d.sessionEntries.count()).toBe(0)
+    expect(await d.gyms.count()).toBe(1) // the rest still imports
   })
 })
