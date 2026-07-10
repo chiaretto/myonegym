@@ -105,3 +105,30 @@ Derive a day's categories from its exercises, and drop the manual day category.
 | Many categories overflow the day sub-line | Low | Low | The sub-line already wraps/ellipsizes; join with " · " and let it wrap. |
 | Loss of the manual label users had set | Low | Low | The derived label reflects real content; the manual one was redundant. Data isn't deleted, just ignored. |
 | Older backup import regresses | Low | Med | Import tolerates extra fields (Dexie `bulkAdd`); covered by a round-trip test with a legacy day. |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-10
+**Duration:** 0 days (created and completed 2026-07-10)
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/db/types.ts` (drop `Day.categoryId`), `src/db/repos.ts` (`createDay`/`updateDay`, `deleteCategory`)
+- `src/lib/days.ts` (new — `dayCategoryNames`/`daySubtitle`), `src/data/portability.ts` (`generateExample`)
+- `src/features/home/HomePage.tsx`, `src/features/settings/DaysPage.tsx`, `README.md`
+- Tests: `src/lib/days.test.ts`, `src/features/settings/days.integration.test.tsx`, `src/data/portability.test.ts`
+
+### Specs Updated
+- `openspec/specs/training-days/spec.md` — modified **Register a Training Day** and **Edit and Delete Training Days**; added **Derived Day Categories**
+- `openspec/specs/home-navigation/spec.md` — modified **Home Accordion of Training Days** (header shows derived categories)
+
+### Notes
+- Implements GitHub issue #1. Code shipped to `main` in commit `462cb96`; this
+  archive consolidates the specs. The day-edit polish (exercise category + details
+  preview) and the shared Sheet close button rode in the same commit but are
+  UI-only (not part of this change's requirements).
+
+### Verification
+- `npm run build`, `npm run typecheck`, `npm test` (63/63) — all pass
