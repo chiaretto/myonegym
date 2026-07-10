@@ -25,10 +25,11 @@
   /* Typography scale — one knob rescales every text size in the app.
      Base values are the original px (as rem at a 16px root), so the OS/browser
      text-size preference composes; --font-scale then enlarges on top.
-     Default 2 → all text is ≥2× its pre-change size (mobile legibility),
-     with the size ratios (hierarchy) preserved. Tune this single value to
-     rescale the whole app. Sizing is theme-independent (no dark override). */
-  --font-scale: 2;
+     This is the shipped default (150%); it is user-adjustable at runtime via
+     Settings → Aparência, which overrides this value on <html> (see
+     src/state/settings.ts). Keep this equal to FONT_SCALE_DEFAULT so there is
+     no first-paint flash. Sizing is theme-independent (no dark override). */
+  --font-scale: 1.5;
   --fs-2xs: calc(0.6875rem * var(--font-scale)); /* 11px base */
   --fs-xs:  calc(0.75rem   * var(--font-scale)); /* 12px base */
   --fs-sm:  calc(0.8125rem * var(--font-scale)); /* 13px base */

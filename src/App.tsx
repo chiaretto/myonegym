@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useActiveGym } from './state/activeGym'
+import { applyFontScale, useSettings } from './state/settings'
 import { FeedbackProvider } from './ui/Feedback'
 import { HomePage } from './features/home/HomePage'
 import { ExerciseDetailPage } from './features/exercise/ExerciseDetailPage'
@@ -13,13 +14,20 @@ import { CategoriesPage } from './features/settings/CategoriesPage'
 import { ExercisesPage } from './features/settings/ExercisesPage'
 import { DaysPage } from './features/settings/DaysPage'
 import { DataPage } from './features/settings/DataPage'
+import { AppearancePage } from './features/settings/AppearancePage'
 
 export function App() {
   const reconcile = useActiveGym((s) => s.reconcile)
+  const fontScale = useSettings((s) => s.fontScale)
 
   useEffect(() => {
     void reconcile()
   }, [reconcile])
+
+  // Apply the user's font-size preference live whenever it changes.
+  useEffect(() => {
+    applyFontScale(fontScale)
+  }, [fontScale])
 
   return (
     <FeedbackProvider>
@@ -36,6 +44,7 @@ export function App() {
           <Route path="/settings/exercises" element={<ExercisesPage />} />
           <Route path="/settings/days" element={<DaysPage />} />
           <Route path="/settings/data" element={<DataPage />} />
+          <Route path="/settings/appearance" element={<AppearancePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

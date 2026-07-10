@@ -5,6 +5,12 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css'
 import './styles/global.css'
 import { App } from './App'
 import { requestPersistentStorage } from './lib/storage'
+import { applyFontScale, useSettings } from './state/settings'
+
+// Apply the saved font size BEFORE first paint so the app never flashes the
+// default before the user's preference applies. zustand+persist rehydrates
+// synchronously from localStorage, so getState() already holds the stored value.
+applyFontScale(useSettings.getState().fontScale)
 
 // Best-effort: ask the browser to keep our IndexedDB data around.
 void requestPersistentStorage()

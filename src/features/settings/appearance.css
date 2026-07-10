@@ -1,0 +1,13 @@
+.fs-card { padding: 16px 14px; display: block; }
+.fs-value { font-size: var(--fs-4xl); font-weight: 500; text-align: center;
+  font-variant-numeric: tabular-nums; margin-bottom: 10px; }
+.fs-slider { width: 100%; accent-color: var(--fill-accent); height: 28px; }
+.fs-ends { display: flex; justify-content: space-between; font-size: var(--fs-2xs);
+  color: var(--text-muted); margin-top: -2px; }
+
+.fs-preview { padding: 16px 14px; display: grid; gap: 8px; }
+.fs-preview .p-title { font-size: var(--fs-lg); font-weight: 500; }
+.fs-preview .p-body { font-size: var(--fs-sm); color: var(--text-secondary); }
+.fs-preview .p-badge { justify-self: start; padding: 5px 9px; background: var(--surface-2);
+  border: 0.5px solid var(--border); border-radius: 6px; font-size: var(--fs-sm);
+  font-weight: 500; font-variant-numeric: tabular-nums; }

@@ -43,6 +43,11 @@ export function SettingsPage() {
           <NavRow to="/settings/days" icon="calendar-event" title="Dias de treino" sub="Selecione os exercícios de cada dia" meta={days?.length} />
         </div>
 
+        <div className="group-label">Aparência</div>
+        <div className="group">
+          <NavRow to="/settings/appearance" icon="text-size" title="Aparência" sub="Tamanho da fonte do app" />
+        </div>
+
         <div className="group-label">Dados</div>
         <div className="group">
           <NavRow to="/settings/data" icon="database" title="Backup e compartilhamento" sub="Gerar exemplo · exportar · importar" />

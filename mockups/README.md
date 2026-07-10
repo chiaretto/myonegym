@@ -82,11 +82,13 @@ Same structure, mirrored:
 - Two weights: **400** regular, **500** medium. Do not use 600/700.
 - Sizes (px): caption 11 · body 13–15 · title 20 · display 44 (weight value).
 - **All sizes route through one scale.** `src/styles/tokens.css` defines
-  `--font-scale` (default **2**) and `--fs-2xs … --fs-7xl` tokens computed as
+  `--font-scale` (default **1.5**) and `--fs-2xs … --fs-7xl` tokens computed as
   `calc(<base>rem * var(--font-scale))` — the px above are the pre-scale bases.
-  Never hardcode a `font-size: <px>`; reference a token. Change `--font-scale`
-  in that one place to rescale all text (bumped to 2× for mobile legibility;
-  `rem` keeps the OS/browser text-size preference composable). Fixed icon boxes
+  Never hardcode a `font-size: <px>`; reference a token. `--font-scale` is
+  **user-adjustable** (Settings → Aparência, 100%–200%): the choice is saved in
+  `localStorage` (`myonegym.settings`) and written to `<html>` at runtime,
+  overriding the token default (applied before first paint to avoid a flash).
+  `rem` keeps the OS/browser text-size preference composable. Fixed icon boxes
   (`.brand-mark`, `.icon-btn`, `.row-ic`, `.tl-delete`) are sized in `em` off
   their own `font-size`, so glyphs stay contained as the scale changes.
 
