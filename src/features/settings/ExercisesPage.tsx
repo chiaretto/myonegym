@@ -4,6 +4,7 @@ import { db } from '../../db/db'
 import type { Exercise } from '../../db/types'
 import { useCategories, useCategoryMap, useDays, useExercises } from '../../lib/hooks'
 import { dayNamesForExercise } from '../../lib/days'
+import { filterExercises, type CategoryFilter, type DayFilter } from '../../lib/exerciseFilters'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -12,11 +13,27 @@ import { Sheet } from '../../ui/Sheet'
 
 export function ExercisesPage() {
   const exs = useExercises()
+  const cats = useCategories()
   const catMap = useCategoryMap()
   const days = useDays()
   const toast = useToast()
   const confirm = useConfirm()
   const [editing, setEditing] = useState<Exercise | 'new' | null>(null)
+  const [search, setSearch] = useState('')
+  const [categorySel, setCategorySel] = useState('all')
+  const [daySel, setDaySel] = useState('all')
+
+  const categoryFilter: CategoryFilter =
+    categorySel === 'all' || categorySel === 'none' ? categorySel : Number(categorySel)
+  const dayFilter: DayFilter = daySel === 'all' || daySel === 'none' ? daySel : Number(daySel)
+  const filtersActive = search.trim() !== '' || categorySel !== 'all' || daySel !== 'all'
+  const filtered = filterExercises(exs, { search, categoryId: categoryFilter, dayId: dayFilter }, days)
+
+  const clearFilters = () => {
+    setSearch('')
+    setCategorySel('all')
+    setDaySel('all')
+  }
 
   const onDelete = async (e: Exercise) => {
     const ok = await confirm({
@@ -34,7 +51,7 @@ export function ExercisesPage() {
     <>
       <BackBar title="Exercícios" to="/settings" />
       <main className="screen">
-        {exs && exs.length === 0 && (
+        {exs.length === 0 && (
           <div className="empty">
             <span className="big">🏋️</span>
             <h2>Nenhum exercício</h2>
@@ -42,8 +59,62 @@ export function ExercisesPage() {
           </div>
         )}
 
+        {exs.length > 0 && (
+          <div className="filters">
+            <div className="field">
+              <label htmlFor="ex-filter-search">Buscar por nome</label>
+              <input
+                id="ex-filter-search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome"
+              />
+            </div>
+            <div className="filters-row">
+              <div className="field">
+                <label htmlFor="ex-filter-cat">Categoria</label>
+                <select id="ex-filter-cat" value={categorySel} onChange={(e) => setCategorySel(e.target.value)}>
+                  <option value="all">Todas as categorias</option>
+                  <option value="none">Sem categoria</option>
+                  {cats?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label htmlFor="ex-filter-day">Dia de treino</label>
+                <select id="ex-filter-day" value={daySel} onChange={(e) => setDaySel(e.target.value)}>
+                  <option value="all">Todos os dias</option>
+                  <option value="none">Nenhum dia</option>
+                  {days?.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {exs.length > 0 && filtered.length === 0 && (
+          <div className="empty">
+            <span className="big">🔎</span>
+            <h2>Nenhum exercício encontrado</h2>
+            <p>Ajuste a busca ou os filtros para ver outros exercícios.</p>
+            {filtersActive && (
+              <button className="btn subtle" onClick={clearFilters}>
+                Limpar filtros
+              </button>
+            )}
+          </div>
+        )}
+
+        {filtered.length > 0 && (
         <div className="group">
-          {exs?.map((e) => {
+          {filtered.map((e) => {
             const dayNames = dayNamesForExercise(e.id!, days ?? [])
             return (
             <div key={e.id} className="row">
@@ -77,6 +148,7 @@ export function ExercisesPage() {
             )
           })}
         </div>
+        )}
 
         <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>
           <Icon name="plus" /> Novo exercício

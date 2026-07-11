@@ -29,14 +29,15 @@ describe('Exercises list — training days per item', () => {
       </MemoryRouter>,
     )
 
-    // Rosca is in both days — one outlined chip per day.
-    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
-    expect(screen.getByText('Dia 2')).toBeInTheDocument()
-    expect(screen.getByText('Nenhum dia')).toBeInTheDocument() // Alongamento
+    // Rosca is in both days — one outlined chip per day. `selector` disambiguates
+    // from the same-named options in the new day filter `<select>`.
+    expect(await screen.findByText('Dia 1', { selector: '.chip' })).toBeInTheDocument()
+    expect(screen.getByText('Dia 2', { selector: '.chip' })).toBeInTheDocument()
+    expect(screen.getByText('Nenhum dia', { selector: '.row-sub' })).toBeInTheDocument() // Alongamento
 
     // Remove Rosca from Dia 1 → its "Dia 1" chip disappears, "Dia 2" stays.
     await updateDay(dia1, { name: 'Dia 1', exerciseIds: [] }, db)
-    await waitFor(() => expect(screen.queryByText('Dia 1')).not.toBeInTheDocument())
-    expect(screen.getByText('Dia 2')).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Dia 1', { selector: '.chip' })).not.toBeInTheDocument())
+    expect(screen.getByText('Dia 2', { selector: '.chip' })).toBeInTheDocument()
   })
 })
