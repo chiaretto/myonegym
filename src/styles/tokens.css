@@ -1,25 +1,44 @@
-/* MyOneGym design tokens — mirrors mockups/README.md.
-   Palette: white · near-black · muted terracotta. Light + dark. */
+/* MyOneGym design tokens — "Momentum" dark-premium redesign.
+   Direction A from design_handoff_myonegym (dark-only, orange accent).
+   Palette: near-black bg · layered dark surfaces · warm orange accent. */
 :root {
-  --surface-0: #f4eeec;
-  --surface-1: #faf6f5;
-  --surface-2: #ffffff;
-  --text-primary: #1a1614;
-  --text-secondary: #6b615f;
-  --text-muted: #a29996;
-  --border: rgba(26, 22, 20, 0.09);
-  --border-strong: rgba(26, 22, 20, 0.18);
-  --bg-accent: #f7eae7;
-  --border-accent: #d9b6b1;
-  --text-accent: #7a3634;
-  --fill-accent: #b8524e;
-  --on-accent: #ffffff;
-  --danger: #b23b2e;
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Surfaces (dark-only — no light theme) */
+  --surface-0: #0b0b0e; /* app background */
+  --surface-1: #151519; /* cards */
+  --surface-2: #1d1d23; /* chips / inputs / raised */
+  --surface-3: #26262e; /* tracks / empty fills */
 
-  --r-card: 12px;
-  --r-btn: 10px;
-  --r-ctl: 8px;
+  /* Text */
+  --text-primary: #f4f4f6;
+  --text-secondary: #8b8b95; /* muted */
+  --text-muted: #5f5f68;     /* dim / icon-off */
+
+  /* Lines */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Accent (orange) */
+  --accent: #ff5a36;
+  --accent-2: #ff7a52; /* gradient partner */
+  --bg-accent: rgba(255, 90, 54, 0.15);   /* soft tint fill */
+  --border-accent: rgba(255, 90, 54, 0.28);
+  --text-accent: #ff7a52;  /* accent text on dark (lighter for legibility) */
+  --fill-accent: #ff5a36;  /* solid accent fill (buttons, rings) */
+  --on-accent: #160a06;    /* text/icon on orange */
+  --accent-grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+
+  --danger: #ff6f5e;
+
+  /* Type families — Momentum: Sora (titles) · Manrope (body/UI) · JetBrains Mono (micro-labels) */
+  --font-title: 'Sora', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Radii — Momentum: rounder cards */
+  --r-card: 22px;
+  --r-btn: 14px;
+  --r-ctl: 12px;
+  --r-row: 16px;
   --r-pill: 999px;
 
   /* Typography scale — one knob rescales every text size in the app.
@@ -28,7 +47,8 @@
      This is the shipped default (150%); it is user-adjustable at runtime via
      Settings → Aparência, which overrides this value on <html> (see
      src/state/settings.ts). Keep this equal to FONT_SCALE_DEFAULT so there is
-     no first-paint flash. Sizing is theme-independent (no dark override). */
+     no first-paint flash. Sizing is theme- and font-family-independent — only
+     the families/weights change in the Momentum redesign, not the scale. */
   --font-scale: 1.5;
   --fs-2xs: calc(0.6875rem * var(--font-scale)); /* 11px base */
   --fs-xs:  calc(0.75rem   * var(--font-scale)); /* 12px base */
@@ -42,23 +62,4 @@
   --fs-5xl: calc(2.125rem  * var(--font-scale)); /* 34px base */
   --fs-6xl: calc(2.5rem    * var(--font-scale)); /* 40px base */
   --fs-7xl: calc(3.5rem    * var(--font-scale)); /* 56px base */
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-0: #1b1817;
-    --surface-1: #221e1d;
-    --surface-2: #2a2624;
-    --text-primary: #f5efed;
-    --text-secondary: #a79e9c;
-    --text-muted: #6b615f;
-    --border: rgba(245, 239, 237, 0.12);
-    --border-strong: rgba(245, 239, 237, 0.24);
-    --bg-accent: #3b2a28;
-    --border-accent: #6d3e3a;
-    --text-accent: #e6b5b0;
-    --fill-accent: #c77373;
-    --on-accent: #1a1614;
-    --danger: #d97a6c;
-  }
 }

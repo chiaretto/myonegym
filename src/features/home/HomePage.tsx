@@ -8,16 +8,50 @@ import {
   useDays,
   useExerciseMap,
   useGymWeights,
+  useSessionSummaries,
 } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
 import { daySubtitle } from '../../lib/days'
 import { fmtWeight } from '../../lib/format'
+import { startOfWeek } from '../../lib/week'
 import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { TabBar } from '../../ui/Chrome'
 import { GymSelector } from '../gym/GymSelector'
 import './home.css'
+
+/** Weekly progress ring — completed sessions this week over the number of days. */
+function WeeklySummary({ done, total }: { done: number; total: number }) {
+  const pct = total > 0 ? Math.min(1, done / total) : 0
+  const R = 26
+  const C = 2 * Math.PI * R
+  return (
+    <section className="week-card" aria-label="Resumo da semana">
+      <div className="week-ring">
+        <svg viewBox="0 0 64 64" width="64" height="64">
+          <circle cx="32" cy="32" r={R} className="ring-track" />
+          <circle
+            cx="32"
+            cy="32"
+            r={R}
+            className="ring-fill"
+            strokeDasharray={C}
+            strokeDashoffset={C * (1 - pct)}
+            transform="rotate(-90 32 32)"
+          />
+        </svg>
+        <span className="week-pct">{Math.round(pct * 100)}%</span>
+      </div>
+      <div className="week-body">
+        <span className="eyebrow">Esta semana</span>
+        <strong className="week-count">
+          {done} <span className="week-of">/ {total} treinos</span>
+        </strong>
+      </div>
+    </section>
+  )
+}
 
 export function HomePage() {
   const days = useDays()
@@ -26,9 +60,13 @@ export function HomePage() {
   const activeGymId = useActiveGym((s) => s.activeGymId)
   const weights = useGymWeights(activeGymId)
   const activeSession = useActiveSession(activeGymId)
+  const summaries = useSessionSummaries(activeGymId)
   const nav = useNavigate()
   const toast = useToast()
   const [openId, setOpenId] = useState<number | null>(null)
+
+  const weekStart = startOfWeek(Date.now())
+  const doneThisWeek = summaries.filter((s) => (s.session.completedAt ?? 0) >= weekStart).length
 
   const onStart = async (dayId: number) => {
     if (activeGymId == null) {
@@ -74,11 +112,22 @@ export function HomePage() {
           </div>
         )}
 
+        {days && days.length > 0 && (
+          <WeeklySummary done={doneThisWeek} total={days.length} />
+        )}
+
         <ul className="accordion">
-          {days?.map((day) => {
+          {days?.map((day, idx) => {
             const isOpen = openId === day.id
+            const isResume = activeSession != null && activeSession.dayId === day.id
+            // Feature the first day (next workout) when nothing is being resumed.
+            const isFeatured = idx === 0 && activeSession == null
             return (
-              <li key={day.id} className={`day${isOpen ? ' open' : ''}`}>
+              <li
+                key={day.id}
+                className={`day${isOpen ? ' open' : ''}${isFeatured ? ' featured' : ''}`}
+              >
+                {isFeatured && !isOpen && <span className="eyebrow day-eyebrow">Próximo treino</span>}
                 <div className="day-head">
                   <button
                     className="day-head-main"
@@ -88,17 +137,12 @@ export function HomePage() {
                     <span className="day-title">{day.name}</span>
                     <span className="day-sub">{daySubtitle(day, exMap, catMap)}</span>
                   </button>
-                  {(() => {
-                    const isResume = activeSession != null && activeSession.dayId === day.id
-                    return (
-                      <button
-                        className={`day-start${isResume ? ' resume' : ''}`}
-                        onClick={() => onStart(day.id!)}
-                      >
-                        <Icon name="player-play" size={12} /> {isResume ? 'Continuar' : 'Iniciar'}
-                      </button>
-                    )
-                  })()}
+                  <button
+                    className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
+                    onClick={() => onStart(day.id!)}
+                  >
+                    <Icon name="player-play" size={12} /> {isResume ? 'Continuar' : 'Iniciar'}
+                  </button>
                   <button
                     className="chev-btn"
                     aria-label={isOpen ? 'Recolher' : 'Expandir'}

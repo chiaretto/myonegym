@@ -15,6 +15,13 @@ import { useGyms } from '../../lib/hooks'
 import { Sparkline } from './Sparkline'
 import './exercise.css'
 
+/** Step a weight string by ±0.5, clamped at 0 and snapped to a clean half-step. */
+function stepValue(current: string, delta: number): string {
+  const n = Number(current.replace(',', '.'))
+  const base = Number.isFinite(n) ? n : 0
+  return String(Math.max(0, Math.round((base + delta) * 2) / 2))
+}
+
 export function ExerciseDetailPage() {
   const { id } = useParams()
   const exerciseId = Number(id)
@@ -144,17 +151,35 @@ export function ExerciseDetailPage() {
               </div>
             ) : (
               <div className="wc-edit">
-                <input
-                  className="wc-input"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="0.5"
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  aria-label="Peso"
-                  autoFocus
-                />
+                <div className="wc-stepper">
+                  <button
+                    type="button"
+                    className="step-btn"
+                    aria-label="Diminuir peso"
+                    onClick={() => setValue(stepValue(value, -0.5))}
+                  >
+                    <Icon name="minus" />
+                  </button>
+                  <input
+                    className="wc-input"
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.5"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    aria-label="Peso"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className="step-btn accent"
+                    aria-label="Aumentar peso"
+                    onClick={() => setValue(stepValue(value, 0.5))}
+                  >
+                    <Icon name="plus" />
+                  </button>
+                </div>
                 <div className="unit-seg" role="group" aria-label="Unidade">
                   {UNITS.map((u) => (
                     <button

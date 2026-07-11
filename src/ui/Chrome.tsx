@@ -27,7 +27,7 @@ export function BackBar({ title, to }: { title: string; to?: string }) {
       <button className="icon-btn ghost" aria-label="Voltar" onClick={() => (to ? nav(to) : nav(-1))}>
         <Icon name="arrow-left" />
       </button>
-      <h1 style={{ fontSize: 16 }}>{title}</h1>
+      <h1 style={{ fontSize: 'var(--fs-2xl)', fontWeight: 800 }}>{title}</h1>
     </header>
   )
 }
