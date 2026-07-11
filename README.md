@@ -55,9 +55,11 @@ npm run typecheck  # tsc --noEmit
 - **Settings** — all CRUD: gyms (with *copy weights from another gym* on
   create), categories (rename; deleting one reassigns its exercises to
   "Sem categoria"), exercises (name, media URL, category — each item also shows
-  which training days it belongs to), and training days (name + ordered exercise
-  selection — exercises may repeat; days can be reordered). A day's categories
-  are **derived from its exercises** (e.g. "Peito · Tríceps"), not set by hand.
+  which training days it belongs to; the list has a name search plus category
+  and training-day filters, combinable, to narrow a growing catalog), and
+  training days (name + ordered exercise selection — exercises may repeat;
+  days can be reordered). A day's categories are **derived from its exercises**
+  (e.g. "Peito · Tríceps"), not set by hand.
 - **Appearance** — **Configurações → Aparência** has a **font-size** slider
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.

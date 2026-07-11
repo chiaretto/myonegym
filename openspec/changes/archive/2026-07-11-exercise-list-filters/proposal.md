@@ -2,7 +2,8 @@
 
 **Change ID:** `exercise-list-filters`
 **Created:** 2026-07-11
-**Status:** Draft
+**Status:** Implementation Complete
+**Completed:** 2026-07-11
 
 ---
 
@@ -89,17 +90,17 @@ purely as a **client-side view filter** (no data model changes):
 
 ## Success Criteria
 
-- [ ] The Exercícios list has a search input that filters by exercise name
+- [x] The Exercícios list has a search input that filters by exercise name
       (case-insensitive, accent-insensitive).
-- [ ] The Exercícios list has a category filter (including "Todas as
+- [x] The Exercícios list has a category filter (including "Todas as
       categorias" and "Sem categoria") that narrows the list.
-- [ ] The Exercícios list has a training-day filter (including "Todos os dias"
+- [x] The Exercícios list has a training-day filter (including "Todos os dias"
       and "Nenhum dia") that narrows the list.
-- [ ] The three filters combine (AND) and update the list live as the user
+- [x] The three filters combine (AND) and update the list live as the user
       types/selects.
-- [ ] Filtering to zero results shows a clear "no matches" message with a way
+- [x] Filtering to zero results shows a clear "no matches" message with a way
       to reset filters; it is distinct from the "no exercises at all" state.
-- [ ] `npm run build`, `npm run typecheck`, `npm test` pass, with a helper test
+- [x] `npm run build`, `npm run typecheck`, `npm test` pass, with a helper test
       and a UI test for the filter bar.
 
 ## Risks & Mitigations
@@ -109,3 +110,22 @@ purely as a **client-side view filter** (no data model changes):
 | Filter bar crowds the mobile viewport (390px) | Med | Low | Stack search input above the two selects; keep controls compact, matching existing form field sizing. |
 | Accent-insensitive search adds complexity | Low | Low | Use a small, well-tested normalization (e.g. `normalize('NFD')` + strip diacritics) shared by the helper's unit tests. |
 | Confusion between "no exercises at all" and "no filter matches" empty states | Low | Med | Distinct copy/icon for each, and a visible "limpar filtros" action in the no-matches state. |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-11
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/lib/exerciseFilters.ts` — `filterExercises(exercises, filters, days)` helper
+- `src/lib/exerciseFilters.test.ts` — helper unit tests
+- `src/features/settings/ExercisesPage.tsx` — filter bar (search, category, day) and "no matches" empty state
+- `src/features/settings/exercises.integration.test.tsx` — updated for the new filter bar
+- `src/features/settings/exercises.filters.integration.test.tsx` — filter narrowing/combination tests
+- `src/styles/global.css` — filter bar layout styles
+- `README.md` — Settings note
+
+### Specs Updated
+- `openspec/specs/exercises/spec.md` — ADDED "Filter and Search the Exercises List"

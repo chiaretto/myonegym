@@ -96,6 +96,12 @@ h1, h2, h3, p { margin: 0; }
 }
 .field .err { font-size: var(--fs-2xs); color: var(--danger); }
 
+/* Filter bars (e.g. exercises list search + category/day selects) */
+.filters { margin-bottom: 4px; }
+.filters-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.filters-row .field { margin-bottom: 14px; min-width: 0; }
+.filters-row .field select { width: 100%; min-width: 0; }
+
 /* Chips */
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: var(--r-pill);
   border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-secondary);
