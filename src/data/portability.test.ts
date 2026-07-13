@@ -17,6 +17,7 @@ import {
   importBackupReplaceAll,
   parseBackup,
   PortabilityError,
+  resetAll,
 } from './portability'
 
 let d: MyOneGymDB
@@ -126,6 +127,58 @@ describe('generate example', () => {
     for (const day of await d.days.toArray()) {
       for (const id of day.exerciseIds) expect(exIds.has(id)).toBe(true)
     }
+  })
+})
+
+describe('device-local onboarding flag is never part of a backup', () => {
+  it('exportBackup carries no trace of the first-launch prompt flag', async () => {
+    await seed()
+    const doc = await exportBackup(d)
+    expect('hasSeenExamplePrompt' in doc).toBe(false)
+    expect(JSON.stringify(doc)).not.toContain('hasSeenExamplePrompt')
+  })
+
+  it('importBackupReplaceAll ignores an unexpected onboarding field, same as sessions', async () => {
+    await seed()
+    const doc = await exportBackup(d)
+    const legacy = JSON.parse(JSON.stringify(doc))
+    legacy.hasSeenExamplePrompt = false
+    await expect(
+      importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d),
+    ).resolves.not.toThrow()
+    expect(await d.gyms.count()).toBe(1) // the rest still imports fine
+  })
+})
+
+describe('resetAll', () => {
+  it('empties every table (gyms, categories, exercises, days, weights, weightHistory, sessions, sessionEntries)', async () => {
+    const { g } = await seed()
+    const day = (await d.days.toArray())[0].id!
+    const sid = await startSession(g, day, d)
+    await setEntryDone((await listSessionEntries(sid, d))[0].id!, true, d)
+    await completeSession(sid, d)
+    expect(await d.gyms.count()).toBeGreaterThan(0)
+    expect(await d.weightHistory.count()).toBeGreaterThan(0)
+    expect(await d.sessions.count()).toBeGreaterThan(0)
+
+    await resetAll(d)
+
+    expect(await d.gyms.count()).toBe(0)
+    expect(await d.categories.count()).toBe(0)
+    expect(await d.exercises.count()).toBe(0)
+    expect(await d.days.count()).toBe(0)
+    expect(await d.weights.count()).toBe(0)
+    expect(await d.weightHistory.count()).toBe(0)
+    expect(await d.sessions.count()).toBe(0)
+    expect(await d.sessionEntries.count()).toBe(0)
+  })
+
+  it('leaves the DB usable afterwards — generateExample runs again without error', async () => {
+    await seed()
+    await resetAll(d)
+    await expect(generateExample(d)).resolves.not.toThrow()
+    expect(await d.gyms.count()).toBe(1)
+    expect(await d.categories.count()).toBe(8)
   })
 })
 

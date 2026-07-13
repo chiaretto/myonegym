@@ -16,6 +16,7 @@ import {
   getSession,
   getSessionEntry,
   getWeight,
+  hasAnyRegisteredData,
   listCategories,
   listDays,
   reorderDays,
@@ -291,5 +292,21 @@ describe('sessions', () => {
     // snapshot name + weight remain
     expect(entries.find((e) => e.exerciseName === 'Rosca Direta')?.usedValue).toBe(20)
     expect((await getSession(sid, d))?.dayName).toBe('Dia 1')
+  })
+})
+
+describe('hasAnyRegisteredData', () => {
+  it('is false for an empty database', async () => {
+    expect(await hasAnyRegisteredData(d)).toBe(false)
+  })
+
+  it('is true as soon as any gym, category, exercise, or day exists', async () => {
+    await createGym('A', undefined, d)
+    expect(await hasAnyRegisteredData(d)).toBe(true)
+  })
+
+  it('is true from a category alone (no gym yet)', async () => {
+    await createCategory('Peito', d)
+    expect(await hasAnyRegisteredData(d)).toBe(true)
   })
 })

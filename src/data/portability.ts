@@ -105,6 +105,19 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
   })
 }
 
+/* ----------------------------------------------------------------- reset */
+
+/**
+ * Erase all registered data (every table from `allTables`), leaving the app
+ * equivalent to a fresh install. Same clearing step `importBackupReplaceAll`
+ * performs before restoring, without the subsequent insert.
+ */
+export async function resetAll(d: MyOneGymDB = db): Promise<void> {
+  await d.transaction('rw', allTables(d), async () => {
+    await Promise.all(allTables(d).map((t) => t.clear()))
+  })
+}
+
 /* --------------------------------------------------------------- example */
 
 async function getOrCreateCategory(name: string, d: MyOneGymDB): Promise<number> {

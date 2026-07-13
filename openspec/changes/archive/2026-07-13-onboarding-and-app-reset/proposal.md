@@ -2,7 +2,8 @@
 
 **Change ID:** `onboarding-and-app-reset`
 **Created:** 2026-07-13
-**Status:** Draft
+**Status:** Implementation Complete
+**Completed:** 2026-07-13
 **Implements:** GitHub issue #8 — "Melhorar comportamento dos dados de exemplo"
 
 ---
@@ -105,19 +106,19 @@
 
 ## Success Criteria
 
-- [ ] Opening the app for the very first time on a device (no data, never
+- [x] Opening the app for the very first time on a device (no data, never
       asked) shows a prompt to load the sample routine.
-- [ ] Accepting the prompt generates the same bundled sample data as
+- [x] Accepting the prompt generates the same bundled sample data as
       "Gerar exemplo"; declining leaves the app empty.
-- [ ] The prompt is never shown again on that device after the first
+- [x] The prompt is never shown again on that device after the first
       answer, and is not shown to devices that already had data before this
       feature shipped.
-- [ ] Settings → Backup has a "Resetar app" action that, after an explicit
+- [x] Settings → Backup has a "Resetar app" action that, after an explicit
       irreversible-action confirmation, erases all registered data (gyms,
       categories, exercises, days, weights, weight history, sessions).
-- [ ] After a reset, the app behaves like a fresh install, including
+- [x] After a reset, the app behaves like a fresh install, including
       re-offering the first-launch sample-data prompt.
-- [ ] `npm run build`, `npm run typecheck`, `npm test` pass with new
+- [x] `npm run build`, `npm run typecheck`, `npm test` pass with new
       coverage for `resetAll`, the first-launch prompt, and the reset flow.
 
 ## Risks & Mitigations
@@ -128,3 +129,29 @@
 | User taps "Resetar app" by accident | Low | High | Explicit confirm sheet, danger styling, and an unambiguous "cannot be undone" message, matching the existing import-overwrite warning. |
 | First-launch prompt blocks/annoys returning users across devices (no data sync) | Low | Low | Acceptable — the app is local-only per device by design; each device is prompted once, independently. |
 | Reset accidentally clears device-local prefs (font size) | Low | Low | Scope `resetAll` to the Dexie tables only; leave `state/settings.ts` (zustand-persisted) untouched. |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-13
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/data/portability.ts` — `resetAll(d)` clears every Dexie table in one transaction
+- `src/data/portability.test.ts` — `resetAll` regression tests + `hasSeenExamplePrompt` excluded-from-backup tests
+- `src/db/repos.ts` — `hasAnyRegisteredData(d)` migration-safety check
+- `src/db/repos.test.ts` — `hasAnyRegisteredData` unit tests
+- `src/state/onboarding.ts` — new device-local `useOnboarding` store (`hasSeenExamplePrompt`, `markPromptSeen`, `resetPromptSeen`)
+- `src/state/onboarding.test.ts` — store unit tests
+- `src/App.tsx` — first-launch sample-data prompt wired into the init effect
+- `src/App.test.tsx`, `src/App.onboarding.test.tsx` — smoke test updated + new onboarding flow coverage
+- `src/features/settings/DataPage.tsx` — "Zona de perigo" / "Resetar app" row wired to `useConfirm`
+- `src/features/settings/data.integration.test.tsx` — reset confirm-gate integration tests
+- `src/features/settings/appearance.integration.test.tsx` — updated to mark the prompt seen in `beforeEach`
+- `src/styles/global.css` — `.row-ic.danger` / `.row-sub.danger` styling
+- `README.md` — documented "Resetar app" and the first-launch prompt
+
+### Specs Updated
+- `openspec/specs/app-foundation/spec.md` — ADDED "First-Launch Example Data Prompt"
+- `openspec/specs/data-portability/spec.md` — ADDED "Reset App (Erase All Data)"

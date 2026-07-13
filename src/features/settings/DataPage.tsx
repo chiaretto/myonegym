@@ -6,8 +6,10 @@ import {
   importBackupReplaceAll,
   parseBackup,
   PortabilityError,
+  resetAll,
 } from '../../data/portability'
 import { useActiveGym } from '../../state/activeGym'
+import { useOnboarding } from '../../state/onboarding'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -30,6 +32,7 @@ export function DataPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const reconcile = useActiveGym((s) => s.reconcile)
+  const resetPromptSeen = useOnboarding((s) => s.resetPromptSeen)
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
 
@@ -65,6 +68,26 @@ export function DataPage() {
       toast('Backup importado.')
     } catch (e) {
       toast(e instanceof PortabilityError ? e.message : 'Falha ao importar.')
+    }
+  }
+
+  const onReset = async () => {
+    const ok = await confirm({
+      title: 'Resetar app?',
+      message:
+        'Isto apaga TODOS os dados cadastrados deste dispositivo — academias, categorias, exercícios, dias, pesos, histórico e treinos. Não pode ser desfeito.',
+      confirmLabel: 'Apagar tudo',
+      danger: true,
+    })
+    if (!ok) return
+    setBusy(true)
+    try {
+      await resetAll(db)
+      await reconcile()
+      resetPromptSeen() // re-arm the first-launch sample-data prompt
+      toast('App resetado.')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -122,6 +145,19 @@ export function DataPage() {
             if (f) void onImportFile(f)
           }}
         />
+
+        <div className="group-label">Zona de perigo</div>
+        <div className="group">
+          <button className="row" onClick={() => void onReset()} disabled={busy}>
+            <span className="row-ic danger">
+              <Icon name="alert-triangle" />
+            </span>
+            <span className="row-body">
+              <span className="row-title">Resetar app</span>
+              <span className="row-sub danger">Apaga todos os dados deste dispositivo. Não pode ser desfeito</span>
+            </span>
+          </button>
+        </div>
       </main>
     </>
   )

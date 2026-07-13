@@ -66,6 +66,13 @@ npm run typecheck  # tsc --noEmit
 - **Data** — generate an example routine, export a full backup JSON, and import
   a backup (**replaces all** local data, with confirmation). Device-local data
   (weight-change history and workout sessions) is **not** included in backups.
+  A **"Zona de perigo"** section adds **Resetar app**, which erases all
+  registered data on the device after an explicit "cannot be undone"
+  confirmation — equivalent to a fresh install.
+- **First launch** — the very first time the app opens on a device with no
+  registered data, it offers to load the same example routine as **Gerar
+  exemplo**. The choice (accept or decline) is remembered locally on that
+  device so the prompt is shown at most once; **Resetar app** re-arms it.
 
 ## Design decisions worth knowing
 

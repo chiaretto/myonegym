@@ -4,10 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { FONT_SCALE_DEFAULT, useSettings } from '../../state/settings'
+import { useOnboarding } from '../../state/onboarding'
 
 beforeEach(() => {
   localStorage.clear()
   useSettings.getState().reset()
+  // Not the focus of this test — skip the first-launch sample-data prompt.
+  useOnboarding.getState().markPromptSeen()
   document.documentElement.style.removeProperty('--font-scale')
 })
 afterEach(() => {

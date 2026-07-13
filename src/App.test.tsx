@@ -1,9 +1,16 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from './App'
 import { db } from './db/db'
+import { useOnboarding } from './state/onboarding'
 
+beforeEach(() => {
+  localStorage.clear()
+  // Not the focus of these tests — treat the device as already-asked so the
+  // first-launch prompt never interferes. See App.onboarding.test.tsx.
+  useOnboarding.getState().markPromptSeen()
+})
 afterEach(async () => {
   cleanup()
   // reset the shared dev DB between renders
