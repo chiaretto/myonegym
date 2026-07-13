@@ -21,6 +21,21 @@ function requireName(name: string, what = 'nome'): string {
   return trimmed
 }
 
+/**
+ * True when the device has any registered data at all (gyms, categories,
+ * exercises, or days). Used to decide whether a device is "already asked"
+ * for the first-launch sample-data prompt.
+ */
+export async function hasAnyRegisteredData(d: MyOneGymDB = db): Promise<boolean> {
+  const [gyms, categories, exercises, days] = await Promise.all([
+    d.gyms.count(),
+    d.categories.count(),
+    d.exercises.count(),
+    d.days.count(),
+  ])
+  return gyms + categories + exercises + days > 0
+}
+
 /* ------------------------------------------------------------------ gyms */
 
 export async function listGyms(d: MyOneGymDB = db): Promise<Gym[]> {
