@@ -150,3 +150,19 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
   background: var(--surface-2); color: var(--text-primary); padding: 11px 18px; border-radius: var(--r-pill);
   border: 0.5px solid var(--border-strong); font-size: var(--fs-sm); z-index: 30; max-width: 90%;
   text-align: center; box-shadow: 0 12px 32px -12px rgba(0,0,0,0.8); }
+
+/* Segmented tabs (ui/Tabs) — same visual language as .unit-seg */
+.tabs { display: flex; gap: 4px; padding: 3px; margin-bottom: 16px;
+  background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--r-btn); }
+.tabs button { flex: 1; background: transparent; border: 0; padding: 10px 0; font-size: var(--fs-sm);
+  font-weight: 700; color: var(--text-secondary); border-radius: var(--r-ctl); }
+.tabs button.on { background: var(--fill-accent); color: var(--on-accent); }
+
+/* Exercise note editor (Observações tab) */
+.note-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.note-input { width: 100%; min-height: 8.5em; resize: vertical; padding: 12px; border-radius: var(--r-ctl);
+  border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-primary);
+  font: inherit; font-size: var(--fs-sm); line-height: 1.5; }
+.note-input:focus { outline: none; border-color: var(--accent); }
+.note-empty { font-size: var(--fs-sm); color: var(--text-secondary); }

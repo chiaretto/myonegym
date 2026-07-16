@@ -3,6 +3,7 @@ import type {
   Category,
   Day,
   Exercise,
+  ExerciseNote,
   Gym,
   Session,
   SessionEntry,
@@ -19,6 +20,7 @@ export class MyOneGymDB extends Dexie {
   weightHistory!: Table<WeightHistory, number>
   sessions!: Table<Session, number>
   sessionEntries!: Table<SessionEntry, number>
+  exerciseNotes!: Table<ExerciseNote, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -36,6 +38,23 @@ export class MyOneGymDB extends Dexie {
       sessions: '++id, gymId, dayId, status, startedAt, completedAt',
       sessionEntries: '++id, sessionId, exerciseId',
     })
+    // v3 — per-gym exercise notes. Additive: one note per (gym, exercise).
+    this.version(3).stores({
+      exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId',
+    })
+    // v4 — sessions carry no independent weight; strip the now-removed
+    // usedValue/usedUnit from existing entries (weight is always the per-gym target).
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('sessionEntries')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            delete e.usedValue
+            delete e.usedUnit
+          })
+      })
   }
 }
 
@@ -52,5 +71,6 @@ export function allTables(database: MyOneGymDB = db) {
     database.weightHistory,
     database.sessions,
     database.sessionEntries,
+    database.exerciseNotes,
   ]
 }

@@ -1,9 +1,9 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
-import type { Category, Day, Exercise, Gym, Unit, Weight } from '../db/types'
+import type { Category, Day, Exercise, ExerciseNote, Gym, Unit, Weight } from '../db/types'
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 /** Bundled sample routine (issue #4) used by "Gerar exemplo". */
 const EXAMPLE_DATA = exampleBackup as unknown as {
@@ -17,9 +17,9 @@ const EXAMPLE_DATA = exampleBackup as unknown as {
 export class PortabilityError extends Error {}
 
 /**
- * Full backup document — current weights only. Device-local data is NOT
- * exported: the weight-change history log AND workout sessions/entries stay on
- * the device (a backup carries no `sessions`).
+ * Full backup document — current weights and per-gym exercise notes. Device-local
+ * data is NOT exported: the weight-change history log AND workout sessions/entries
+ * stay on the device (a backup carries no `sessions`).
  */
 export interface BackupDoc {
   app: typeof APP_TAG
@@ -31,17 +31,19 @@ export interface BackupDoc {
   exercises: Exercise[]
   days: Day[]
   weights: Weight[]
+  exerciseNotes: ExerciseNote[]
 }
 
 /* ------------------------------------------------------------------ export */
 
 export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
-  const [gyms, categories, exercises, days, weights] = await Promise.all([
+  const [gyms, categories, exercises, days, weights, exerciseNotes] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
     d.exercises.toArray(),
     d.days.toArray(),
     d.weights.toArray(), // current weights only; weightHistory + sessions are device-local
+    d.exerciseNotes.toArray(),
   ])
   return {
     app: APP_TAG,
@@ -53,6 +55,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     exercises,
     days,
     weights,
+    exerciseNotes,
   }
 }
 
@@ -82,6 +85,11 @@ export function parseBackup(json: string): BackupDoc {
     throw new PortabilityError('Este arquivo não é um backup do MyOneGym.')
   }
   assertArrays(obj, ['gyms', 'categories', 'exercises', 'days', 'weights'])
+  // `exerciseNotes` is optional: backups from before notes existed have zero.
+  if (obj.exerciseNotes === undefined) obj.exerciseNotes = []
+  else if (!Array.isArray(obj.exerciseNotes)) {
+    throw new PortabilityError('Documento inválido: "exerciseNotes" deve ser uma lista.')
+  }
   // Any `sessions`/`sessionEntries` in an older backup are ignored (device-local).
   return obj as unknown as BackupDoc
 }
@@ -101,6 +109,7 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
+    if (doc.exerciseNotes?.length) await d.exerciseNotes.bulkAdd(doc.exerciseNotes)
     // weightHistory + sessions/sessionEntries stay empty by design (device-local)
   })
 }

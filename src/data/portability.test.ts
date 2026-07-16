@@ -6,7 +6,9 @@ import {
   createExercise,
   createGym,
   createCategory,
+  getNote,
   listSessionEntries,
+  saveNote,
   saveWeight,
   setEntryDone,
   startSession,
@@ -97,6 +99,44 @@ describe('backup export/import', () => {
     await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
     expect(await d.days.count()).toBe(1) // imports fine; categoryId is ignored
     expect((await d.days.toArray())[0].name).toBe('Dia 1')
+  })
+})
+
+describe('backup includes per-gym exercise notes', () => {
+  it('exports notes and round-trips them (wipe -> import restores)', async () => {
+    const { g, ex } = await seed()
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
+
+    const doc = await exportBackup(d)
+    expect(doc.exerciseNotes).toHaveLength(1)
+    expect(doc.exerciseNotes[0]).toMatchObject({ gymId: g, exerciseId: ex, text: 'manter cotovelo fixo' })
+
+    // wipe everything (incl. notes) then restore
+    await Promise.all(
+      [d.gyms, d.categories, d.exercises, d.days, d.weights, d.weightHistory, d.exerciseNotes].map((t) =>
+        t.clear(),
+      ),
+    )
+    expect(await d.exerciseNotes.count()).toBe(0)
+
+    await importBackupReplaceAll(doc, d)
+    expect((await getNote(g, ex, d))?.text).toBe('manter cotovelo fixo')
+  })
+
+  it('older backup without exerciseNotes imports as zero notes', async () => {
+    const { g, ex } = await seed()
+    await saveNote(g, ex, 'temporária', d)
+    const doc = await exportBackup(d)
+
+    // simulate a pre-notes backup: drop the field entirely
+    const legacy = JSON.parse(JSON.stringify(doc))
+    delete legacy.exerciseNotes
+    const parsed = parseBackup(JSON.stringify(legacy))
+    expect(parsed.exerciseNotes).toEqual([]) // defaulted, not rejected
+
+    await importBackupReplaceAll(parsed, d)
+    expect(await d.exerciseNotes.count()).toBe(0)
+    expect(await d.gyms.count()).toBe(1) // the rest still imports fine
   })
 })
 

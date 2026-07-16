@@ -13,6 +13,7 @@ import {
   deleteSession,
   ensureUncategorized,
   getActiveSession,
+  getNote,
   getSession,
   getSessionEntry,
   getWeight,
@@ -24,9 +25,9 @@ import {
   listSessionEntries,
   listSessionSummaries,
   renameCategory,
+  saveNote,
   saveWeight,
   setEntryDone,
-  setEntryWeight,
   startSession,
   validateMediaUrl,
 } from './repos'
@@ -122,16 +123,65 @@ describe('exercises', () => {
     expect(() => validateMediaUrl('https://x.com/a.mp4')).toThrow(ValidationError)
   })
 
-  it('delete removes from days and drops weights + history', async () => {
+  it('delete removes from days and drops weights + history + notes', async () => {
     const g = await createGym('A', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 20, 'KG', d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
     await deleteExercise(ex, d)
     expect((await d.days.get(day))?.exerciseIds).toEqual([])
     expect(await getWeight(g, ex, d)).toBeUndefined()
     expect(await listHistory(g, ex, d)).toHaveLength(0)
+    expect(await getNote(g, ex, d)).toBeUndefined()
     expect(await d.exercises.get(ex)).toBeUndefined()
+  })
+})
+
+describe('exercise notes', () => {
+  it('upsert round-trip: save then read back the note', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
+    expect((await getNote(g, ex, d))?.text).toBe('manter cotovelo fixo')
+  })
+
+  it('editing replaces the text (still one record)', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
+    await saveNote(g, ex, 'usar pegada aberta', d)
+    expect((await getNote(g, ex, d))?.text).toBe('usar pegada aberta')
+    expect(await d.exerciseNotes.where('[gymId+exerciseId]').equals([g, ex]).count()).toBe(1)
+  })
+
+  it('trims and saving blank/whitespace text deletes the note', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, '  espaçado  ', d)
+    expect((await getNote(g, ex, d))?.text).toBe('espaçado')
+    await saveNote(g, ex, '   ', d)
+    expect(await getNote(g, ex, d)).toBeUndefined()
+  })
+
+  it('is isolated per gym', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(a, ex, 'nota da A', d)
+    expect((await getNote(a, ex, d))?.text).toBe('nota da A')
+    expect(await getNote(b, ex, d)).toBeUndefined()
+  })
+
+  it('deleting a gym removes its notes but leaves other gyms untouched', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(a, ex, 'nota da A', d)
+    await saveNote(b, ex, 'nota da B', d)
+    await deleteGym(a, d)
+    expect(await getNote(a, ex, d)).toBeUndefined()
+    expect((await getNote(b, ex, d))?.text).toBe('nota da B')
   })
 })
 
@@ -173,24 +223,23 @@ describe('sessions', () => {
     return { g, rosca, supino, agachamento, day }
   }
 
-  it('start snapshots current target weights into entries (empty when unset)', async () => {
+  it('start creates entries with names only — no stored weight', async () => {
     const { g, day } = await seedDay()
     const sid = await startSession(g, day, d)
     const entries = await listSessionEntries(sid, d)
-    expect(entries.map((e) => [e.exerciseName, e.usedValue, e.usedUnit])).toEqual([
-      ['Rosca Direta', 20, 'KG'],
-      ['Supino', 40, 'KG'],
-      ['Agachamento', undefined, undefined],
-    ])
+    expect(entries.map((e) => e.exerciseName)).toEqual(['Rosca Direta', 'Supino', 'Agachamento'])
     expect(entries.every((e) => e.done === false)).toBe(true)
+    // entries carry no weight — the weight is the exercise's per-gym target
+    expect(entries.every((e) => !('usedValue' in e) && !('usedUnit' in e))).toBe(true)
   })
 
-  it('snapshot is independent of later target changes', async () => {
+  it('the session weight is the live per-gym target (no snapshot)', async () => {
     const { g, rosca, day } = await seedDay()
-    const sid = await startSession(g, day, d)
-    await saveWeight(g, rosca, 25, 'KG', d) // change the target afterwards
-    const entries = await listSessionEntries(sid, d)
-    expect(entries.find((e) => e.exerciseName === 'Rosca Direta')?.usedValue).toBe(20)
+    await startSession(g, day, d)
+    // the target read for the session's gym is the current one, and it moves
+    expect((await getWeight(g, rosca, d))?.value).toBe(20)
+    await saveWeight(g, rosca, 25, 'KG', d)
+    expect((await getWeight(g, rosca, d))?.value).toBe(25)
   })
 
   it('rejects a second active session for the same gym', async () => {
@@ -211,19 +260,19 @@ describe('sessions', () => {
     expect((await getSession(sidB, d))?.gymId).toBe(b)
   })
 
-  it('run: mark done and set used weight without touching the target', async () => {
+  it('run: mark done; adjusting weight updates the per-gym target + history', async () => {
     const { g, rosca, day } = await seedDay()
     const sid = await startSession(g, day, d)
     const entries = await listSessionEntries(sid, d)
     const rEntry = entries.find((e) => e.exerciseName === 'Rosca Direta')!
     await setEntryDone(rEntry.id!, true, d)
-    await setEntryWeight(rEntry.id!, 22.5, 'KG', d)
-    const after = await listSessionEntries(sid, d)
-    const r2 = after.find((e) => e.id === rEntry.id)!
+    // editing the weight during a session goes through the target editor
+    await saveWeight(g, rosca, 22.5, 'KG', d)
+    const r2 = (await listSessionEntries(sid, d)).find((e) => e.id === rEntry.id)!
     expect(r2.done).toBe(true)
-    expect(r2.usedValue).toBe(22.5)
-    // the exercise's target weight for the gym is unchanged
-    expect((await getWeight(g, rosca, d))?.value).toBe(20)
+    // the exercise's target weight for the gym IS updated, with a history entry
+    expect((await getWeight(g, rosca, d))?.value).toBe(22.5)
+    expect((await listHistory(g, rosca, d))[0]?.value).toBe(22.5)
   })
 
   it('complete moves to completed and frees the gym to start again', async () => {
@@ -269,28 +318,25 @@ describe('sessions', () => {
     expect(await d.exercises.count()).toBe(3)
   })
 
-  it('getSessionEntry returns a single entry; used-weight edit leaves the target untouched', async () => {
-    const { g, rosca, day } = await seedDay()
+  it('getSessionEntry returns a single entry (name snapshot, no weight)', async () => {
+    const { day, g } = await seedDay()
     const sid = await startSession(g, day, d)
     const [first] = await listSessionEntries(sid, d)
     const fetched = await getSessionEntry(first.id!, d)
     expect(fetched?.exerciseName).toBe('Rosca Direta')
-    await setEntryWeight(first.id!, 22.5, 'LB', d)
-    expect((await getSessionEntry(first.id!, d))?.usedValue).toBe(22.5)
-    expect((await getSessionEntry(first.id!, d))?.usedUnit).toBe('LB')
-    // the exercise's target weight for the gym is unchanged
-    expect((await getWeight(g, rosca, d))?.value).toBe(20)
-    expect((await getWeight(g, rosca, d))?.unit).toBe('KG')
+    expect(fetched && !('usedValue' in fetched)).toBe(true)
   })
 
-  it('session detail survives deletion of the source exercise and day', async () => {
+  it('session detail survives deletion of the source exercise and day (name snapshot)', async () => {
     const { g, rosca, day } = await seedDay()
     const sid = await startSession(g, day, d)
     await deleteExercise(rosca, d)
     await d.days.delete(day)
     const entries = await listSessionEntries(sid, d)
-    // snapshot name + weight remain
-    expect(entries.find((e) => e.exerciseName === 'Rosca Direta')?.usedValue).toBe(20)
+    // the name snapshot remains so the recap still renders
+    expect(entries.some((e) => e.exerciseName === 'Rosca Direta')).toBe(true)
+    // the target weight is gone with the exercise (no per-session copy)
+    expect(await getWeight(g, rosca, d)).toBeUndefined()
     expect((await getSession(sid, d))?.dayName).toBe('Dia 1')
   })
 })

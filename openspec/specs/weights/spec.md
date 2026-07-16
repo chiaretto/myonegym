@@ -28,8 +28,13 @@ a third. The active gym determines which weight and unit are shown and edited.
 
 ### Requirement: Edit and Save Weight
 
-The weight field on the exercise detail MUST support an explicit **edit → save**
-interaction so a value is only persisted on save.
+The target weight MUST support an explicit **edit → save** interaction so a value
+is only persisted on save. The **same editor** MUST be available in two places for
+the active/session gym: the **catalog exercise detail** and the **in-session
+exercise detail** (Execução tab) while the session is **in progress**. Both edit
+the **same** per-gym target keyed by `(gymId, exerciseId)` and, on save, append a
+weight-history entry — there is no separate per-session weight. On a **completed**
+session the editor is shown **read-only** (current target for reference).
 
 #### Scenario: Edit then save
 - GIVEN "Rosca Direta" shows 20 KG in the active gym
@@ -40,6 +45,12 @@ interaction so a value is only persisted on save.
 - GIVEN "Rosca Direta" is 20 KG in the active gym
 - WHEN the user edits the unit to "LB" and saves
 - THEN the record stores unit "LB" for the active gym
+
+#### Scenario: Edit from the in-session detail updates the same target
+- GIVEN an in-progress session in gym "A" and "Rosca Direta" at 20 KG in "A"
+- WHEN the user edits the weight to 25 KG on the session exercise detail and saves
+- THEN the target `(A, Rosca Direta)` becomes 25 KG and a history entry is appended
+- AND the catalog exercise detail shows 25 KG (it is the same per-gym target)
 
 #### Scenario: No active gym
 - GIVEN no gym exists yet

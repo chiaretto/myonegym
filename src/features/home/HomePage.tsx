@@ -11,7 +11,7 @@ import {
   useSessionSummaries,
 } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
-import { daySubtitle } from '../../lib/days'
+import { daySubtitle, nextWorkoutDayId } from '../../lib/days'
 import { fmtWeight } from '../../lib/format'
 import { startOfWeek } from '../../lib/week'
 import { useToast } from '../../ui/Feedback'
@@ -68,6 +68,10 @@ export function HomePage() {
   const weekStart = startOfWeek(Date.now())
   const doneThisWeek = summaries.filter((s) => (s.session.completedAt ?? 0) >= weekStart).length
 
+  // "Próximo treino": the day after the most recent completed session (summaries
+  // are newest-first, per active gym), wrapping to the first day.
+  const nextDayId = nextWorkoutDayId(days ?? [], summaries[0]?.session.dayId ?? null)
+
   const onStart = async (dayId: number) => {
     if (activeGymId == null) {
       toast('Crie ou selecione uma academia primeiro.')
@@ -117,11 +121,11 @@ export function HomePage() {
         )}
 
         <ul className="accordion">
-          {days?.map((day, idx) => {
+          {days?.map((day) => {
             const isOpen = openId === day.id
             const isResume = activeSession != null && activeSession.dayId === day.id
-            // Feature the first day (next workout) when nothing is being resumed.
-            const isFeatured = idx === 0 && activeSession == null
+            // Feature the next workout day (from history) when nothing is being resumed.
+            const isFeatured = day.id === nextDayId && activeSession == null
             return (
               <li
                 key={day.id}

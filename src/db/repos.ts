@@ -4,6 +4,7 @@ import {
   type Category,
   type Day,
   type Exercise,
+  type ExerciseNote,
   type Gym,
   type Session,
   type SessionEntry,
@@ -76,11 +77,12 @@ export async function renameGym(id: number, name: string, d: MyOneGymDB = db): P
   await d.gyms.update(id, { name: requireName(name, 'nome da academia') })
 }
 
-/** Delete a gym and cascade to its weights and history. */
+/** Delete a gym and cascade to its weights, history, and exercise notes. */
 export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.gyms, d.weights, d.weightHistory, async () => {
+  await d.transaction('rw', d.gyms, d.weights, d.weightHistory, d.exerciseNotes, async () => {
     await d.weights.where('gymId').equals(id).delete()
     await d.weightHistory.where('gymId').equals(id).delete()
+    await d.exerciseNotes.where('gymId').equals(id).delete()
     await d.gyms.delete(id)
   })
 }
@@ -184,18 +186,30 @@ export async function updateExercise(
   await d.exercises.update(id, { name, mediaUrl, categoryId: input.categoryId })
 }
 
-/** Delete an exercise: pull it from all days and drop its weights + history. */
+/**
+ * Delete an exercise: pull it from all days and drop its weights, history, and
+ * per-gym notes.
+ */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.exercises, d.days, d.weights, d.weightHistory, async () => {
-    await d.days
-      .filter((day) => day.exerciseIds.includes(id))
-      .modify((day) => {
-        day.exerciseIds = day.exerciseIds.filter((x) => x !== id)
-      })
-    await d.weights.where('exerciseId').equals(id).delete()
-    await d.weightHistory.where('exerciseId').equals(id).delete()
-    await d.exercises.delete(id)
-  })
+  await d.transaction(
+    'rw',
+    d.exercises,
+    d.days,
+    d.weights,
+    d.weightHistory,
+    d.exerciseNotes,
+    async () => {
+      await d.days
+        .filter((day) => day.exerciseIds.includes(id))
+        .modify((day) => {
+          day.exerciseIds = day.exerciseIds.filter((x) => x !== id)
+        })
+      await d.weights.where('exerciseId').equals(id).delete()
+      await d.weightHistory.where('exerciseId').equals(id).delete()
+      await d.exerciseNotes.where('exerciseId').equals(id).delete()
+      await d.exercises.delete(id)
+    },
+  )
 }
 
 /* ------------------------------------------------------------------ days */
@@ -341,6 +355,45 @@ export async function deleteHistoryEntry(entryId: number, d: MyOneGymDB = db): P
   })
 }
 
+/* --------------------------------------------------------- exercise notes */
+
+/** The note for (gym, exercise), if any (at most one). */
+export async function getNote(
+  gymId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<ExerciseNote | undefined> {
+  return d.exerciseNotes.where('[gymId+exerciseId]').equals([gymId, exerciseId]).first()
+}
+
+/**
+ * Upsert the note for (gym, exercise). Blank/whitespace-only text DELETES the
+ * record (there is no "empty note"). Stamps `updatedAt` on save.
+ */
+export async function saveNote(
+  gymId: number,
+  exerciseId: number,
+  text: string,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  const clean = text.trim()
+  await d.transaction('rw', d.exerciseNotes, async () => {
+    const current = await d.exerciseNotes
+      .where('[gymId+exerciseId]')
+      .equals([gymId, exerciseId])
+      .first()
+    if (!clean) {
+      if (current?.id != null) await d.exerciseNotes.delete(current.id)
+      return
+    }
+    if (current?.id != null) {
+      await d.exerciseNotes.update(current.id, { text: clean, updatedAt: Date.now() })
+    } else {
+      await d.exerciseNotes.add({ gymId, exerciseId, text: clean, updatedAt: Date.now() })
+    }
+  })
+}
+
 /* ------------------------------------------------------------- sessions */
 
 export interface SessionSummary {
@@ -362,58 +415,48 @@ export async function getActiveSession(
 }
 
 /**
- * Start a workout session for a day in the given gym. Snapshots the day's
- * exercises into entries, each pre-filled with the exercise's CURRENT target
- * weight for the gym (or empty when unset). Rejects if the gym already has an
- * in-progress session (only one active session per gym). Returns the new id.
+ * Start a workout session for a day in the given gym. Creates one entry per
+ * exercise, snapshotting only the exercise NAME (for durability). Entries store
+ * no weight — the weight shown/edited is always the exercise's per-gym target.
+ * Rejects if the gym already has an in-progress session (only one active session
+ * per gym). Returns the new id.
  */
 export async function startSession(
   gymId: number,
   dayId: number,
   d: MyOneGymDB = db,
 ): Promise<number> {
-  return d.transaction(
-    'rw',
-    d.sessions,
-    d.sessionEntries,
-    d.days,
-    d.exercises,
-    d.weights,
-    async () => {
-      const active = await d.sessions
-        .where('gymId')
-        .equals(gymId)
-        .filter((s) => s.status === 'active')
-        .first()
-      if (active) {
-        throw new ValidationError('Já existe um treino em andamento nesta academia.')
-      }
-      const day = await d.days.get(dayId)
-      if (!day) throw new ValidationError('Dia de treino não encontrado.')
+  return d.transaction('rw', d.sessions, d.sessionEntries, d.days, d.exercises, async () => {
+    const active = await d.sessions
+      .where('gymId')
+      .equals(gymId)
+      .filter((s) => s.status === 'active')
+      .first()
+    if (active) {
+      throw new ValidationError('Já existe um treino em andamento nesta academia.')
+    }
+    const day = await d.days.get(dayId)
+    if (!day) throw new ValidationError('Dia de treino não encontrado.')
 
-      const sessionId = await d.sessions.add({
-        gymId,
-        dayId,
-        dayName: day.name,
-        startedAt: Date.now(),
-        status: 'active',
+    const sessionId = await d.sessions.add({
+      gymId,
+      dayId,
+      dayName: day.name,
+      startedAt: Date.now(),
+      status: 'active',
+    })
+    for (const exId of day.exerciseIds) {
+      const ex = await d.exercises.get(exId)
+      if (!ex) continue
+      await d.sessionEntries.add({
+        sessionId,
+        exerciseId: exId,
+        exerciseName: ex.name,
+        done: false,
       })
-      for (const exId of day.exerciseIds) {
-        const ex = await d.exercises.get(exId)
-        if (!ex) continue
-        const w = await d.weights.where('[gymId+exerciseId]').equals([gymId, exId]).first()
-        await d.sessionEntries.add({
-          sessionId,
-          exerciseId: exId,
-          exerciseName: ex.name,
-          usedValue: w?.value,
-          usedUnit: w?.unit,
-          done: false,
-        })
-      }
-      return sessionId
-    },
-  )
+    }
+    return sessionId
+  })
 }
 
 export async function getSession(id: number, d: MyOneGymDB = db): Promise<Session | undefined> {
@@ -463,17 +506,6 @@ export async function setEntryDone(
   d: MyOneGymDB = db,
 ): Promise<void> {
   await d.sessionEntries.update(entryId, { done })
-}
-
-/** Set the weight actually used for a session entry (does NOT touch the target). */
-export async function setEntryWeight(
-  entryId: number,
-  value: number,
-  unit: Unit,
-  d: MyOneGymDB = db,
-): Promise<void> {
-  if (!Number.isFinite(value) || value < 0) throw new ValidationError('Peso inválido.')
-  await d.sessionEntries.update(entryId, { usedValue: value, usedUnit: unit })
 }
 
 /** Mark an in-progress session completed, stamping the completion time. */
