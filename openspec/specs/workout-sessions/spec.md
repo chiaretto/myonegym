@@ -186,15 +186,23 @@ MUST be **read-only** — it shows the gym's **current** target for reference (n
 edit, no history delete).
 
 The detail MUST present its content in **tabs**: an **"Execução"** tab containing
-the guided stepper and the Peso alvo editor described here, and an
-**"Observações"** tab that shows and edits the **per-gym exercise note** for
-`(session.gymId, entry.exerciseId)` (see the `exercise-notes` capability). The
-note tab provides an editable text field with an explicit save; the note is
-**durable and per `(gym, exercise)`**, so it is shared with the catalog exercise
-detail and with future sessions of the same exercise in the same gym. When the
-entry has no linked exercise (`exerciseId` absent because the source exercise was
-deleted), the Observações tab MUST show an empty/disabled state (no note can be
-attached to a missing exercise).
+the guided stepper and the Peso alvo editor described here, an **"Observações"**
+tab that shows and edits the **per-gym exercise note** for `(session.gymId,
+entry.exerciseId)` (see the `exercise-notes` capability), and a **"Foto"** tab
+that shows and manages the **per-gym exercise photos** for the same pair (see the
+`exercise-photos` capability). The note tab provides an editable text field with
+an explicit save; the photo tab lists the pair's photos and lets the user attach
+one (camera or gallery) or delete one. Both the note and the photos are **durable
+and per `(gym, exercise)`**, so they are shared with the catalog exercise detail
+and with future sessions of the same exercise in the same gym. When the entry has
+no linked exercise (`exerciseId` absent because the source exercise was deleted),
+the Observações **and Foto** tabs MUST show an empty/disabled state (nothing can
+be attached to a missing exercise).
+
+Unlike the Peso alvo editor, the Observações and Foto tabs MUST remain
+**editable even when the parent session is completed** — a note and a photo
+describe the exercise in that gym, not that session, so there is nothing to
+freeze.
 
 The detail MUST act as a **guided stepper** over the session's exercises:
 
@@ -307,6 +315,22 @@ a placeholder and the live target/history are empty).
 - GIVEN a session entry whose source exercise was later deleted (`exerciseId` absent)
 - WHEN the user opens its detail and switches to the "Observações" tab
 - THEN the tab shows an empty/disabled state and no note can be saved
+
+#### Scenario: Attach a photo from the Foto tab
+- GIVEN an in-progress session in gym "A" on the detail of "Rosca Direta"
+- WHEN the user opens the "Foto" tab and attaches a photo of the machine
+- THEN the photo is persisted for `(A, Rosca Direta)`
+- AND it is shown the next time "Rosca Direta" is opened in gym "A" (in a later session or on the catalog detail)
+
+#### Scenario: Foto tab is empty for a deleted source exercise
+- GIVEN a session entry whose source exercise was later deleted (`exerciseId` absent)
+- WHEN the user opens its detail and switches to the "Foto" tab
+- THEN the tab shows an empty/disabled state and no photo can be attached
+
+#### Scenario: Photos stay editable on a completed session
+- GIVEN a completed session's recap in gym "A"
+- WHEN the user opens an entry's detail and switches to the "Foto" tab
+- THEN a photo can still be attached or deleted (the weight editor remains read-only)
 
 #### Scenario: Read-only for a completed session
 - GIVEN a completed session's recap
