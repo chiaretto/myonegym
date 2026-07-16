@@ -42,6 +42,19 @@ export class MyOneGymDB extends Dexie {
     this.version(3).stores({
       exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId',
     })
+    // v4 — sessions carry no independent weight; strip the now-removed
+    // usedValue/usedUnit from existing entries (weight is always the per-gym target).
+    this.version(4)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('sessionEntries')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            delete e.usedValue
+            delete e.usedUnit
+          })
+      })
   }
 }
 

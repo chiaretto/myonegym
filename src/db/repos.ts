@@ -415,58 +415,48 @@ export async function getActiveSession(
 }
 
 /**
- * Start a workout session for a day in the given gym. Snapshots the day's
- * exercises into entries, each pre-filled with the exercise's CURRENT target
- * weight for the gym (or empty when unset). Rejects if the gym already has an
- * in-progress session (only one active session per gym). Returns the new id.
+ * Start a workout session for a day in the given gym. Creates one entry per
+ * exercise, snapshotting only the exercise NAME (for durability). Entries store
+ * no weight — the weight shown/edited is always the exercise's per-gym target.
+ * Rejects if the gym already has an in-progress session (only one active session
+ * per gym). Returns the new id.
  */
 export async function startSession(
   gymId: number,
   dayId: number,
   d: MyOneGymDB = db,
 ): Promise<number> {
-  return d.transaction(
-    'rw',
-    d.sessions,
-    d.sessionEntries,
-    d.days,
-    d.exercises,
-    d.weights,
-    async () => {
-      const active = await d.sessions
-        .where('gymId')
-        .equals(gymId)
-        .filter((s) => s.status === 'active')
-        .first()
-      if (active) {
-        throw new ValidationError('Já existe um treino em andamento nesta academia.')
-      }
-      const day = await d.days.get(dayId)
-      if (!day) throw new ValidationError('Dia de treino não encontrado.')
+  return d.transaction('rw', d.sessions, d.sessionEntries, d.days, d.exercises, async () => {
+    const active = await d.sessions
+      .where('gymId')
+      .equals(gymId)
+      .filter((s) => s.status === 'active')
+      .first()
+    if (active) {
+      throw new ValidationError('Já existe um treino em andamento nesta academia.')
+    }
+    const day = await d.days.get(dayId)
+    if (!day) throw new ValidationError('Dia de treino não encontrado.')
 
-      const sessionId = await d.sessions.add({
-        gymId,
-        dayId,
-        dayName: day.name,
-        startedAt: Date.now(),
-        status: 'active',
+    const sessionId = await d.sessions.add({
+      gymId,
+      dayId,
+      dayName: day.name,
+      startedAt: Date.now(),
+      status: 'active',
+    })
+    for (const exId of day.exerciseIds) {
+      const ex = await d.exercises.get(exId)
+      if (!ex) continue
+      await d.sessionEntries.add({
+        sessionId,
+        exerciseId: exId,
+        exerciseName: ex.name,
+        done: false,
       })
-      for (const exId of day.exerciseIds) {
-        const ex = await d.exercises.get(exId)
-        if (!ex) continue
-        const w = await d.weights.where('[gymId+exerciseId]').equals([gymId, exId]).first()
-        await d.sessionEntries.add({
-          sessionId,
-          exerciseId: exId,
-          exerciseName: ex.name,
-          usedValue: w?.value,
-          usedUnit: w?.unit,
-          done: false,
-        })
-      }
-      return sessionId
-    },
-  )
+    }
+    return sessionId
+  })
 }
 
 export async function getSession(id: number, d: MyOneGymDB = db): Promise<Session | undefined> {
@@ -516,17 +506,6 @@ export async function setEntryDone(
   d: MyOneGymDB = db,
 ): Promise<void> {
   await d.sessionEntries.update(entryId, { done })
-}
-
-/** Set the weight actually used for a session entry (does NOT touch the target). */
-export async function setEntryWeight(
-  entryId: number,
-  value: number,
-  unit: Unit,
-  d: MyOneGymDB = db,
-): Promise<void> {
-  if (!Number.isFinite(value) || value < 0) throw new ValidationError('Peso inválido.')
-  await d.sessionEntries.update(entryId, { usedValue: value, usedUnit: unit })
 }
 
 /** Mark an in-progress session completed, stamping the completion time. */

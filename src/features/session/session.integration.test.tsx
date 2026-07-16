@@ -80,7 +80,7 @@ describe('Workout session end-to-end', () => {
     expect(await db.sessionEntries.count()).toBe(0)
   })
 
-  it('detail: edit used weight, then Concluído marks done and advances', async () => {
+  it('detail: editing the weight updates the per-gym target, then Concluído advances', async () => {
     await seedDia1()
     const user = userEvent.setup()
 
@@ -92,17 +92,24 @@ describe('Workout session end-to-end', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
-    expect(await screen.findByText('Peso usado')).toBeInTheDocument()
+    // The session detail now uses the same "Peso alvo" editor as the catalog.
+    expect(await screen.findByText('Peso alvo')).toBeInTheDocument()
 
-    // Edit the used weight here (40 → 42.5) — updates only the entry.
+    // Edit the weight here (40 → 42.5) — this updates the exercise's per-gym target.
     await user.click(screen.getByRole('button', { name: /Editar/ }))
-    const input = screen.getByLabelText('Peso usado')
+    const input = screen.getByLabelText('Peso')
     await user.clear(input)
     await user.type(input, '42.5')
     await user.click(screen.getByRole('button', { name: /Salvar/ }))
+
+    const supinoEx = (await db.exercises.toArray()).find((e) => e.name === 'Supino Reto')!
     await waitFor(async () =>
-      expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.usedValue).toBe(42.5),
+      expect((await db.weights.where('exerciseId').equals(supinoEx.id!).first())?.value).toBe(42.5),
     )
+    // No independent per-session weight is stored on the entry.
+    expect(
+      (await db.sessionEntries.toArray()).every((e) => !('usedValue' in e)),
+    ).toBe(true)
 
     // Pending exercise shows the "Concluir" CTA; tapping it marks Supino done and
     // advances to the next exercise (Crucifixo).
@@ -117,11 +124,6 @@ describe('Workout session end-to-end', () => {
     expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Concluído' })).toBeInTheDocument()
     expect(screen.getAllByText('Concluído').length).toBeGreaterThan(1) // button + chip
-
-    // The exercise's target weight is unchanged (still 40 KG).
-    const supinoEx = (await db.exercises.toArray()).find((e) => e.name === 'Supino Reto')!
-    const w = await db.weights.where('exerciseId').equals(supinoEx.id!).first()
-    expect(w?.value).toBe(40)
   })
 
   it('steps between exercises (Voltar/Avançar) and guards Concluir treino', async () => {

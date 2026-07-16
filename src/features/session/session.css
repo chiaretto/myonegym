@@ -91,19 +91,6 @@
 }
 .done-badge.full { background: var(--accent-grad); color: var(--on-accent); }
 
-/* Used-weight editor (bottom sheet) */
-.entry-edit { display: flex; flex-direction: column; gap: 12px; }
-.entry-edit .val {
-  width: 100%; padding: 12px; border-radius: var(--r-ctl); border: 0.5px solid var(--border-strong);
-  background: var(--surface-2); color: var(--text-primary); font-size: var(--fs-4xl); font-weight: 700;
-  text-align: center; font-variant-numeric: tabular-nums;
-}
-.u-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px;
-  background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--r-btn); }
-.u-seg button { background: transparent; border: 0; padding: 10px 0; font-size: var(--fs-sm);
-  font-weight: 700; color: var(--text-secondary); border-radius: var(--r-ctl); }
-.u-seg button.on { background: var(--fill-accent); color: var(--on-accent); }
-
 /* Home day-header start/resume affordance */
 .day-start {
   display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: var(--r-pill);

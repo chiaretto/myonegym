@@ -3,7 +3,14 @@ import { db } from '../../db/db'
 import { completeSession, deleteSession, setEntryDone } from '../../db/repos'
 import type { SessionEntry } from '../../db/types'
 import { fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
-import { useCategoryMap, useExerciseMap, useGyms, useSession, useSessionEntries } from '../../lib/hooks'
+import {
+  useCategoryMap,
+  useExerciseMap,
+  useGymWeights,
+  useGyms,
+  useSession,
+  useSessionEntries,
+} from '../../lib/hooks'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
@@ -15,6 +22,7 @@ export function SessionPage() {
   const session = useSession(sessionId)
   const entries = useSessionEntries(sessionId)
   const gyms = useGyms()
+  const weights = useGymWeights(session?.gymId ?? null)
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
   const toast = useToast()
@@ -126,14 +134,17 @@ export function SessionPage() {
                     <span className="entry-name">{entry.exerciseName}</span>
                     {cat && <span className="entry-cat">{cat}</span>}
                   </span>
-                  {entry.usedValue != null ? (
-                    <span className="used-weight readonly">
-                      {fmtNumber(entry.usedValue)}
-                      <span className="unit">{entry.usedUnit}</span>
-                    </span>
-                  ) : (
-                    <span className="used-weight empty">definir</span>
-                  )}
+                  {(() => {
+                    const w = entry.exerciseId != null ? weights.get(entry.exerciseId) : undefined
+                    return w ? (
+                      <span className="used-weight readonly">
+                        {fmtNumber(w.value)}
+                        <span className="unit">{w.unit}</span>
+                      </span>
+                    ) : (
+                      <span className="used-weight empty">definir</span>
+                    )
+                  })()}
                 </Link>
               </li>
             )

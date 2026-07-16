@@ -2,35 +2,39 @@
 
 ## Purpose
 Record and review **workout sessions** — a single training visit, scoped to a
-gym like weights. A session snapshots a training day's exercises with their
-current target weights, lets the user run through them (mark done, set the weight
-actually used), complete the session, and review or delete past sessions per gym.
+gym like weights. A session lists a training day's exercises, lets the user run
+through them (mark done, and adjust each exercise's **per-gym target weight** via
+the same editor as the catalog), complete the session, and review or delete past
+sessions per gym. The session stores **no independent weight** — the weight shown
+and edited is always the exercise's per-gym target.
 
 ## Requirements
 ### Requirement: Start a Workout Session
 
 The user MUST be able to **start a workout session** from a training day. The
-session is created in the **active gym** and captures a snapshot of that day's
-active exercises as **session entries**, one per exercise, each pre-filled with
-the exercise's **current target weight and unit** for the active gym (or empty
-when no target is set). A session starts in an **in-progress** state and records
-its **start time**. Starting a session MUST require an active gym.
+session is created in the **active gym** and captures that day's active exercises
+as **session entries**, one per exercise, each snapshotting the exercise **name**
+(for durability if the source exercise is later renamed/deleted). Entries do
+**NOT** store a weight — the weight shown and edited for an entry is always the
+exercise's **per-gym target weight** for the session's gym (see the `weights`
+capability). A session starts **in-progress** and records its **start time**.
+Starting a session MUST require an active gym.
 
 #### Scenario: Start a session from a day
-- GIVEN gym "A" is active and "Dia 1" contains "Rosca Direta" (20 KG) and "Supino" (40 KG)
+- GIVEN gym "A" is active and "Dia 1" contains "Rosca Direta" (target 20 KG) and "Supino" (target 40 KG)
 - WHEN the user starts a workout for "Dia 1"
 - THEN an in-progress session is created in gym "A" with a start time
-- AND it has two entries: "Rosca Direta" (used 20 KG) and "Supino" (used 40 KG)
+- AND it has two entries, "Rosca Direta" and "Supino", each showing the exercise's current target (20 KG and 40 KG)
 
-#### Scenario: Entry starts empty when no target weight exists
-- GIVEN gym "A" is active and "Dia 1" contains "Agachamento" with no weight recorded in "A"
+#### Scenario: Entry shows "definir" when no target weight exists
+- GIVEN gym "A" is active and "Dia 1" contains "Agachamento" with no target weight in "A"
 - WHEN the user starts a workout for "Dia 1"
-- THEN the "Agachamento" entry is created with no used weight (empty, to be filled during the session)
+- THEN the "Agachamento" entry shows a "definir" hint (no weight is stored on the entry)
 
-#### Scenario: Snapshot is independent of later target changes
-- GIVEN a session was started with "Rosca Direta" used 20 KG
-- WHEN the user later changes the target weight of "Rosca Direta" to 25 KG in gym "A"
-- THEN the session entry still shows 20 KG (the snapshot is not rewritten)
+#### Scenario: The session reflects later target changes (no snapshot)
+- GIVEN an in-progress session lists "Rosca Direta" showing 20 KG
+- WHEN the user changes the target weight of "Rosca Direta" to 25 KG in gym "A"
+- THEN the session entry now shows 25 KG (the session holds no independent weight)
 
 #### Scenario: Cannot start without an active gym
 - GIVEN no gym exists (or none is active)
@@ -59,19 +63,20 @@ resumes the existing session instead.
 While a session is in progress, the user MUST be able to **mark each entry as
 done** (and toggle it back). Each entry MUST be presented as a **Home-style row**
 — a **media thumbnail**, the exercise **name** and **category**, a **done
-checkbox**, and a compact **read-only used-weight badge** (or a "definir" hint
-when unset). Tapping the row (outside the checkbox) MUST open that entry's
-**detail** (see Session Exercise Detail). Marking an entry done MUST be possible
-from the list checkbox **or** from the detail, and the session's progress MUST
-reflect either. **Setting the weight actually used** for an entry (value + unit)
-happens on the detail screen and updates only that session entry; the exercise's
-target weight for the gym is never changed. Changes to entries persist
-immediately and are local.
+checkbox**, and a compact **read-only weight badge** showing the exercise's
+**current per-gym target weight** for the session's gym (or a "definir" hint when
+unset). Tapping the row (outside the checkbox) MUST open that entry's **detail**
+(see Session Exercise Detail). Marking an entry done MUST be possible from the
+list checkbox **or** from the detail, and the session's progress MUST reflect
+either. **Adjusting the weight** for an entry happens on the detail screen and
+updates the **exercise's per-gym target weight** (and its history) — there is no
+separate per-session weight. Changes to the done state persist immediately and
+are local.
 
 #### Scenario: Entry rows look like Home rows
-- GIVEN an in-progress session for a day with "Rosca Direta" (Bíceps, used 20 KG)
+- GIVEN an in-progress session for a day with "Rosca Direta" (Bíceps, target 20 KG in the session's gym)
 - WHEN the user views the runner
-- THEN the "Rosca Direta" row shows a media thumbnail, its name and category, a done checkbox, and a "20 KG" badge
+- THEN the "Rosca Direta" row shows a media thumbnail, its name and category, a done checkbox, and a "20 KG" badge (the current target)
 
 #### Scenario: Mark an exercise done from the list
 - GIVEN an in-progress session with entry "Rosca Direta" not done
@@ -140,43 +145,54 @@ shows a different list.
 
 ### Requirement: View Session Detail
 
-Opening a session from history MUST show its entries: each exercise's name and
-the **used weight/unit** captured for that session, plus its done state. The
-detail MUST render from the session's own snapshot, independent of the current
-state of the source day/exercise/target.
+Opening a session from history MUST show its entries: each exercise's **name**
+(from the entry snapshot) and the exercise's **current per-gym target weight** for
+the session's gym (live — or a "definir"/empty indicator when unset or the source
+was deleted), plus its done state. The recap does **not** store or show a frozen
+per-session weight.
 
 #### Scenario: Open a completed session
-- GIVEN a completed session for "Dia 1" with "Rosca Direta" (22.5 KG, done) and "Supino" (40 KG, not done)
+- GIVEN a completed session for "Dia 1" with "Rosca Direta" (done) and "Supino" (not done), and current targets 22.5 KG and 40 KG in the session's gym
 - WHEN the user opens it from history
-- THEN the detail lists both entries with their used weights and done states
+- THEN the detail lists both entries with the current target weights (22.5 KG, 40 KG) and their done states
 
-#### Scenario: Detail survives source deletion
+#### Scenario: Recap reflects the current target, not a frozen value
+- GIVEN a completed session referenced "Rosca Direta" while its target was 20 KG
+- WHEN the target for "Rosca Direta" is later changed to 25 KG in that gym
+- THEN reopening the completed session shows 25 KG (the recap reads the live target)
+
+#### Scenario: Recap survives source deletion
 - GIVEN a completed session referencing "Rosca Direta"
 - WHEN "Rosca Direta" is later deleted from the app
-- THEN the session detail still shows "Rosca Direta" with its captured weight (from the snapshot)
+- THEN the session detail still shows the "Rosca Direta" name (from the snapshot) with an empty/"definir" weight
 
 ### Requirement: Session Exercise Detail
 
 Each session entry MUST have a **detail screen** (reached by tapping its row in
 the runner or the completed-session recap). The detail MUST render the exercise's
 **media** (static image or animated GIF, played animated), the exercise name and
-its category/day context, the entry's **used weight** for this session, and the
-exercise's per-gym **weight-history timeline** (scoped to the **session's gym**,
-read-only). While the session is in progress, the detail MUST let the user
-**edit and save the used weight** (value + unit KG/LB/#) — affecting **only this
-entry**, never the target weight.
+its category/day context, and — for the weight — the **same "Peso alvo" editor
+used on the catalog exercise detail** (see the `weights` capability), scoped to
+the **session's gym**: the per-gym **target weight** (edit → save, value + unit
+KG/LB/#) together with the per-gym **weight-history timeline** (with per-entry
+delete). Saving the weight MUST update the exercise's **per-gym target weight**
+and append a **history** entry — the session stores no independent weight.
+
+While the session is **in progress** the Peso alvo editor and its history delete
+MUST be **editable**. When the parent session is **completed**, the weight card
+MUST be **read-only** — it shows the gym's **current** target for reference (no
+edit, no history delete).
 
 The detail MUST present its content in **tabs**: an **"Execução"** tab containing
-the guided stepper, used-weight editor, and history timeline described here, and
-an **"Observações"** tab that shows and edits the **per-gym exercise note** for
+the guided stepper and the Peso alvo editor described here, and an
+**"Observações"** tab that shows and edits the **per-gym exercise note** for
 `(session.gymId, entry.exerciseId)` (see the `exercise-notes` capability). The
 note tab provides an editable text field with an explicit save; the note is
 **durable and per `(gym, exercise)`**, so it is shared with the catalog exercise
-detail and with future sessions of the same exercise in the same gym — it is
-**not** a per-session field like the used weight. When the entry has no linked
-exercise (`exerciseId` absent because the source exercise was deleted), the
-Observações tab MUST show an empty/disabled state (no note can be attached to a
-missing exercise).
+detail and with future sessions of the same exercise in the same gym. When the
+entry has no linked exercise (`exerciseId` absent because the source exercise was
+deleted), the Observações tab MUST show an empty/disabled state (no note can be
+attached to a missing exercise).
 
 The detail MUST act as a **guided stepper** over the session's exercises:
 
@@ -196,9 +212,10 @@ The detail MUST act as a **guided stepper** over the session's exercises:
 
 Un-marking an entry is done from the runner list (not the detail). When the
 parent session is **completed**, the detail MUST be **read-only** (no weight
-editing, no marking) and MUST show the static done state; Voltar/Avançar MAY
-still be used to browse. The detail MUST render from the entry's snapshot where
-live data is missing, so it still works if the source exercise was deleted.
+editing, no history delete, no marking) and MUST show the static done state;
+Voltar/Avançar MAY still be used to browse. The detail MUST render from the
+entry's name snapshot where the source exercise was deleted (media falls back to
+a placeholder and the live target/history are empty).
 
 #### Scenario: Pending exercise shows a call-to-action
 - GIVEN an in-progress session on the detail of an exercise that is **not** done
@@ -235,16 +252,18 @@ live data is missing, so it still works if the source exercise was deleted.
 - THEN "Voltar" is disabled
 - AND GIVEN the detail of the last exercise, "Avançar" is disabled
 
-#### Scenario: Edit the used weight from the detail
-- GIVEN the "Rosca Direta" entry detail shows used 20 KG
-- WHEN the user edits the used weight to 22.5 KG and saves
-- THEN the entry stores used 22.5 KG for this session only
-- AND the exercise's target weight for gym "A" is unchanged
+#### Scenario: Edit the weight from the session detail updates the target
+- GIVEN an in-progress session in gym "A" on the detail of "Rosca Direta" (target 20 KG)
+- WHEN the user edits the weight to 22.5 KG and saves
+- THEN the exercise's **target weight** for gym "A" becomes 22.5 KG
+- AND a weight-history entry is appended for `(A, Rosca Direta)`
+- AND the catalog exercise detail for "Rosca Direta" in gym "A" shows 22.5 KG
 
-#### Scenario: History is the exercise's target history, read-only
-- GIVEN "Rosca Direta" has target-weight history 20 KG → 22.5 KG in gym "A"
-- WHEN the user opens the entry detail during a session in gym "A"
-- THEN the timeline shows that history as read-only reference (no delete affordance)
+#### Scenario: Setting a weight when none existed
+- GIVEN an in-progress session in gym "A" on the detail of "Agachamento" with no target in "A"
+- WHEN the user sets the weight to 60 KG and saves
+- THEN the target `(A, Agachamento) = 60 KG` is created (with a first history entry)
+- AND the runner row for "Agachamento" now shows "60 KG" instead of "definir"
 
 #### Scenario: Add a note from the Observações tab
 - GIVEN an in-progress session in gym "A" on the detail of "Rosca Direta"
@@ -260,15 +279,15 @@ live data is missing, so it still works if the source exercise was deleted.
 #### Scenario: Read-only for a completed session
 - GIVEN a completed session's recap
 - WHEN the user opens an entry's detail
-- THEN the media, used weight, done state, and history are shown
-- AND the used weight cannot be edited and the done state cannot be changed
+- THEN the media, the current target weight, done state, and history are shown
+- AND the weight cannot be edited, history entries cannot be deleted, and the done state cannot be changed
 - AND Voltar/Avançar may still be used to browse the exercises
 
 #### Scenario: Detail survives source exercise deletion
 - GIVEN a session entry whose source exercise "Rosca Direta" was later deleted
 - WHEN the user opens that entry's detail
-- THEN the entry's snapshot name and used weight still render
-- AND the media falls back to a placeholder and the live history is empty
+- THEN the entry's snapshot name still renders
+- AND the media falls back to a placeholder and the target/history are empty
 
 ### Requirement: Delete a Session
 

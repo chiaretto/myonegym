@@ -89,16 +89,15 @@ export interface Session {
 }
 
 /**
- * A single exercise line within a session. `exerciseName` and `usedValue/Unit`
- * are snapshots so past sessions are unaffected by later edits/deletes of the
- * source exercise or its target weight.
+ * A single exercise line within a session. `exerciseName` is a snapshot so a
+ * session still renders after the source exercise is renamed/deleted. The entry
+ * stores NO weight — the weight shown/edited for an entry is always the
+ * exercise's per-gym target weight (see Weight), looked up live by the UI.
  */
 export interface SessionEntry {
   id?: number
   sessionId: number
   exerciseId?: number
   exerciseName: string
-  usedValue?: number
-  usedUnit?: Unit
   done: boolean
 }
