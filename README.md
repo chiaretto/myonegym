@@ -71,6 +71,18 @@ npm run typecheck  # tsc --noEmit
   and prints an **absolute** date, since it outlives the day it was made. An
   exercise's media only appears if its host sends CORS headers; anything that
   can't be loaded falls back to the placeholder rather than failing the share.
+- **Exercise photos** — the **Foto** tab (beside Observações, on both the catalog
+  exercise detail and the in-session entry detail) holds **photos per
+  `(gym, exercise)`** — your own pictures of *that machine* (seat height, pin
+  position), as opposed to the exercise's `mediaUrl` demo image, which is the
+  same everywhere. Take one with the camera or pick one from the gallery; several
+  can coexist, newest first, each viewable full-size and deletable. Photos are
+  **downscaled to 1600px / JPEG** before being stored (a 6 MB camera frame lands
+  around 200 KB) and kept as bytes in IndexedDB. They stay **editable on a
+  completed session** — a photo describes the exercise in that gym, not that
+  session. Deleting a gym or an exercise deletes its photos. Photos are
+  **device-local: they are NOT in the backup** and an import erases them — the
+  one kind of user content a restore cannot bring back.
 - **Exercise notes** — the **Observações** tab (on both the catalog exercise
   detail and the in-session entry detail) holds one **free-text note per
   `(gym, exercise)`**, like the target weight. It is durable and shared across
@@ -90,8 +102,11 @@ npm run typecheck  # tsc --noEmit
 - **Data** — generate an example routine, export a full backup JSON, and import
   a backup (**replaces all** local data, with confirmation). The backup carries
   gyms, categories, exercises, days, current per-gym weights, and per-gym exercise
-  notes. Device-local data (weight-change history and workout sessions) is
-  **not** included in backups.
+  notes. Device-local data (weight-change history, workout sessions, and
+  **exercise photos**) is **not** included in backups. Photos are excluded
+  because they are binary: base64 in JSON would turn a ~50 KB backup into tens of
+  MB. The screen says so — they are the only user-created content a restore
+  cannot bring back.
   A **"Zona de perigo"** section adds **Resetar app**, which erases all
   registered data on the device after an explicit "cannot be undone"
   confirmation — equivalent to a fresh install.

@@ -58,6 +58,35 @@ export interface ExerciseNote {
   updatedAt: number
 }
 
+/**
+ * A photo of an exercise within a gym — the user's own picture of *that machine*
+ * (seat height, pin position, plate layout), as opposed to `Exercise.mediaUrl`,
+ * which is a remote demo image shared by every gym.
+ *
+ * Keyed by `(gymId, exerciseId)` like a Weight or an ExerciseNote, but unlike
+ * those a pair holds **many** photos, so the index is non-unique.
+ *
+ * The image is stored as raw **bytes + mime type**, not as a `Blob`. Both are
+ * structured-cloneable in principle, but Blob-in-IndexedDB has a long history of
+ * Safari bugs — a bad bet for an installable PWA — and fake-indexeddb drops a
+ * Blob's contents entirely, which would leave this untestable. Bytes are
+ * portable and verifiable; the UI wraps them back into a Blob to display.
+ * Base64 was rejected: it would inflate the same data ~33% and cost a conversion
+ * on every read. Device-local — never exported (see data-portability).
+ */
+export interface ExercisePhoto {
+  id?: number
+  gymId: number
+  exerciseId: number
+  bytes: ArrayBuffer
+  /** Mime type of `bytes`, e.g. "image/jpeg" — needed to rebuild the Blob. */
+  type: string
+  /** Dimensions of the stored (downscaled) image, not the original. */
+  width: number
+  height: number
+  createdAt: number
+}
+
 export type HistoryKind = 'first' | 'value' | 'unit'
 
 /** Append-only change log for weights. Device-local; never exported. */
