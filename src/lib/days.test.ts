@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayCategoryNames, dayNamesForExercise, daySubtitle } from './days'
+import { dayCategoryNames, dayNamesForExercise, daySubtitle, nextWorkoutDayId } from './days'
 import type { Category, Day, Exercise } from '../db/types'
 
 const cats = new Map<number, Category>([
@@ -55,5 +55,42 @@ describe('dayNamesForExercise', () => {
   })
   it('returns empty when the exercise is in no day', () => {
     expect(dayNamesForExercise(99, days)).toEqual([])
+  })
+})
+
+describe('nextWorkoutDayId', () => {
+  const days: Day[] = [
+    { id: 1, name: 'Dia 1', exerciseIds: [] },
+    { id: 2, name: 'Dia 2', exerciseIds: [] },
+    { id: 3, name: 'Dia 3', exerciseIds: [] },
+  ]
+
+  it('features the first day when there is no session history', () => {
+    expect(nextWorkoutDayId(days, null)).toBe(1)
+    expect(nextWorkoutDayId(days, undefined)).toBe(1)
+  })
+
+  it('advances to the day after the most recent session', () => {
+    expect(nextWorkoutDayId(days, 1)).toBe(2)
+    expect(nextWorkoutDayId(days, 2)).toBe(3)
+  })
+
+  it('wraps to the first day after the last day', () => {
+    expect(nextWorkoutDayId(days, 3)).toBe(1)
+  })
+
+  it('falls back to the first day when the last-session day was deleted', () => {
+    expect(nextWorkoutDayId(days, 999)).toBe(1)
+  })
+
+  it('returns null when there are no days', () => {
+    expect(nextWorkoutDayId([], null)).toBeNull()
+    expect(nextWorkoutDayId([], 2)).toBeNull()
+  })
+
+  it('handles a single-day list (always wraps back to it)', () => {
+    const one: Day[] = [{ id: 5, name: 'Único', exerciseIds: [] }]
+    expect(nextWorkoutDayId(one, null)).toBe(5)
+    expect(nextWorkoutDayId(one, 5)).toBe(5)
   })
 })

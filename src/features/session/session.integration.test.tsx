@@ -96,7 +96,8 @@ describe('Workout session end-to-end', () => {
     expect(await screen.findByText('Peso alvo')).toBeInTheDocument()
 
     // Edit the weight here (40 → 42.5) — this updates the exercise's per-gym target.
-    await user.click(screen.getByRole('button', { name: /Editar/ }))
+    // Wait for the target-weight live query to resolve (button flips Definir→Editar).
+    await user.click(await screen.findByRole('button', { name: /Editar/ }))
     const input = screen.getByLabelText('Peso')
     await user.clear(input)
     await user.type(input, '42.5')

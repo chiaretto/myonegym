@@ -43,3 +43,22 @@ export function daySubtitle(
 export function dayNamesForExercise(exerciseId: number, days: Day[]): string[] {
   return days.filter((d) => d.exerciseIds.includes(exerciseId)).map((d) => d.name)
 }
+
+/**
+ * The id of the day to feature as "Próximo treino" — the day immediately after
+ * the most recent completed session's day, in `days` display order. Wraps to the
+ * first day when there is no history, when the last session was the final day, or
+ * when its day is no longer in the list. Returns `null` when there are no days.
+ *
+ * `days` must be in display order; `lastCompletedDayId` is the `dayId` of the
+ * most recent completed session for the active gym (or null/undefined when none).
+ */
+export function nextWorkoutDayId(
+  days: Day[],
+  lastCompletedDayId: number | null | undefined,
+): number | null {
+  if (days.length === 0) return null
+  // -1 when there is no session or its day was deleted → (idx + 1) % len == first.
+  const idx = lastCompletedDayId == null ? -1 : days.findIndex((d) => d.id === lastCompletedDayId)
+  return days[(idx + 1) % days.length].id ?? null
+}
