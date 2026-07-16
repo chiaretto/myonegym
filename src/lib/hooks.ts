@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import {
   getActiveSession,
+  getNote,
   getSession,
   getSessionEntry,
   listCategories,
@@ -56,6 +57,18 @@ export function useHistory(gymId: number | null, exerciseId: number | null) {
       gymId == null || exerciseId == null ? [] : listHistory(gymId, exerciseId, db),
     [gymId, exerciseId],
     [],
+  )
+}
+
+/**
+ * The per-gym note for (gym, exercise), or null when unset / ids missing.
+ * `undefined` while loading (mirrors `useSession`).
+ */
+export function useNote(gymId: number | null, exerciseId: number | null) {
+  return useLiveQuery(
+    async () =>
+      gymId == null || exerciseId == null ? null : ((await getNote(gymId, exerciseId, db)) ?? null),
+    [gymId, exerciseId],
   )
 }
 

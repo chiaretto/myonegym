@@ -11,9 +11,13 @@ import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { BackBar } from '../../ui/Chrome'
+import { Tabs } from '../../ui/Tabs'
 import { useGyms } from '../../lib/hooks'
+import { NoteEditor } from './NoteEditor'
 import { Sparkline } from './Sparkline'
 import './exercise.css'
+
+type DetailTab = 'detail' | 'notes'
 
 /** Step a weight string by ±0.5, clamped at 0 and snapped to a clean half-step. */
 function stepValue(current: string, delta: number): string {
@@ -43,6 +47,7 @@ export function ExerciseDetailPage() {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
+  const [tab, setTab] = useState<DetailTab>('detail')
 
   // Seed the editor from the current weight whenever it (or gym) changes.
   useEffect(() => {
@@ -124,6 +129,19 @@ export function ExerciseDetailPage() {
           </div>
         </div>
 
+        <Tabs<DetailTab>
+          tabs={[
+            { id: 'detail', label: 'Detalhe' },
+            { id: 'notes', label: 'Observações' },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+
+        {tab === 'notes' ? (
+          <NoteEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+        ) : (
+          <>
         {/* Weight editor */}
         {activeGymId == null ? (
           <section className="weight-card">
@@ -246,6 +264,8 @@ export function ExerciseDetailPage() {
               })}
             </ul>
           </section>
+        )}
+          </>
         )}
       </main>
     </>

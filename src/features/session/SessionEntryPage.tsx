@@ -17,9 +17,13 @@ import { BackBar } from '../../ui/Chrome'
 import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
+import { Tabs } from '../../ui/Tabs'
+import { NoteEditor } from '../exercise/NoteEditor'
 import { Sparkline } from '../exercise/Sparkline'
 import '../exercise/exercise.css'
 import './session.css'
+
+type EntryTab = 'exec' | 'notes'
 
 export function SessionEntryPage() {
   const { id, entryId } = useParams()
@@ -41,6 +45,7 @@ export function SessionEntryPage() {
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
+  const [tab, setTab] = useState<EntryTab>('exec')
 
   // Seed the editor from the entry's used weight whenever it changes.
   useEffect(() => {
@@ -123,6 +128,19 @@ export function SessionEntryPage() {
           </div>
         </div>
 
+        <Tabs<EntryTab>
+          tabs={[
+            { id: 'exec', label: 'Execução' },
+            { id: 'notes', label: 'Observações' },
+          ]}
+          active={tab}
+          onChange={setTab}
+        />
+
+        {tab === 'notes' ? (
+          <NoteEditor gymId={session.gymId} exerciseId={entry.exerciseId ?? null} />
+        ) : (
+          <>
         {/* Guided stepper: Concluído (mark + advance) on top, Voltar/Avançar below */}
         <div className="entry-stepper">
           {readOnly ? (
@@ -248,6 +266,8 @@ export function SessionEntryPage() {
               })}
             </ul>
           </section>
+        )}
+          </>
         )}
       </main>
     </>

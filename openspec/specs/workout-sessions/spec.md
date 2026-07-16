@@ -166,6 +166,18 @@ read-only). While the session is in progress, the detail MUST let the user
 **edit and save the used weight** (value + unit KG/LB/#) — affecting **only this
 entry**, never the target weight.
 
+The detail MUST present its content in **tabs**: an **"Execução"** tab containing
+the guided stepper, used-weight editor, and history timeline described here, and
+an **"Observações"** tab that shows and edits the **per-gym exercise note** for
+`(session.gymId, entry.exerciseId)` (see the `exercise-notes` capability). The
+note tab provides an editable text field with an explicit save; the note is
+**durable and per `(gym, exercise)`**, so it is shared with the catalog exercise
+detail and with future sessions of the same exercise in the same gym — it is
+**not** a per-session field like the used weight. When the entry has no linked
+exercise (`exerciseId` absent because the source exercise was deleted), the
+Observações tab MUST show an empty/disabled state (no note can be attached to a
+missing exercise).
+
 The detail MUST act as a **guided stepper** over the session's exercises:
 
 - The **done control** MUST **visually reflect whether the current entry is
@@ -233,6 +245,17 @@ live data is missing, so it still works if the source exercise was deleted.
 - GIVEN "Rosca Direta" has target-weight history 20 KG → 22.5 KG in gym "A"
 - WHEN the user opens the entry detail during a session in gym "A"
 - THEN the timeline shows that history as read-only reference (no delete affordance)
+
+#### Scenario: Add a note from the Observações tab
+- GIVEN an in-progress session in gym "A" on the detail of "Rosca Direta"
+- WHEN the user opens the "Observações" tab, types "manter cotovelo fixo", and saves
+- THEN the per-gym note `(A, Rosca Direta)` is persisted
+- AND the note is shown the next time "Rosca Direta" is opened in gym "A" (in a later session or on the catalog detail)
+
+#### Scenario: Observações tab is empty for a deleted source exercise
+- GIVEN a session entry whose source exercise was later deleted (`exerciseId` absent)
+- WHEN the user opens its detail and switches to the "Observações" tab
+- THEN the tab shows an empty/disabled state and no note can be saved
 
 #### Scenario: Read-only for a completed session
 - GIVEN a completed session's recap

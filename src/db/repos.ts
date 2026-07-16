@@ -4,6 +4,7 @@ import {
   type Category,
   type Day,
   type Exercise,
+  type ExerciseNote,
   type Gym,
   type Session,
   type SessionEntry,
@@ -76,11 +77,12 @@ export async function renameGym(id: number, name: string, d: MyOneGymDB = db): P
   await d.gyms.update(id, { name: requireName(name, 'nome da academia') })
 }
 
-/** Delete a gym and cascade to its weights and history. */
+/** Delete a gym and cascade to its weights, history, and exercise notes. */
 export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.gyms, d.weights, d.weightHistory, async () => {
+  await d.transaction('rw', d.gyms, d.weights, d.weightHistory, d.exerciseNotes, async () => {
     await d.weights.where('gymId').equals(id).delete()
     await d.weightHistory.where('gymId').equals(id).delete()
+    await d.exerciseNotes.where('gymId').equals(id).delete()
     await d.gyms.delete(id)
   })
 }
@@ -184,18 +186,30 @@ export async function updateExercise(
   await d.exercises.update(id, { name, mediaUrl, categoryId: input.categoryId })
 }
 
-/** Delete an exercise: pull it from all days and drop its weights + history. */
+/**
+ * Delete an exercise: pull it from all days and drop its weights, history, and
+ * per-gym notes.
+ */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.exercises, d.days, d.weights, d.weightHistory, async () => {
-    await d.days
-      .filter((day) => day.exerciseIds.includes(id))
-      .modify((day) => {
-        day.exerciseIds = day.exerciseIds.filter((x) => x !== id)
-      })
-    await d.weights.where('exerciseId').equals(id).delete()
-    await d.weightHistory.where('exerciseId').equals(id).delete()
-    await d.exercises.delete(id)
-  })
+  await d.transaction(
+    'rw',
+    d.exercises,
+    d.days,
+    d.weights,
+    d.weightHistory,
+    d.exerciseNotes,
+    async () => {
+      await d.days
+        .filter((day) => day.exerciseIds.includes(id))
+        .modify((day) => {
+          day.exerciseIds = day.exerciseIds.filter((x) => x !== id)
+        })
+      await d.weights.where('exerciseId').equals(id).delete()
+      await d.weightHistory.where('exerciseId').equals(id).delete()
+      await d.exerciseNotes.where('exerciseId').equals(id).delete()
+      await d.exercises.delete(id)
+    },
+  )
 }
 
 /* ------------------------------------------------------------------ days */
@@ -337,6 +351,45 @@ export async function deleteHistoryEntry(entryId: number, d: MyOneGymDB = db): P
       }
     } else if (current?.id != null) {
       await d.weights.delete(current.id)
+    }
+  })
+}
+
+/* --------------------------------------------------------- exercise notes */
+
+/** The note for (gym, exercise), if any (at most one). */
+export async function getNote(
+  gymId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<ExerciseNote | undefined> {
+  return d.exerciseNotes.where('[gymId+exerciseId]').equals([gymId, exerciseId]).first()
+}
+
+/**
+ * Upsert the note for (gym, exercise). Blank/whitespace-only text DELETES the
+ * record (there is no "empty note"). Stamps `updatedAt` on save.
+ */
+export async function saveNote(
+  gymId: number,
+  exerciseId: number,
+  text: string,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  const clean = text.trim()
+  await d.transaction('rw', d.exerciseNotes, async () => {
+    const current = await d.exerciseNotes
+      .where('[gymId+exerciseId]')
+      .equals([gymId, exerciseId])
+      .first()
+    if (!clean) {
+      if (current?.id != null) await d.exerciseNotes.delete(current.id)
+      return
+    }
+    if (current?.id != null) {
+      await d.exerciseNotes.update(current.id, { text: clean, updatedAt: Date.now() })
+    } else {
+      await d.exerciseNotes.add({ gymId, exerciseId, text: clean, updatedAt: Date.now() })
     }
   })
 }

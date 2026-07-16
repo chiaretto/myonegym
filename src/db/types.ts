@@ -45,6 +45,19 @@ export interface Weight {
   unit: Unit
 }
 
+/**
+ * A free-text note for an exercise within a gym — one per (gymId, exerciseId),
+ * like a target weight. Durable and independent of any workout session; shared
+ * across sessions and the catalog exercise detail for that gym.
+ */
+export interface ExerciseNote {
+  id?: number
+  gymId: number
+  exerciseId: number
+  text: string
+  updatedAt: number
+}
+
 export type HistoryKind = 'first' | 'value' | 'unit'
 
 /** Append-only change log for weights. Device-local; never exported. */

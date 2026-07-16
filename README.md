@@ -35,16 +35,19 @@ npm run typecheck  # tsc --noEmit
 - **Home** — training days as an accordion. Expanding a day lists its exercises
   (media thumbnail + name) with an inline badge showing the current weight for
   the **active gym** (or "definir" when unset). Tap an exercise for its detail.
-- **Exercise detail** — renders the media (static image **or animated GIF**),
-  an edit→save weight field with a unit toggle (**KG / LB / #**), and a
-  per-gym **history timeline** with per-entry delete. Deleting the newest entry
-  reverts the active weight to the previous one (or clears it).
+- **Exercise detail** — renders the media (static image **or animated GIF**) and
+  two tabs: **Detalhe** (an edit→save weight field with a unit toggle
+  **KG / LB / #**, and a per-gym **history timeline** with per-entry delete —
+  deleting the newest entry reverts the active weight to the previous one or
+  clears it) and **Observações** (a free-text note for this exercise in the active
+  gym — see below).
 - **Workout sessions** — start a workout from a day on Home (**Iniciar** /
   **Continuar**). The session snapshots that day's exercises with their current
   target weights. Each entry is a Home-style row (thumbnail + name + weight)
-  with a done checkbox; tap it to open the **entry detail** — the exercise
-  image/GIF, the *weight used* (edit → save), and the per-gym weight history. The
-  detail is a **guided stepper**: **Concluir** marks the exercise done and jumps
+  with a done checkbox; tap it to open the **entry detail** — an **Execução** tab
+  (the exercise image/GIF, the *weight used* (edit → save), and the per-gym weight
+  history) and an **Observações** tab for the exercise's per-gym note. The
+  Execução detail is a **guided stepper**: **Concluir** marks the exercise done and jumps
   to the next one (a done exercise then shows a calm **Concluído** state + chip),
   and **Voltar / Avançar** step between exercises. Finish with
   **Concluir treino** (enabled once at least one exercise is marked). Only one
@@ -52,6 +55,11 @@ npm run typecheck  # tsc --noEmit
   **Settings → Sessões** lists completed sessions for the active gym (grouped by
   month, with a done-count badge); open one for a read-only recap or delete it.
   Sessions store snapshots, so past sessions survive later edits/deletes.
+- **Exercise notes** — the **Observações** tab (on both the catalog exercise
+  detail and the in-session entry detail) holds one **free-text note per
+  `(gym, exercise)`**, like the target weight. It is durable and shared across
+  sessions of that exercise in that gym; saving an empty note clears it. Notes are
+  isolated per gym and are **included in the full backup**.
 - **Settings** — all CRUD: gyms (with *copy weights from another gym* on
   create), categories (rename; deleting one reassigns its exercises to
   "Sem categoria"), exercises (name, media URL, category — each item also shows
@@ -64,8 +72,10 @@ npm run typecheck  # tsc --noEmit
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.
 - **Data** — generate an example routine, export a full backup JSON, and import
-  a backup (**replaces all** local data, with confirmation). Device-local data
-  (weight-change history and workout sessions) is **not** included in backups.
+  a backup (**replaces all** local data, with confirmation). The backup carries
+  gyms, categories, exercises, days, current per-gym weights, and per-gym exercise
+  notes. Device-local data (weight-change history and workout sessions) is
+  **not** included in backups.
   A **"Zona de perigo"** section adds **Resetar app**, which erases all
   registered data on the device after an explicit "cannot be undone"
   confirmation — equivalent to a fresh install.

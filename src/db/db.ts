@@ -3,6 +3,7 @@ import type {
   Category,
   Day,
   Exercise,
+  ExerciseNote,
   Gym,
   Session,
   SessionEntry,
@@ -19,6 +20,7 @@ export class MyOneGymDB extends Dexie {
   weightHistory!: Table<WeightHistory, number>
   sessions!: Table<Session, number>
   sessionEntries!: Table<SessionEntry, number>
+  exerciseNotes!: Table<ExerciseNote, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -36,6 +38,10 @@ export class MyOneGymDB extends Dexie {
       sessions: '++id, gymId, dayId, status, startedAt, completedAt',
       sessionEntries: '++id, sessionId, exerciseId',
     })
+    // v3 — per-gym exercise notes. Additive: one note per (gym, exercise).
+    this.version(3).stores({
+      exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId',
+    })
   }
 }
 
@@ -52,5 +58,6 @@ export function allTables(database: MyOneGymDB = db) {
     database.weightHistory,
     database.sessions,
     database.sessionEntries,
+    database.exerciseNotes,
   ]
 }

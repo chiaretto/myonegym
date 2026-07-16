@@ -13,6 +13,7 @@ import {
   deleteSession,
   ensureUncategorized,
   getActiveSession,
+  getNote,
   getSession,
   getSessionEntry,
   getWeight,
@@ -24,6 +25,7 @@ import {
   listSessionEntries,
   listSessionSummaries,
   renameCategory,
+  saveNote,
   saveWeight,
   setEntryDone,
   setEntryWeight,
@@ -122,16 +124,65 @@ describe('exercises', () => {
     expect(() => validateMediaUrl('https://x.com/a.mp4')).toThrow(ValidationError)
   })
 
-  it('delete removes from days and drops weights + history', async () => {
+  it('delete removes from days and drops weights + history + notes', async () => {
     const g = await createGym('A', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 20, 'KG', d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
     await deleteExercise(ex, d)
     expect((await d.days.get(day))?.exerciseIds).toEqual([])
     expect(await getWeight(g, ex, d)).toBeUndefined()
     expect(await listHistory(g, ex, d)).toHaveLength(0)
+    expect(await getNote(g, ex, d)).toBeUndefined()
     expect(await d.exercises.get(ex)).toBeUndefined()
+  })
+})
+
+describe('exercise notes', () => {
+  it('upsert round-trip: save then read back the note', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
+    expect((await getNote(g, ex, d))?.text).toBe('manter cotovelo fixo')
+  })
+
+  it('editing replaces the text (still one record)', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, 'manter cotovelo fixo', d)
+    await saveNote(g, ex, 'usar pegada aberta', d)
+    expect((await getNote(g, ex, d))?.text).toBe('usar pegada aberta')
+    expect(await d.exerciseNotes.where('[gymId+exerciseId]').equals([g, ex]).count()).toBe(1)
+  })
+
+  it('trims and saving blank/whitespace text deletes the note', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(g, ex, '  espaçado  ', d)
+    expect((await getNote(g, ex, d))?.text).toBe('espaçado')
+    await saveNote(g, ex, '   ', d)
+    expect(await getNote(g, ex, d)).toBeUndefined()
+  })
+
+  it('is isolated per gym', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(a, ex, 'nota da A', d)
+    expect((await getNote(a, ex, d))?.text).toBe('nota da A')
+    expect(await getNote(b, ex, d)).toBeUndefined()
+  })
+
+  it('deleting a gym removes its notes but leaves other gyms untouched', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveNote(a, ex, 'nota da A', d)
+    await saveNote(b, ex, 'nota da B', d)
+    await deleteGym(a, d)
+    expect(await getNote(a, ex, d)).toBeUndefined()
+    expect((await getNote(b, ex, d))?.text).toBe('nota da B')
   })
 })
 
