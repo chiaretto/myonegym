@@ -14,6 +14,7 @@ import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { PhotoTab } from '../exercise/photo/PhotoTab'
+import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
 import { WeightEditor } from '../exercise/WeightEditor'
@@ -89,7 +90,7 @@ export function SessionEntryPage() {
   return (
     <>
       <BackBar title={entry.exerciseName} to={backTo} />
-      <main className="screen">
+      <main className="screen has-stepper">
         <div className="hero">
           <Media url={exercise?.mediaUrl} alt={entry.exerciseName} className="hero-media" />
         </div>
@@ -130,48 +131,38 @@ export function SessionEntryPage() {
         ) : tab === 'notes' ? (
           <NoteEditor gymId={session.gymId} exerciseId={entry.exerciseId ?? null} />
         ) : (
-          <>
-            {/* Guided stepper: Concluído (mark + advance) on top, Voltar/Avançar below */}
-            <div className="entry-stepper">
-              {readOnly ? (
-                <span className={`entry-done-state${entry.done ? ' done' : ''}`}>
-                  <Icon name={entry.done ? 'check' : 'minus'} size={14} />
-                  {entry.done ? 'Concluído' : 'Não feito'}
-                </span>
-              ) : (
-                <button className={`btn ${entry.done ? 'done' : 'primary'}`} onClick={onCompleteAndAdvance}>
-                  <Icon name={entry.done ? 'check' : 'circle'} /> {entry.done ? 'Concluído' : 'Concluir'}
-                </button>
-              )}
-              <div className="entry-nav-row">
-                <button
-                  className="btn subtle"
-                  aria-label="Exercício anterior"
-                  disabled={prevId == null}
-                  onClick={() => prevId != null && goTo(prevId)}
-                >
-                  <Icon name="chevron-left" /> Voltar
-                </button>
-                <button
-                  className="btn subtle"
-                  aria-label="Próximo exercício"
-                  disabled={nextId == null}
-                  onClick={() => nextId != null && goTo(nextId)}
-                >
-                  Avançar <Icon name="chevron-right" />
-                </button>
-              </div>
-            </div>
-
-            {/* Per-gym target weight (same editor as the catalog); read-only once completed */}
-            <WeightEditor
-              gymId={session.gymId}
-              exerciseId={entry.exerciseId ?? null}
-              readOnly={readOnly}
-            />
-          </>
+          /* Per-gym target weight (same editor as the catalog); read-only once completed */
+          <WeightEditor
+            gymId={session.gymId}
+            exerciseId={entry.exerciseId ?? null}
+            readOnly={readOnly}
+          />
         )}
       </main>
+
+      {/* Outside <main> and outside the tab panels: the stepper is fixed chrome,
+          so it stays put on Execução, Observações and Foto alike. */}
+      <StepperBar
+        action={
+          readOnly ? (
+            <span className={`entry-done-state${entry.done ? ' done' : ''}`}>
+              <Icon name={entry.done ? 'check' : 'minus'} size={14} />
+              {entry.done ? 'Concluído' : 'Não feito'}
+            </span>
+          ) : (
+            <button
+              className={`btn ${entry.done ? 'done' : 'primary'}`}
+              onClick={onCompleteAndAdvance}
+            >
+              <Icon name={entry.done ? 'check' : 'circle'} /> {entry.done ? 'Concluído' : 'Concluir'}
+            </button>
+          )
+        }
+        onPrev={() => prevId != null && goTo(prevId)}
+        onNext={() => nextId != null && goTo(nextId)}
+        prevDisabled={prevId == null}
+        nextDisabled={nextId == null}
+      />
     </>
   )
 }

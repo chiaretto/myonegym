@@ -150,7 +150,26 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
 .sheet h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; margin-bottom: 14px; }
 .sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
 
-.toast { position: fixed; bottom: 92px; left: 50%; transform: translateX(-50%);
+/* Exercise stepper — fixed bottom chrome (ui/StepperBar).
+   Sits above content but below the sheet backdrop (20) and the toast (30), so a
+   confirmation still covers it. Width matches the .app shell rather than the
+   viewport, so it doesn't span a wide desktop window. */
+.stepper-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; z-index: 10;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface-0); border-top: 0.5px solid var(--border);
+  box-shadow: 0 -14px 34px -14px rgba(0, 0, 0, 0.9);
+}
+/* Reserve the bar's MEASURED height (--stepper-h, published by StepperBar) plus
+   breathing room. A fixed value would hide content at large font scales, since
+   the bar grows with --font-scale. Overrides .screen's default bottom padding. */
+.screen.has-stepper { padding-bottom: calc(24px + var(--stepper-h, 0px)); }
+
+/* 76px default keeps the historical 92px offset where there is no stepper (Home,
+   above the tab bar); with one, the toast rides above the bar instead of under it. */
+.toast { position: fixed; bottom: calc(16px + var(--stepper-h, 76px)); left: 50%; transform: translateX(-50%);
   background: var(--surface-2); color: var(--text-primary); padding: 11px 18px; border-radius: var(--r-pill);
   border: 0.5px solid var(--border-strong); font-size: var(--fs-sm); z-index: 30; max-width: 90%;
   text-align: center; box-shadow: 0 12px 32px -12px rgba(0,0,0,0.8); }

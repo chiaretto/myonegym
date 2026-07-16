@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { startSession, ValidationError } from '../../db/repos'
 import {
@@ -63,7 +62,20 @@ export function HomePage() {
   const summaries = useSessionSummaries(activeGymId)
   const nav = useNavigate()
   const toast = useToast()
-  const [openId, setOpenId] = useState<number | null>(null)
+
+  // The expanded day lives in the URL, not in component state: React unmounts
+  // Home when an exercise detail opens, which would reset local state and lose
+  // the user's place on the way back. `replace` so expanding/collapsing doesn't
+  // pile up history entries (Back must leave Home, not walk the accordion).
+  const [params, setParams] = useSearchParams()
+  const dayParam = Number(params.get('day'))
+  const openId = Number.isInteger(dayParam) && dayParam > 0 ? dayParam : null
+  const toggleDay = (id: number) => {
+    const next = new URLSearchParams(params)
+    if (openId === id) next.delete('day')
+    else next.set('day', String(id))
+    setParams(next, { replace: true })
+  }
 
   const weekStart = startOfWeek(Date.now())
   const doneThisWeek = summaries.filter((s) => (s.session.completedAt ?? 0) >= weekStart).length
@@ -136,7 +148,7 @@ export function HomePage() {
                   <button
                     className="day-head-main"
                     aria-expanded={isOpen}
-                    onClick={() => setOpenId(isOpen ? null : day.id!)}
+                    onClick={() => toggleDay(day.id!)}
                   >
                     <span className="day-title">{day.name}</span>
                     <span className="day-sub">{daySubtitle(day, exMap, catMap)}</span>
@@ -150,7 +162,7 @@ export function HomePage() {
                   <button
                     className="chev-btn"
                     aria-label={isOpen ? 'Recolher' : 'Expandir'}
-                    onClick={() => setOpenId(isOpen ? null : day.id!)}
+                    onClick={() => toggleDay(day.id!)}
                   >
                     <Icon name="chevron-down" className="chev day-chev" />
                   </button>
@@ -168,7 +180,7 @@ export function HomePage() {
                       const exCat = ex.categoryId != null ? catMap.get(ex.categoryId) : undefined
                       return (
                         <li key={`${exId}-${i}`}>
-                          <Link className="exercise" to={`/exercise/${exId}`}>
+                          <Link className="exercise" to={`/exercise/${exId}?day=${day.id}`}>
                             <Media className="thumb" url={ex.mediaUrl} alt={ex.name} />
                             <span className="ex-body">
                               <span className="ex-name">{ex.name}</span>

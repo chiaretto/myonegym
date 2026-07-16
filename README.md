@@ -35,8 +35,17 @@ npm run typecheck  # tsc --noEmit
 - **Home** — training days as an accordion. Expanding a day lists its exercises
   (media thumbnail + name) with an inline badge showing the current weight for
   the **active gym** (or "definir" when unset). Tap an exercise for its detail.
+  The **expanded day is part of the address** (`/?day=<id>`), not screen state, so
+  it survives opening an exercise and coming back — and `/?day=3` deep-links
+  straight to that day. Toggling days replaces rather than pushes, so Back leaves
+  Home instead of walking the accordion.
 - **Exercise detail** — renders the media (static image **or animated GIF**) and
-  two tabs: **Detalhe** (an edit→save weight field with a unit toggle
+  tabs. Opened from a day (`/exercise/<id>?day=<id>`) it **remembers that day**:
+  Voltar returns to Home with the day still expanded, and a **floating bottom bar**
+  offers **Voltar / Avançar** across that day's exercises (disabled at the ends).
+  An exercise can belong to several days, so the day is carried in the address
+  rather than guessed; opened without one, there is no bar and Voltar goes to
+  Home. Tabs: **Detalhe** (an edit→save weight field with a unit toggle
   **KG / LB / #**, and a per-gym **history timeline** with per-entry delete —
   deleting the newest entry reverts the active weight to the previous one or
   clears it) and **Observações** (a free-text note for this exercise in the active
@@ -50,9 +59,13 @@ npm run typecheck  # tsc --noEmit
   and an **Observações** tab for the exercise's per-gym note. Editing the weight
   here updates the exercise's **per-gym target** (and appends history) — a
   session stores **no independent weight**; on a completed session the editor is
-  read-only. The Execução detail is a **guided stepper**: **Concluir** marks the
-  exercise done and jumps to the next one (a done exercise then shows a calm
-  **Concluído** state + chip), and **Voltar / Avançar** step between exercises.
+  read-only. The entry detail is a **guided stepper**, in a **floating bar fixed
+  to the bottom of the screen and present on every tab** — mid-set these are the
+  controls you reach for, so they never require scrolling and don't vanish when
+  you open the note or the photo. The bar reserves its own **measured** height, so
+  it covers no content at any font size. **Concluir** marks the exercise done and
+  jumps to the next one (a done exercise then shows a calm **Concluído** state +
+  chip), and **Voltar / Avançar** step between exercises.
   Completing the **last** exercise, when every exercise is done, prompts to
   **finish the workout** (confirm completes the session; decline returns to the
   list). You can also finish anytime with **Concluir treino** on the runner
