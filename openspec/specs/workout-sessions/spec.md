@@ -204,6 +204,18 @@ Unlike the Peso alvo editor, the Observações and Foto tabs MUST remain
 describe the exercise in that gym, not that session, so there is nothing to
 freeze.
 
+The stepper's controls (the done call-to-action and Voltar/Avançar, described
+below) MUST be presented as a **floating bar fixed to the bottom of the screen**,
+**visible on every tab** — not as content inside the "Execução" panel. Mid-set the
+user reaches for these first, so they must not require scrolling, and a bar that
+vanished when switching to Observações or Foto would not read as fixed chrome.
+
+The bar MUST NOT cover any content: the screen's content MUST reserve room equal
+to the bar's **actual height**, at **any font-size setting** (see the
+`app-foundation` typography spec — the bar scales with it, so a fixed reservation
+would hide content at large scales). Transient messages MUST NOT render
+underneath the bar either.
+
 The detail MUST act as a **guided stepper** over the session's exercises:
 
 - The **done control** MUST **visually reflect whether the current entry is
@@ -237,6 +249,26 @@ editing, no history delete, no marking) and MUST show the static done state;
 Voltar/Avançar MAY still be used to browse. The detail MUST render from the
 entry's name snapshot where the source exercise was deleted (media falls back to
 a placeholder and the live target/history are empty).
+
+#### Scenario: The stepper is fixed to the bottom on every tab
+- GIVEN an in-progress session on an exercise's detail
+- WHEN the user switches between the "Execução", "Observações" and "Foto" tabs
+- THEN the Concluir / Voltar / Avançar bar stays fixed at the bottom of the screen on all three
+
+#### Scenario: Concluir works from another tab
+- GIVEN an in-progress session on the detail of exercise 1 of 3, with the "Foto" tab open
+- WHEN the user taps "Concluir" in the bar
+- THEN exercise 1 is marked done and the detail of exercise 2 is shown
+
+#### Scenario: The bar covers no content at any font size
+- GIVEN an exercise detail with content taller than the screen, at the maximum font-size setting
+- WHEN the user scrolls to the bottom
+- THEN the last content is fully readable above the bar
+
+#### Scenario: A message is not hidden by the bar
+- GIVEN the detail shows a confirmation message (e.g. after saving a note)
+- WHEN the message appears
+- THEN it renders above the floating bar, not underneath it
 
 #### Scenario: Pending exercise shows a call-to-action
 - GIVEN an in-progress session on the detail of an exercise that is **not** done
