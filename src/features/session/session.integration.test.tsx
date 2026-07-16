@@ -190,3 +190,81 @@ describe('Workout session end-to-end', () => {
     expect(await db.sessions.count()).toBe(1)
   })
 })
+
+describe('Finish-workout prompt at the end of the stepper', () => {
+  /** Start Dia 1 and open the first exercise's detail. */
+  async function startAndOpenFirst(user: ReturnType<typeof userEvent.setup>) {
+    await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
+    await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
+  }
+
+  it('offers to finish after the last exercise and completes on confirm', async () => {
+    await seedDia1()
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    await startAndOpenFirst(user)
+    // Concluir through all three exercises in order.
+    await user.click(await screen.findByRole('button', { name: 'Concluir' })) // Supino → Crucifixo
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Concluir' })) // Crucifixo → Tríceps Corda
+    expect(await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Concluir' })) // last → prompt
+
+    // The finish prompt appears; confirming completes the session → history.
+    expect(await screen.findByText('Todos os exercícios concluídos!')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Concluir treino' }))
+    expect(await screen.findByRole('heading', { name: 'Sessões' })).toBeInTheDocument()
+    await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('completed'))
+  })
+
+  it('returns to the runner when the finish prompt is declined', async () => {
+    await seedDia1()
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    await startAndOpenFirst(user)
+    await user.click(await screen.findByRole('button', { name: 'Concluir' }))
+    await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })
+    await user.click(screen.getByRole('button', { name: 'Concluir' }))
+    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })
+    await user.click(screen.getByRole('button', { name: 'Concluir' }))
+
+    // Decline → back on the runner, session still in progress.
+    expect(await screen.findByText('Todos os exercícios concluídos!')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
+    await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('active'))
+  })
+
+  it('does not prompt when the last exercise is completed but some were skipped', async () => {
+    await seedDia1()
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    await startAndOpenFirst(user)
+    // Skip Supino (Avançar without marking), then Concluir the remaining two.
+    await user.click(await screen.findByRole('button', { name: 'Próximo exercício' }))
+    await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })
+    await user.click(screen.getByRole('button', { name: 'Concluir' })) // → Tríceps Corda
+    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })
+    await user.click(screen.getByRole('button', { name: 'Concluir' })) // last, but Supino skipped
+
+    // No prompt; runner shown, session still active.
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
+    expect(screen.queryByText('Todos os exercícios concluídos!')).not.toBeInTheDocument()
+    await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('active'))
+  })
+})

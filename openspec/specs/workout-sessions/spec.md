@@ -199,16 +199,27 @@ The detail MUST act as a **guided stepper** over the session's exercises:
 - The **done control** MUST **visually reflect whether the current entry is
   already done**, so stepping between exercises makes each one's status obvious:
   - **Not done** → a prominent **call-to-action** (e.g., "Concluir") that
-    **marks the entry done and advances** to the next exercise's detail (on the
-    **last** exercise it returns to the session overview / runner).
+    **marks the entry done and advances** to the next exercise's detail. On the
+    **last** exercise, it either **prompts to finish the workout** (when all
+    entries are now done — see below) or returns to the session overview / runner.
   - **Already done** → a **distinct completed state** (e.g., "Concluído" with a
     check and a calmer/confirmed styling), clearly different from the pending
-    call-to-action; activating it still advances.
+    call-to-action; activating it still advances (and, on the last exercise, runs
+    the same finish check).
   - The detail SHOULD also show a **"Concluído" indicator** (e.g., a chip near
     the title) when the entry is done, reinforcing the status at a glance.
 - **Voltar** and **Avançar** controls MUST navigate to the **previous / next**
   exercise **without changing the done state**, and MUST be disabled at the
   first / last exercise respectively.
+
+When the user completes the **last exercise in the list** via the done
+call-to-action and, as a result, **all** of the session's entries are done, the
+detail MUST **prompt** the user that all exercises are complete and ask whether to
+**finish the workout**. **Confirming** MUST complete the session (see Complete a
+Session) and leave for the session history. **Declining or dismissing** MUST
+return to the **runner** (the session's exercise list) with the session still in
+progress. If completing the last exercise leaves **any entry not done** (skipped
+via Avançar), the detail MUST NOT prompt and MUST return to the runner.
 
 Un-marking an entry is done from the runner list (not the detail). When the
 parent session is **completed**, the detail MUST be **read-only** (no weight
@@ -235,11 +246,30 @@ a placeholder and the live target/history are empty).
 - AND WHEN the user taps "Voltar" back to exercise 1
 - THEN exercise 1 now shows the distinct "Concluído" completed state
 
-#### Scenario: Concluir on the last exercise returns to the runner
-- GIVEN the user is on the detail of the last exercise, not done
+#### Scenario: Finishing the last exercise prompts to complete the workout
+- GIVEN a 3-exercise session where exercises 1 and 2 are done and the user is on exercise 3 (the last), not done
 - WHEN the user taps "Concluir"
-- THEN the last exercise is marked done
-- AND the session overview (runner) is shown
+- THEN exercise 3 is marked done
+- AND a prompt appears stating all exercises are complete and asking whether to finish the workout
+
+#### Scenario: Confirming the finish prompt completes the session
+- GIVEN the finish prompt is shown at the end of the stepper
+- WHEN the user confirms ("Concluir treino")
+- THEN the session is completed (stamped and marked completed)
+- AND the user is taken to the session history
+
+#### Scenario: Declining the finish prompt returns to the runner
+- GIVEN the finish prompt is shown at the end of the stepper
+- WHEN the user declines or dismisses it
+- THEN the session remains in progress
+- AND the runner (session exercise list) is shown
+
+#### Scenario: Last exercise with skipped entries returns to the runner without a prompt
+- GIVEN a 3-exercise session where exercise 2 was skipped (not done) and the user is on exercise 3 (the last), not done
+- WHEN the user taps "Concluir"
+- THEN exercise 3 is marked done
+- AND no finish prompt is shown
+- AND the runner is shown with the session still in progress
 
 #### Scenario: Avançar navigates without marking
 - GIVEN the detail of exercise 1 of 3, not done

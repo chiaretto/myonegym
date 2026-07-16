@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../db/db'
-import { setEntryDone } from '../../db/repos'
+import { completeSession, setEntryDone } from '../../db/repos'
 import {
   useCategoryMap,
   useExerciseMap,
@@ -10,6 +10,7 @@ import {
   useSessionEntry,
 } from '../../lib/hooks'
 import { BackBar } from '../../ui/Chrome'
+import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { Tabs } from '../../ui/Tabs'
@@ -30,6 +31,8 @@ export function SessionEntryPage() {
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
   const nav = useNavigate()
+  const confirm = useConfirm()
+  const toast = useToast()
 
   const [tab, setTab] = useState<EntryTab>('exec')
 
@@ -59,8 +62,27 @@ export function SessionEntryPage() {
   const onCompleteAndAdvance = async () => {
     if (readOnly) return
     await setEntryDone(eId, true, db)
-    if (nextId != null) goTo(nextId)
-    else nav(`/session/${sessionId}`) // last exercise → back to the runner
+    if (nextId != null) {
+      goTo(nextId)
+      return
+    }
+    // Last exercise: when this completes the whole day, offer to finish the
+    // workout; otherwise (some skipped) just return to the runner.
+    const allDone = entries.every((e) => e.id === eId || e.done)
+    if (allDone) {
+      const ok = await confirm({
+        title: 'Todos os exercícios concluídos!',
+        message: 'Deseja concluir o treino?',
+        confirmLabel: 'Concluir treino',
+      })
+      if (ok) {
+        await completeSession(sessionId, db)
+        toast('Treino concluído.')
+        nav('/sessions')
+        return
+      }
+    }
+    nav(`/session/${sessionId}`) // declined, or not all done → back to the runner
   }
 
   return (

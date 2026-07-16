@@ -53,8 +53,11 @@ npm run typecheck  # tsc --noEmit
   read-only. The Execução detail is a **guided stepper**: **Concluir** marks the
   exercise done and jumps to the next one (a done exercise then shows a calm
   **Concluído** state + chip), and **Voltar / Avançar** step between exercises.
-  Finish with **Concluir treino** (enabled once at least one exercise is marked).
-  Only one session runs at a time per gym.
+  Completing the **last** exercise, when every exercise is done, prompts to
+  **finish the workout** (confirm completes the session; decline returns to the
+  list). You can also finish anytime with **Concluir treino** on the runner
+  (enabled once at least one exercise is marked). Only one session runs at a time
+  per gym.
   **Settings → Sessões** lists completed sessions for the active gym (grouped by
   month, with a done-count badge); open one for a read-only recap or delete it.
   Entries snapshot the exercise **name** (so a recap still renders after a delete);
