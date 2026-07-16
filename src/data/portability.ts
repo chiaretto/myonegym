@@ -42,7 +42,10 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     d.categories.toArray(),
     d.exercises.toArray(),
     d.days.toArray(),
-    d.weights.toArray(), // current weights only; weightHistory + sessions are device-local
+    // Current weights only. weightHistory, sessions and exercisePhotos are
+    // device-local and never leave the device (photos would also bloat the JSON
+    // by tens of MB as base64).
+    d.weights.toArray(),
     d.exerciseNotes.toArray(),
   ])
   return {

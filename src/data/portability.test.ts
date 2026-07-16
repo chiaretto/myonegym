@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from '../db/db'
 import {
+  addPhoto,
   completeSession,
   createDay,
   createExercise,
@@ -137,6 +138,47 @@ describe('backup includes per-gym exercise notes', () => {
     await importBackupReplaceAll(parsed, d)
     expect(await d.exerciseNotes.count()).toBe(0)
     expect(await d.gyms.count()).toBe(1) // the rest still imports fine
+  })
+})
+
+describe('exercise photos are device-local (never in a backup)', () => {
+  /** ~90 KB of bytes — big enough that leaking them into the JSON would show. */
+  const bigPhoto = () => new Uint8Array(90_000).fill(7).buffer as ArrayBuffer
+
+  it('export carries no photo records or bytes, whatever the photo count', async () => {
+    const { g, ex } = await seed()
+    const bare = JSON.stringify(await exportBackup(d)).length
+
+    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
+    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
+    expect(await d.exercisePhotos.count()).toBe(2)
+
+    const doc = await exportBackup(d)
+    const json = JSON.stringify(doc)
+    expect(json).not.toContain('exercisePhotos')
+    expect(json).not.toContain('bytes')
+    expect(Object.keys(doc)).not.toContain('exercisePhotos')
+    // 180 KB of photos must not move the needle — allow only formatting noise.
+    expect(json.length).toBeLessThan(bare + 1_000)
+  })
+
+  it('import replaces all and leaves zero photos', async () => {
+    const { g, ex } = await seed()
+    const doc = await exportBackup(d)
+    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
+    expect(await d.exercisePhotos.count()).toBe(1)
+
+    await importBackupReplaceAll(doc, d)
+
+    expect(await d.gyms.count()).toBe(1) // the rest restored
+    expect(await d.exercisePhotos.count()).toBe(0) // photos cannot be restored
+  })
+
+  it('resetAll clears photos', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
+    await resetAll(d)
+    expect(await d.exercisePhotos.count()).toBe(0)
   })
 })
 

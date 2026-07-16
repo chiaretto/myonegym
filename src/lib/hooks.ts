@@ -10,6 +10,7 @@ import {
   listExercises,
   listGyms,
   listHistory,
+  listPhotos,
   listSessionEntries,
   listSessionSummaries,
   weightsForGym,
@@ -69,6 +70,18 @@ export function useNote(gymId: number | null, exerciseId: number | null) {
     async () =>
       gymId == null || exerciseId == null ? null : ((await getNote(gymId, exerciseId, db)) ?? null),
     [gymId, exerciseId],
+  )
+}
+
+/**
+ * Photos for (gym, exercise), newest first; empty when either id is missing.
+ * Many per pair, unlike `useNote`.
+ */
+export function usePhotos(gymId: number | null, exerciseId: number | null) {
+  return useLiveQuery(
+    async () => (gymId == null || exerciseId == null ? [] : listPhotos(gymId, exerciseId, db)),
+    [gymId, exerciseId],
+    [],
   )
 }
 

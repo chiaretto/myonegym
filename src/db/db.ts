@@ -4,6 +4,7 @@ import type {
   Day,
   Exercise,
   ExerciseNote,
+  ExercisePhoto,
   Gym,
   Session,
   SessionEntry,
@@ -21,6 +22,7 @@ export class MyOneGymDB extends Dexie {
   sessions!: Table<Session, number>
   sessionEntries!: Table<SessionEntry, number>
   exerciseNotes!: Table<ExerciseNote, number>
+  exercisePhotos!: Table<ExercisePhoto, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -55,6 +57,11 @@ export class MyOneGymDB extends Dexie {
             delete e.usedUnit
           })
       })
+    // v5 — per-gym exercise photos. Additive. Note `[gymId+exerciseId]` is
+    // NOT unique (unlike weights/exerciseNotes): a pair holds many photos.
+    this.version(5).stores({
+      exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt',
+    })
   }
 }
 
@@ -72,5 +79,8 @@ export function allTables(database: MyOneGymDB = db) {
     database.sessions,
     database.sessionEntries,
     database.exerciseNotes,
+    // Device-local, like sessions: an import/reset clears photos (they are not
+    // in the backup, so there is nothing to restore them from).
+    database.exercisePhotos,
   ]
 }

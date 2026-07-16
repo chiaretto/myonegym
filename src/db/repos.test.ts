@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from './db'
 import {
   ValidationError,
+  addPhoto,
   completeSession,
   createCategory,
   createDay,
@@ -10,6 +11,7 @@ import {
   deleteCategory,
   deleteExercise,
   deleteGym,
+  deletePhoto,
   deleteSession,
   ensureUncategorized,
   getActiveSession,
@@ -22,6 +24,7 @@ import {
   listDays,
   reorderDays,
   listHistory,
+  listPhotos,
   listSessionEntries,
   listSessionSummaries,
   renameCategory,
@@ -34,6 +37,10 @@ import {
 
 let d: MyOneGymDB
 let n = 0
+
+/** Stand-in for an already-downscaled JPEG — this layer stores what it's given. */
+const jpeg = (body = 'x') => new TextEncoder().encode(body).buffer as ArrayBuffer
+const readBack = (bytes: ArrayBuffer) => new TextDecoder().decode(new Uint8Array(bytes))
 
 beforeEach(async () => {
   d = new MyOneGymDB(`test-${Date.now()}-${n++}`)
@@ -123,17 +130,19 @@ describe('exercises', () => {
     expect(() => validateMediaUrl('https://x.com/a.mp4')).toThrow(ValidationError)
   })
 
-  it('delete removes from days and drops weights + history + notes', async () => {
+  it('delete removes from days and drops weights + history + notes + photos', async () => {
     const g = await createGym('A', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 20, 'KG', d)
     await saveNote(g, ex, 'manter cotovelo fixo', d)
+    await addPhoto(g, ex, jpeg(), 'image/jpeg', 800, 600, d)
     await deleteExercise(ex, d)
     expect((await d.days.get(day))?.exerciseIds).toEqual([])
     expect(await getWeight(g, ex, d)).toBeUndefined()
     expect(await listHistory(g, ex, d)).toHaveLength(0)
     expect(await getNote(g, ex, d)).toBeUndefined()
+    expect(await listPhotos(g, ex, d)).toHaveLength(0)
     expect(await d.exercises.get(ex)).toBeUndefined()
   })
 })
@@ -182,6 +191,113 @@ describe('exercise notes', () => {
     await deleteGym(a, d)
     expect(await getNote(a, ex, d)).toBeUndefined()
     expect((await getNote(b, ex, d))?.text).toBe('nota da B')
+  })
+})
+
+describe('exercise photos', () => {
+  it('attaches a photo and reads the bytes back', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(g, ex, jpeg('abc'), 'image/jpeg', 1600, 1200, d)
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo).toMatchObject({ gymId: g, exerciseId: ex, width: 1600, height: 1200 })
+    expect(photo.type).toBe('image/jpeg')
+    expect(photo.bytes.byteLength).toBe(3)
+    expect(readBack(photo.bytes)).toBe('abc')
+  })
+
+  it('keeps many photos per (gym, exercise), newest first', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Leg Press' }, d)
+    // Both land in the same millisecond here — the id tie-break is what makes
+    // the order deterministic (fake timers would deadlock Dexie's scheduler).
+    await addPhoto(g, ex, jpeg('old'), 'image/jpeg', 100, 100, d)
+    await addPhoto(g, ex, jpeg('new'), 'image/jpeg', 100, 100, d)
+
+    const photos = await listPhotos(g, ex, d)
+    expect(photos).toHaveLength(2)
+    expect(readBack(photos[0].bytes)).toBe('new')
+    expect(readBack(photos[1].bytes)).toBe('old')
+  })
+
+  it('orders by createdAt when the timestamps differ', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Leg Press' }, d)
+    // Inserted directly with explicit timestamps: `addPhoto` stamps Date.now(),
+    // and this is asserting listPhotos' sort, not the insert. Note the older row
+    // gets the LOWER id, so id order alone would put it first — createdAt wins.
+    const row = (body: string, createdAt: number) => ({
+      gymId: g,
+      exerciseId: ex,
+      bytes: jpeg(body),
+      type: 'image/jpeg',
+      width: 100,
+      height: 100,
+      createdAt,
+    })
+    await d.exercisePhotos.add(row('old', 1_000))
+    await d.exercisePhotos.add(row('new', 9_000))
+
+    const photos = await listPhotos(g, ex, d)
+    expect(readBack(photos[0].bytes)).toBe('new')
+    expect(readBack(photos[1].bytes)).toBe('old')
+  })
+
+  it('is isolated per gym', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    expect(await listPhotos(a, ex, d)).toHaveLength(1)
+    expect(await listPhotos(b, ex, d)).toHaveLength(0)
+  })
+
+  it('deletes a single photo without touching the others', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    const first = await addPhoto(g, ex, jpeg('one'), 'image/jpeg', 100, 100, d)
+    await addPhoto(g, ex, jpeg('two'), 'image/jpeg', 100, 100, d)
+    await deletePhoto(first, d)
+
+    const photos = await listPhotos(g, ex, d)
+    expect(photos).toHaveLength(1)
+    expect(readBack(photos[0].bytes)).toBe('two')
+  })
+
+  it('deleting a photo leaves the weight and note alone', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveWeight(g, ex, 20, 'KG', d)
+    await saveNote(g, ex, 'cotovelo fixo', d)
+    const id = await addPhoto(g, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await deletePhoto(id, d)
+
+    expect((await getWeight(g, ex, d))?.value).toBe(20)
+    expect((await getNote(g, ex, d))?.text).toBe('cotovelo fixo')
+  })
+
+  it('deleting a gym removes its photos but leaves other gyms untouched', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await addPhoto(b, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await deleteGym(a, d)
+
+    expect(await listPhotos(a, ex, d)).toHaveLength(0)
+    expect(await listPhotos(b, ex, d)).toHaveLength(1)
+  })
+
+  it('deleting an exercise removes its photos in every gym', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await addPhoto(b, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await deleteExercise(ex, d)
+
+    expect(await d.exercisePhotos.count()).toBe(0)
   })
 })
 

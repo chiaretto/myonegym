@@ -67,17 +67,21 @@ removes its **per-gym notes**.
 - WHEN the user deletes it
 - THEN its note records across all gyms are removed
 
-### Requirement: Exercise Note on the Catalog Detail
+### Requirement: Exercise Note and Photos on the Catalog Detail
 
 The **exercise detail page** (catalog, `/exercise/:id`) MUST present its content
 in **tabs**: a **"Detalhe"** tab with the existing content (the per-gym target
-weight editor and its history), and an **"Observações"** tab that shows and edits
-the **per-gym exercise note** for `(active gym, exerciseId)` (see the
-`exercise-notes` capability). The Observações tab provides an editable text field
-with an explicit save, and reflects the **same** note edited from the in-session
-exercise detail (notes are per `(gym, exercise)`, not per session). When **no gym
-is active**, the Observações tab MUST prompt the user to create/select a gym
-first — the same treatment as the target-weight editor — and no note can be saved.
+weight editor and its history), an **"Observações"** tab that shows and edits the
+**per-gym exercise note** for `(active gym, exerciseId)` (see the
+`exercise-notes` capability), and a **"Foto"** tab that shows and manages the
+**per-gym exercise photos** for the same pair (see the `exercise-photos`
+capability). The Observações tab provides an editable text field with an explicit
+save; the Foto tab lists the pair's photos and lets the user attach one (camera or
+gallery) or delete one. Both reflect the **same** data edited from the in-session
+exercise detail (notes and photos are per `(gym, exercise)`, not per session).
+When **no gym is active**, the Observações **and Foto** tabs MUST prompt the user
+to create/select a gym first — the same treatment as the target-weight editor —
+and nothing can be saved.
 
 #### Scenario: Edit a note from the catalog detail
 - GIVEN gym "A" is active and "Rosca Direta" has no note in "A"
@@ -95,6 +99,23 @@ first — the same treatment as the target-weight editor — and no note can be 
 - WHEN the user opens an exercise detail and switches to "Observações"
 - THEN the tab prompts the user to create/select a gym first
 - AND no note can be saved until a gym is active
+
+#### Scenario: Attach a photo from the catalog detail
+- GIVEN gym "A" is active and "Rosca Direta" has no photos in "A"
+- WHEN the user opens the exercise detail, switches to "Foto", and attaches a photo
+- THEN the photo is persisted for `(A, Rosca Direta)`
+- AND opening "Rosca Direta" during a session in gym "A" shows the same photo
+
+#### Scenario: Photos follow the active gym
+- GIVEN "Rosca Direta" has photos in gym "A" and none in gym "B"
+- WHEN the user makes gym "B" active and opens the exercise detail "Foto" tab
+- THEN no photos are shown (photos are scoped to the active gym)
+
+#### Scenario: No active gym prompts for one before a photo
+- GIVEN no gym exists yet
+- WHEN the user opens an exercise detail and switches to "Foto"
+- THEN the tab prompts the user to create/select a gym first
+- AND no photo can be attached until a gym is active
 
 ### Requirement: Exercise Media Display on Detail Views
 

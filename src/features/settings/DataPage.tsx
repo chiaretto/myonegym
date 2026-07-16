@@ -116,9 +116,15 @@ export function DataPage() {
             </span>
             <span className="row-body">
               <span className="row-title">Exportar backup (JSON)</span>
-              <span className="row-sub">Tudo, exceto o histórico de peso</span>
+              <span className="row-sub">Tudo, exceto histórico de peso, treinos e fotos</span>
             </span>
           </button>
+          {/* Photos are the only user-created content a restore cannot bring
+              back, so the exclusion is stated instead of buried. */}
+          <p className="group-note">
+            <Icon name="camera" size={12} /> As <strong>fotos</strong> dos exercícios ficam só neste
+            aparelho — elas não entram no backup e não voltam ao importar.
+          </p>
         </div>
 
         <div className="group-label">Importar</div>
@@ -129,7 +135,9 @@ export function DataPage() {
             </span>
             <span className="row-body">
               <span className="row-title">Importar backup (JSON)</span>
-              <span className="row-sub warn">Substitui TODOS os dados deste dispositivo</span>
+              <span className="row-sub warn">
+                Substitui TODOS os dados deste dispositivo, inclusive as fotos
+              </span>
             </span>
           </button>
         </div>

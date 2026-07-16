@@ -5,6 +5,7 @@ import {
   type Day,
   type Exercise,
   type ExerciseNote,
+  type ExercisePhoto,
   type Gym,
   type Session,
   type SessionEntry,
@@ -79,12 +80,21 @@ export async function renameGym(id: number, name: string, d: MyOneGymDB = db): P
 
 /** Delete a gym and cascade to its weights, history, and exercise notes. */
 export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.gyms, d.weights, d.weightHistory, d.exerciseNotes, async () => {
-    await d.weights.where('gymId').equals(id).delete()
-    await d.weightHistory.where('gymId').equals(id).delete()
-    await d.exerciseNotes.where('gymId').equals(id).delete()
-    await d.gyms.delete(id)
-  })
+  await d.transaction(
+    'rw',
+    d.gyms,
+    d.weights,
+    d.weightHistory,
+    d.exerciseNotes,
+    d.exercisePhotos,
+    async () => {
+      await d.weights.where('gymId').equals(id).delete()
+      await d.weightHistory.where('gymId').equals(id).delete()
+      await d.exerciseNotes.where('gymId').equals(id).delete()
+      await d.exercisePhotos.where('gymId').equals(id).delete()
+      await d.gyms.delete(id)
+    },
+  )
 }
 
 /* ------------------------------------------------------------ categories */
@@ -187,17 +197,14 @@ export async function updateExercise(
 }
 
 /**
- * Delete an exercise: pull it from all days and drop its weights, history, and
- * per-gym notes.
+ * Delete an exercise: pull it from all days and drop its weights, history,
+ * per-gym notes, and per-gym photos.
  */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
+  // Array form: Dexie's typed overloads stop at 5 tables.
   await d.transaction(
     'rw',
-    d.exercises,
-    d.days,
-    d.weights,
-    d.weightHistory,
-    d.exerciseNotes,
+    [d.exercises, d.days, d.weights, d.weightHistory, d.exerciseNotes, d.exercisePhotos],
     async () => {
       await d.days
         .filter((day) => day.exerciseIds.includes(id))
@@ -207,6 +214,9 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
       await d.weights.where('exerciseId').equals(id).delete()
       await d.weightHistory.where('exerciseId').equals(id).delete()
       await d.exerciseNotes.where('exerciseId').equals(id).delete()
+      // Photos are the heaviest rows in the DB — orphans would waste storage the
+      // user has no way to reach or clear.
+      await d.exercisePhotos.where('exerciseId').equals(id).delete()
       await d.exercises.delete(id)
     },
   )
@@ -392,6 +402,54 @@ export async function saveNote(
       await d.exerciseNotes.add({ gymId, exerciseId, text: clean, updatedAt: Date.now() })
     }
   })
+}
+
+/* -------------------------------------------------------- exercise photos */
+
+/**
+ * Photos for (gym, exercise), newest first. Many per pair (unlike notes).
+ * Ties on `createdAt` break by id — two photos attached within the same
+ * millisecond would otherwise come back in an unstable order.
+ */
+export async function listPhotos(
+  gymId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<ExercisePhoto[]> {
+  const rows = await d.exercisePhotos
+    .where('[gymId+exerciseId]')
+    .equals([gymId, exerciseId])
+    .toArray()
+  return rows.sort((a, b) => b.createdAt - a.createdAt || (b.id ?? 0) - (a.id ?? 0))
+}
+
+/**
+ * Attach a photo to (gym, exercise). The bytes are expected to be **already
+ * downscaled** (see downscalePhoto) — this layer stores what it is given.
+ * Returns the new id.
+ */
+export async function addPhoto(
+  gymId: number,
+  exerciseId: number,
+  bytes: ArrayBuffer,
+  type: string,
+  width: number,
+  height: number,
+  d: MyOneGymDB = db,
+): Promise<number> {
+  return d.exercisePhotos.add({
+    gymId,
+    exerciseId,
+    bytes,
+    type,
+    width,
+    height,
+    createdAt: Date.now(),
+  })
+}
+
+export async function deletePhoto(id: number, d: MyOneGymDB = db): Promise<void> {
+  await d.exercisePhotos.delete(id)
 }
 
 /* ------------------------------------------------------------- sessions */

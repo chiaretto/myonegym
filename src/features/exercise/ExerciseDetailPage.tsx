@@ -8,11 +8,12 @@ import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { BackBar } from '../../ui/Chrome'
 import { Tabs } from '../../ui/Tabs'
+import { PhotoTab } from './photo/PhotoTab'
 import { NoteEditor } from './NoteEditor'
 import { WeightEditor } from './WeightEditor'
 import './exercise.css'
 
-type DetailTab = 'detail' | 'notes'
+type DetailTab = 'detail' | 'notes' | 'photo'
 
 export function ExerciseDetailPage() {
   const { id } = useParams()
@@ -71,12 +72,15 @@ export function ExerciseDetailPage() {
           tabs={[
             { id: 'detail', label: 'Detalhe' },
             { id: 'notes', label: 'Observações' },
+            { id: 'photo', label: 'Foto' },
           ]}
           active={tab}
           onChange={setTab}
         />
 
-        {tab === 'notes' ? (
+        {tab === 'photo' ? (
+          <PhotoTab gymId={activeGymId ?? null} exerciseId={exerciseId} />
+        ) : tab === 'notes' ? (
           <NoteEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
         ) : (
           <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />

@@ -13,13 +13,14 @@ import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
+import { PhotoTab } from '../exercise/photo/PhotoTab'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
 import { WeightEditor } from '../exercise/WeightEditor'
 import '../exercise/exercise.css'
 import './session.css'
 
-type EntryTab = 'exec' | 'notes'
+type EntryTab = 'exec' | 'notes' | 'photo'
 
 export function SessionEntryPage() {
   const { id, entryId } = useParams()
@@ -116,12 +117,17 @@ export function SessionEntryPage() {
           tabs={[
             { id: 'exec', label: 'Execução' },
             { id: 'notes', label: 'Observações' },
+            { id: 'photo', label: 'Foto' },
           ]}
           active={tab}
           onChange={setTab}
         />
 
-        {tab === 'notes' ? (
+        {tab === 'photo' ? (
+          /* Photos stay editable on a completed session: unlike the weight, a
+             photo describes the exercise in this gym, not this session. */
+          <PhotoTab gymId={session.gymId} exerciseId={entry.exerciseId ?? null} />
+        ) : tab === 'notes' ? (
           <NoteEditor gymId={session.gymId} exerciseId={entry.exerciseId ?? null} />
         ) : (
           <>
