@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, deleteSession, setEntryDone } from '../../db/repos'
 import type { SessionEntry } from '../../db/types'
 import { fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
+import { renderCard } from './share/renderCard'
+import { shareFilename, shareSessionImage } from './share/shareCard'
+import { buildShareCard, type ShareVariant } from './share/shareModel'
 import {
   useCategoryMap,
   useExerciseMap,
@@ -28,6 +32,7 @@ export function SessionPage() {
   const toast = useToast()
   const confirm = useConfirm()
   const nav = useNavigate()
+  const [sharing, setSharing] = useState<ShareVariant | null>(null)
 
   if (session === undefined) return <SessionBar onDelete={undefined} />
   if (session === null) {
@@ -63,6 +68,22 @@ export function SessionPage() {
     await completeSession(sessionId, db)
     toast('Treino concluído.')
     nav('/sessions')
+  }
+
+  const onShare = async (variant: ShareVariant) => {
+    if (sharing) return // a second tap would open a second share sheet
+    setSharing(variant)
+    try {
+      const card = buildShareCard({ session, entries, gym, weights, exMap, catMap, variant })
+      const blob = await renderCard(card)
+      const filename = shareFilename(session.dayName, session.completedAt ?? session.startedAt)
+      const outcome = await shareSessionImage(blob, filename, session.dayName)
+      if (outcome === 'downloaded') toast('Imagem salva.')
+    } catch {
+      toast('Não foi possível gerar a imagem.')
+    } finally {
+      setSharing(null)
+    }
   }
 
   const onDelete = async () => {
@@ -164,12 +185,30 @@ export function SessionPage() {
             {done === 0 && <p className="complete-hint">Marque ao menos um exercício para concluir.</p>}
           </>
         ) : (
-          session.completedAt != null && (
-            <div className="session-done-ts">
-              <Icon name="check" size={12} /> Concluído {relativeDate(session.completedAt).toLowerCase()} ·{' '}
-              {fmtDuration(session.completedAt - session.startedAt)}
+          <>
+            {session.completedAt != null && (
+              <div className="session-done-ts">
+                <Icon name="check" size={12} /> Concluído {relativeDate(session.completedAt).toLowerCase()} ·{' '}
+                {fmtDuration(session.completedAt - session.startedAt)}
+              </div>
+            )}
+            <div className="share-row">
+              <button
+                className="btn"
+                onClick={() => onShare('full')}
+                disabled={sharing != null}
+              >
+                <Icon name="share" /> {sharing === 'full' ? 'Gerando…' : 'Compartilhar'}
+              </button>
+              <button
+                className="btn"
+                onClick={() => onShare('lite')}
+                disabled={sharing != null}
+              >
+                <Icon name="share" /> {sharing === 'lite' ? 'Gerando…' : 'Compartilhar sem pesos'}
+              </button>
             </div>
-          )
+          </>
         )}
       </main>
     </>

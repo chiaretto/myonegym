@@ -62,6 +62,15 @@ npm run typecheck  # tsc --noEmit
   month, with a done-count badge); open one for a read-only recap or delete it.
   Entries snapshot the exercise **name** (so a recap still renders after a delete);
   the weight shown is always the live per-gym target.
+- **Share a session as an image** — a completed session's recap offers
+  **Compartilhar** (with weights and training duration) and **Compartilhar sem
+  pesos** (with neither), so a workout can be shown off without revealing how
+  much you lift. Each renders a PNG resembling the recap and hands it to the OS
+  share sheet, falling back to a download where sharing files isn't supported.
+  The image is a **fixed design** — it ignores the Aparência font-size setting —
+  and prints an **absolute** date, since it outlives the day it was made. An
+  exercise's media only appears if its host sends CORS headers; anything that
+  can't be loaded falls back to the placeholder rather than failing the share.
 - **Exercise notes** — the **Observações** tab (on both the catalog exercise
   detail and the in-session entry detail) holds one **free-text note per
   `(gym, exercise)`**, like the target weight. It is durable and shared across

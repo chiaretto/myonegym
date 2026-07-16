@@ -69,6 +69,10 @@
 .session-done-ts { text-align: center; font-size: var(--fs-2xs); color: var(--text-secondary);
   padding: 14px 0 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
+/* Share actions (read-only detail): stacked so the longer "sem pesos" label
+   never truncates at 390px. */
+.share-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
 /* History */
 .context-strip { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
 .count-hint { font-size: var(--fs-2xs); color: var(--text-muted); }

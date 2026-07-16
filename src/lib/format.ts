@@ -30,6 +30,15 @@ export function fmtDayMonth(ts: number): string {
   return new Date(ts).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' }).replace('.', '')
 }
 
+/** Absolute pt-BR date, e.g. "16 jul 2026". Used where a relative label would
+ *  rot — a shared image outlives the day it was made. */
+export function fmtFullDate(ts: number): string {
+  return new Date(ts)
+    .toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })
+    .replace(/\./g, '')
+    .replace(/ de /g, ' ')
+}
+
 /** Duration between two timestamps as "48 min" / "1 h 5 min". */
 export function fmtDuration(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60_000))
