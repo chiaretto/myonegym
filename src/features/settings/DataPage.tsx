@@ -15,7 +15,9 @@ import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 
 function download(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  // Compact, not pretty-printed: a full backup embeds photos as base64 and can be
+  // several MB — indentation would add megabytes of pure whitespace.
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -48,8 +50,14 @@ export function DataPage() {
   }
 
   const onExportBackup = async () => {
-    download(`myonegym-backup-${stamp()}.json`, await exportBackup(db))
-    toast('Backup exportado.')
+    setBusy(true)
+    try {
+      // A full backup with photos can take a moment to build and serialize.
+      download(`myonegym-backup-${stamp()}.json`, await exportBackup(db))
+      toast('Backup exportado.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const onImportFile = async (file: File) => {
@@ -110,20 +118,22 @@ export function DataPage() {
 
         <div className="group-label">Exportar</div>
         <div className="group">
-          <button className="row" onClick={onExportBackup}>
+          <button className="row" onClick={onExportBackup} disabled={busy}>
             <span className="row-ic">
               <Icon name="download" />
             </span>
             <span className="row-body">
               <span className="row-title">Exportar backup (JSON)</span>
-              <span className="row-sub">Tudo, exceto histórico de peso, treinos e fotos</span>
+              <span className="row-sub">
+                Backup completo: pesos, notas, treinos, histórico e fotos
+              </span>
             </span>
           </button>
-          {/* Photos are the only user-created content a restore cannot bring
-              back, so the exclusion is stated instead of buried. */}
+          {/* The backup is now a full snapshot — worth saying it can be large so a
+              slow export/download on a phone isn't a surprise. */}
           <p className="group-note">
-            <Icon name="camera" size={12} /> As <strong>fotos</strong> dos exercícios ficam só neste
-            aparelho — elas não entram no backup e não voltam ao importar.
+            <Icon name="database" size={12} /> Inclui <strong>tudo</strong> deste aparelho. Com muitas
+            fotos o arquivo pode ficar grande.
           </p>
         </div>
 

@@ -1,41 +1,19 @@
-# data-portability Specification
+# Delta: data-portability
 
-## Purpose
-TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
-## Requirements
-### Requirement: Generate Example Data
+**Change ID:** `full-backup-restore`
+**Affects:** the backup becomes a **complete** snapshot (all data, including
+sessions, weight history and photos) and import becomes a full **restore** —
+reversing the earlier device-local exclusions
 
-From Settings, the user MUST be able to **generate a realistic sample routine**
-to explore the app quickly. The sample is a **bundled dataset** (a predefined
-gym, muscle **categories**, **exercises** with media, several named **training
-days**, and per-gym **weights**). Generation MUST be **additive and safe** —
-inserted with **remapped ids** so existing data is never overwritten and
-references (exercise→category, day→exercises, weight→gym+exercise) stay intact.
-Day categories are **derived from the day's exercises** (the dataset's per-day
-category is ignored). The example **gym and its weights** MUST be seeded **only
-when no gym exists yet**; the categories/exercises/days are always added.
+---
 
-#### Scenario: Generate the sample routine
-- GIVEN the app has little or no data
-- WHEN the user taps "Gerar exemplo"
-- THEN the bundled categories, exercises (with media), and named training days are created and visible
+## ADDED Requirements
 
-#### Scenario: Fresh app also gets a gym and weights
-- GIVEN no gym exists yet
-- WHEN the user taps "Gerar exemplo"
-- THEN the example gym is created with per-gym weights for the sample exercises
-- AND the exercises' current weights are visible on Home
+(None)
 
-#### Scenario: Days show derived categories
-- GIVEN the sample was generated
-- WHEN the user views Home
-- THEN each day shows the categories derived from its exercises (not a stored day category)
+---
 
-#### Scenario: Additive and safe with existing data
-- GIVEN the user already has some categories and a gym
-- WHEN the user taps "Gerar exemplo"
-- THEN the sample content is added without overwriting existing data
-- AND references remain valid (no id collisions)
+## MODIFIED Requirements
 
 ### Requirement: Export Full Backup JSON
 
@@ -137,44 +115,8 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - THEN import is rejected with a clear error before any replacement occurs
 - AND existing local data is left unchanged
 
-### Requirement: Reset App (Erase All Data)
+---
 
-From Settings, the user MUST be able to **reset the app**, erasing **all
-registered data** from the device: gyms, categories, exercises, training
-days, weights, weight history, **exercise notes**, and workout sessions/entries
-— the same full set already cleared as the first step of "Importar backup". The
-action MUST
-require an explicit confirmation, and the confirmation MUST clearly state
-that the action **cannot be undone** before anything is erased. On confirm,
-all local data is erased immediately; declining or dismissing the
-confirmation MUST leave all existing data unchanged. After a reset, the app
-MUST behave like a fresh install — including re-arming the first-launch
-sample-data prompt (see app-foundation) so the user may choose to reload the
-sample data again. Device-local **presentation** preferences (e.g. the
-font-size setting) are unaffected by a reset.
+## REMOVED Requirements
 
-#### Scenario: Reset requires confirmation and warns it is irreversible
-- GIVEN the user has gyms, exercises, days, and weights registered
-- WHEN the user taps "Resetar app" in Settings → Backup
-- THEN a confirmation is shown stating that all data will be erased and the action cannot be undone
-
-#### Scenario: Confirming erases all registered data
-- GIVEN the reset confirmation is shown
-- WHEN the user confirms
-- THEN all gyms, categories, exercises, days, weights, weight history, exercise notes, and workout sessions are erased
-- AND Home and Settings reflect an empty app (equivalent to a fresh install)
-
-#### Scenario: Declining keeps data intact
-- GIVEN the reset confirmation is shown
-- WHEN the user cancels/dismisses it
-- THEN no data is erased and the app is unchanged
-
-#### Scenario: Reset re-arms the first-launch prompt
-- GIVEN the user has already been asked about the sample data on this device (see app-foundation)
-- WHEN the user resets the app
-- THEN the first-launch sample-data prompt is shown again the next time the app loads
-
-#### Scenario: Reset does not affect presentation preferences
-- GIVEN the user has set a custom font size
-- WHEN the user resets the app
-- THEN the font-size preference is unchanged after the reset
+(None)
