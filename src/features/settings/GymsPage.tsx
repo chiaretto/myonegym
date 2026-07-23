@@ -4,6 +4,7 @@ import { db } from '../../db/db'
 import type { Gym } from '../../db/types'
 import { useGyms } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
+import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -32,7 +33,7 @@ export function GymsPage() {
   return (
     <>
       <BackBar title="Academias" to="/settings" />
-      <main className="screen">
+      <main className="screen has-action-bar">
         {gyms && gyms.length === 0 && (
           <div className="empty">
             <span className="big">🏢</span>
@@ -66,10 +67,13 @@ export function GymsPage() {
           ))}
         </div>
 
-        <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>
+      </main>
+
+      <ActionBar>
+        <button className="btn primary" onClick={() => setEditing('new')}>
           <Icon name="plus" /> Nova academia
         </button>
-      </main>
+      </ActionBar>
 
       {editing && (
         <GymForm

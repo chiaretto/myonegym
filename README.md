@@ -108,7 +108,13 @@ npm run typecheck  # tsc --noEmit
   and training-day filters, combinable, to narrow a growing catalog), and
   training days (name + ordered exercise selection — exercises may repeat;
   days can be reordered). A day's categories are **derived from its exercises**
-  (e.g. "Peito · Tríceps"), not set by hand.
+  (e.g. "Peito · Tríceps"), not set by hand. On each of these screens the **create
+  action** ("+ Novo…") sits in a **floating bar fixed to the bottom**, reachable
+  without scrolling to the end of the list; the same bar carries **"Concluir
+  treino"** on the session runner. Inside a form modal, the **Cancelar/Salvar**
+  footer stays pinned as the content scrolls. All of these reserve their measured
+  height so they never cover content, at any font size (`ui/ActionBar`, shared
+  with the exercise stepper).
 - **Appearance** — **Configurações → Aparência** has a **font-size** slider
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.

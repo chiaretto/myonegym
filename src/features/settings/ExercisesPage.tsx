@@ -5,6 +5,7 @@ import type { Exercise } from '../../db/types'
 import { useCategories, useCategoryMap, useDays, useExercises } from '../../lib/hooks'
 import { dayNamesForExercise } from '../../lib/days'
 import { filterExercises, type CategoryFilter, type DayFilter } from '../../lib/exerciseFilters'
+import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -50,7 +51,7 @@ export function ExercisesPage() {
   return (
     <>
       <BackBar title="Exercícios" to="/settings" />
-      <main className="screen">
+      <main className="screen has-action-bar">
         {exs.length === 0 && (
           <div className="empty">
             <span className="big">🏋️</span>
@@ -150,10 +151,13 @@ export function ExercisesPage() {
         </div>
         )}
 
-        <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>
+      </main>
+
+      <ActionBar>
+        <button className="btn primary" onClick={() => setEditing('new')}>
           <Icon name="plus" /> Novo exercício
         </button>
-      </main>
+      </ActionBar>
 
       {editing && <ExerciseForm exercise={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>

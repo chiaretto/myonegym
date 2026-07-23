@@ -78,10 +78,10 @@ describe('The stepper is fixed chrome, not tab content', () => {
     const { sessionId, entries } = await seedSession()
     renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
 
-    const bar = (await screen.findByRole('button', { name: 'Concluir' })).closest('.stepper-bar')
+    const bar = (await screen.findByRole('button', { name: 'Concluir' })).closest('.action-bar')
     expect(bar).not.toBeNull()
     // Must NOT live inside <main class="screen">, or it would scroll away.
     expect(bar!.closest('main.screen')).toBeNull()
-    expect(document.querySelector('main.screen')).toHaveClass('has-stepper')
+    expect(document.querySelector('main.screen')).toHaveClass('has-action-bar')
   })
 })

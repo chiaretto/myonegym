@@ -90,7 +90,7 @@ export function SessionEntryPage() {
   return (
     <>
       <BackBar title={entry.exerciseName} to={backTo} />
-      <main className="screen has-stepper">
+      <main className="screen has-action-bar">
         <div className="hero">
           <Media url={exercise?.mediaUrl} alt={entry.exerciseName} className="hero-media" />
         </div>

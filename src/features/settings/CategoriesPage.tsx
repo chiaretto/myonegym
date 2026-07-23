@@ -3,6 +3,7 @@ import { createCategory, deleteCategory, renameCategory, ValidationError } from 
 import { db } from '../../db/db'
 import type { Category } from '../../db/types'
 import { useCategories } from '../../lib/hooks'
+import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -37,7 +38,7 @@ export function CategoriesPage() {
   return (
     <>
       <BackBar title="Categorias" to="/settings" />
-      <main className="screen">
+      <main className="screen has-action-bar">
         {cats && cats.length === 0 && (
           <div className="empty">
             <span className="big">🏷️</span>
@@ -70,10 +71,13 @@ export function CategoriesPage() {
           ))}
         </div>
 
-        <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>
+      </main>
+
+      <ActionBar>
+        <button className="btn primary" onClick={() => setEditing('new')}>
           <Icon name="plus" /> Nova categoria
         </button>
-      </main>
+      </ActionBar>
 
       {editing && (
         <CategoryForm category={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />

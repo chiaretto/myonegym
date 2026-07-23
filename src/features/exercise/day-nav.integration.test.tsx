@@ -131,7 +131,7 @@ describe('Exercise detail opened without a day', () => {
     expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Próximo exercício' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exercício anterior' })).not.toBeInTheDocument()
-    expect(document.querySelector('main.screen')).not.toHaveClass('has-stepper')
+    expect(document.querySelector('main.screen')).not.toHaveClass('has-action-bar')
 
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
     expect(url()).toBe('/')
