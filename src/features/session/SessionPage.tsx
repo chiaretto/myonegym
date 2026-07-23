@@ -15,6 +15,7 @@ import {
   useSession,
   useSessionEntries,
 } from '../../lib/hooks'
+import { ActionBar } from '../../ui/ActionBar'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
@@ -106,7 +107,7 @@ export function SessionPage() {
         to={readOnly ? '/sessions' : '/'}
         onDelete={onDelete}
       />
-      <main className="screen">
+      <main className={`screen${readOnly ? '' : ' has-action-bar'}`}>
         <div className="session-hero">
           <span className="session-day">{session.dayName}</span>
           <div className="session-meta">
@@ -172,19 +173,7 @@ export function SessionPage() {
           })}
         </ul>
 
-        {!readOnly ? (
-          <>
-            <button
-              className="btn primary"
-              style={{ marginTop: 14 }}
-              onClick={onComplete}
-              disabled={done === 0}
-            >
-              <Icon name="check" /> Concluir treino
-            </button>
-            {done === 0 && <p className="complete-hint">Marque ao menos um exercício para concluir.</p>}
-          </>
-        ) : (
+        {readOnly && (
           <>
             {session.completedAt != null && (
               <div className="session-done-ts">
@@ -192,6 +181,8 @@ export function SessionPage() {
                 {fmtDuration(session.completedAt - session.startedAt)}
               </div>
             )}
+            {/* The completed-session share buttons stay in the body (out of scope
+                for the floating bar); only the in-progress "Concluir treino" floats. */}
             <div className="share-row">
               <button
                 className="btn"
@@ -211,6 +202,17 @@ export function SessionPage() {
           </>
         )}
       </main>
+
+      {!readOnly && (
+        <ActionBar>
+          <button className="btn primary" onClick={onComplete} disabled={done === 0}>
+            <Icon name="check" /> Concluir treino
+          </button>
+          {done === 0 && (
+            <p className="complete-hint">Marque ao menos um exercício para concluir.</p>
+          )}
+        </ActionBar>
+      )}
     </>
   )
 }

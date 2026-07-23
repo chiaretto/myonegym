@@ -4,6 +4,7 @@ import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
 import { useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
 import { daySubtitle } from '../../lib/days'
+import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
@@ -52,7 +53,7 @@ export function DaysPage() {
   return (
     <>
       <BackBar title="Dias de treino" to="/settings" />
-      <main className="screen">
+      <main className="screen has-action-bar">
         {days && days.length === 0 && (
           <div className="empty">
             <span className="big">🗓️</span>
@@ -96,10 +97,13 @@ export function DaysPage() {
           ))}
         </div>
 
-        <button className="btn primary" style={{ marginTop: 14 }} onClick={() => setEditing('new')}>
+      </main>
+
+      <ActionBar>
+        <button className="btn primary" onClick={() => setEditing('new')}>
           <Icon name="plus" /> Novo dia
         </button>
-      </main>
+      </ActionBar>
 
       {editing && <DayForm day={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>

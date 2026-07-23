@@ -68,7 +68,7 @@ export function ExerciseDetailPage() {
   return (
     <>
       <BackBar title={exercise.name} to={backTo} />
-      <main className={`screen${fromDay ? ' has-stepper' : ''}`}>
+      <main className={`screen${fromDay ? ' has-action-bar' : ''}`}>
         <div className="hero">
           <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
         </div>
