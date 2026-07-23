@@ -14,10 +14,10 @@ import { SessionPage } from './features/session/SessionPage'
 import { SessionEntryPage } from './features/session/SessionEntryPage'
 import { SessionsPage } from './features/session/SessionsPage'
 import { SettingsPage } from './features/settings/SettingsPage'
-import { GymsPage } from './features/settings/GymsPage'
-import { CategoriesPage } from './features/settings/CategoriesPage'
-import { ExercisesPage } from './features/settings/ExercisesPage'
-import { DaysPage } from './features/settings/DaysPage'
+import { GymsPage, GymFormPage } from './features/settings/GymsPage'
+import { CategoriesPage, CategoryFormPage } from './features/settings/CategoriesPage'
+import { ExercisesPage, ExerciseFormPage } from './features/settings/ExercisesPage'
+import { DaysPage, DayFormPage } from './features/settings/DaysPage'
 import { DataPage } from './features/settings/DataPage'
 import { AppearancePage } from './features/settings/AppearancePage'
 
@@ -76,9 +76,17 @@ export function App() {
           <Route path="/session/:id/entry/:entryId" element={<SessionEntryPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/settings/gyms" element={<GymsPage />} />
+          <Route path="/settings/gyms/new" element={<GymFormPage />} />
+          <Route path="/settings/gyms/:id/edit" element={<GymFormPage />} />
           <Route path="/settings/categories" element={<CategoriesPage />} />
+          <Route path="/settings/categories/new" element={<CategoryFormPage />} />
+          <Route path="/settings/categories/:id/edit" element={<CategoryFormPage />} />
           <Route path="/settings/exercises" element={<ExercisesPage />} />
+          <Route path="/settings/exercises/new" element={<ExerciseFormPage />} />
+          <Route path="/settings/exercises/:id/edit" element={<ExerciseFormPage />} />
           <Route path="/settings/days" element={<DaysPage />} />
+          <Route path="/settings/days/new" element={<DayFormPage />} />
+          <Route path="/settings/days/:id/edit" element={<DayFormPage />} />
           <Route path="/settings/data" element={<DataPage />} />
           <Route path="/settings/appearance" element={<AppearancePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

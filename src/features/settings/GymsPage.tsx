@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createGym, deleteGym, renameGym, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Gym } from '../../db/types'
@@ -8,14 +10,13 @@ import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
-import { Sheet } from '../../ui/Sheet'
 
 export function GymsPage() {
   const gyms = useGyms()
   const { activeGymId, setActiveGym, reconcile } = useActiveGym()
   const toast = useToast()
   const confirm = useConfirm()
-  const [editing, setEditing] = useState<Gym | 'new' | null>(null)
+  const nav = useNavigate()
 
   const onDelete = async (g: Gym) => {
     const ok = await confirm({
@@ -53,11 +54,19 @@ export function GymsPage() {
                 {g.id === activeGymId && <span className="row-sub warn">Ativa</span>}
               </span>
               {g.id !== activeGymId && (
-                <button className="icon-btn ghost" aria-label="Tornar ativa" onClick={() => setActiveGym(g.id!)}>
+                <button
+                  className="icon-btn ghost"
+                  aria-label="Tornar ativa"
+                  onClick={() => setActiveGym(g.id!)}
+                >
                   <Icon name="circle" />
                 </button>
               )}
-              <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(g)}>
+              <button
+                className="icon-btn ghost"
+                aria-label="Editar"
+                onClick={() => nav(`/settings/gyms/${g.id}/edit`)}
+              >
                 <Icon name="pencil" />
               </button>
               <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(g)}>
@@ -66,93 +75,118 @@ export function GymsPage() {
             </div>
           ))}
         </div>
-
       </main>
 
       <ActionBar>
-        <button className="btn primary" onClick={() => setEditing('new')}>
+        <button className="btn primary" onClick={() => nav('/settings/gyms/new')}>
           <Icon name="plus" /> Nova academia
         </button>
       </ActionBar>
-
-      {editing && (
-        <GymForm
-          gym={editing === 'new' ? null : editing}
-          gyms={gyms ?? []}
-          onClose={() => setEditing(null)}
-          onSaved={(id, wasNew) => {
-            if (wasNew && (gyms?.length ?? 0) === 0 && id != null) setActiveGym(id)
-            void reconcile()
-            setEditing(null)
-          }}
-        />
-      )}
     </>
   )
 }
 
-function GymForm({
-  gym,
-  gyms,
-  onClose,
-  onSaved,
-}: {
-  gym: Gym | null
-  gyms: Gym[]
-  onClose: () => void
-  onSaved: (id: number | null, wasNew: boolean) => void
-}) {
+export function GymFormPage() {
+  const { id } = useParams()
+  const editId = id != null ? Number(id) : null
+  const gym = useLiveQuery(
+    async () => (editId == null ? null : ((await db.gyms.get(editId)) ?? null)),
+    [editId],
+    editId == null ? null : undefined,
+  )
+
+  if (editId != null && gym === undefined) {
+    return <BackBar title="Editar academia" to="/settings/gyms" />
+  }
+  if (editId != null && gym === null) {
+    return (
+      <>
+        <BackBar title="Editar academia" to="/settings/gyms" />
+        <div className="empty">
+          <p>Academia não encontrada.</p>
+        </div>
+      </>
+    )
+  }
+
+  return <GymForm gym={gym ?? null} />
+}
+
+function GymForm({ gym }: { gym: Gym | null }) {
+  const gyms = useGyms()
+  const { setActiveGym, reconcile } = useActiveGym()
   const toast = useToast()
+  const nav = useNavigate()
   const [name, setName] = useState(gym?.name ?? '')
   const [copyFrom, setCopyFrom] = useState<number | ''>('')
   const [err, setErr] = useState('')
+
+  const back = () => nav('/settings/gyms')
 
   const submit = async () => {
     try {
       if (gym) {
         await renameGym(gym.id!, name, db)
         toast('Academia atualizada.')
-        onSaved(gym.id!, false)
       } else {
+        const wasFirst = (gyms?.length ?? 0) === 0
         const id = await createGym(name, copyFrom === '' ? undefined : Number(copyFrom), db)
+        // The very first gym becomes the active one (same effect the list had).
+        if (wasFirst && id != null) setActiveGym(id)
+        await reconcile()
         toast('Academia criada.')
-        onSaved(id, true)
       }
+      back()
     } catch (e) {
       setErr(e instanceof ValidationError ? e.message : 'Erro ao salvar.')
     }
   }
 
   return (
-    <Sheet title={gym ? 'Editar academia' : 'Nova academia'} onClose={onClose}>
-      <div className="field">
-        <label htmlFor="gym-name">Nome</label>
-        <input id="gym-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Academia Central" />
-        {err && <span className="err">{err}</span>}
-      </div>
-
-      {!gym && gyms.length > 0 && (
+    <>
+      <BackBar title={gym ? 'Editar academia' : 'Nova academia'} to="/settings/gyms" />
+      <main className="screen has-action-bar">
         <div className="field">
-          <label htmlFor="gym-copy">Copiar pesos de (opcional)</label>
-          <select id="gym-copy" value={copyFrom} onChange={(e) => setCopyFrom(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">Não copiar</option>
-            {gyms.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+          <label htmlFor="gym-name">Nome</label>
+          <input
+            id="gym-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            placeholder="Ex.: Academia Central"
+          />
+          {err && <span className="err">{err}</span>}
         </div>
-      )}
 
-      <div className="sheet-actions">
-        <button className="btn subtle" onClick={onClose}>
-          Cancelar
-        </button>
-        <button className="btn primary" onClick={submit}>
-          Salvar
-        </button>
-      </div>
-    </Sheet>
+        {!gym && (gyms?.length ?? 0) > 0 && (
+          <div className="field">
+            <label htmlFor="gym-copy">Copiar pesos de (opcional)</label>
+            <select
+              id="gym-copy"
+              value={copyFrom}
+              onChange={(e) => setCopyFrom(e.target.value === '' ? '' : Number(e.target.value))}
+            >
+              <option value="">Não copiar</option>
+              {gyms?.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </main>
+
+      <ActionBar>
+        <div className="form-actions">
+          <button className="btn subtle" onClick={back}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={submit}>
+            Salvar
+          </button>
+        </div>
+      </ActionBar>
+    </>
   )
 }
