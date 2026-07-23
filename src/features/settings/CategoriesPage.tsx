@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createCategory, deleteCategory, renameCategory, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Category } from '../../db/types'
@@ -7,13 +9,12 @@ import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
-import { Sheet } from '../../ui/Sheet'
 
 export function CategoriesPage() {
   const cats = useCategories()
   const toast = useToast()
   const confirm = useConfirm()
-  const [editing, setEditing] = useState<Category | 'new' | null>(null)
+  const nav = useNavigate()
 
   const onDelete = async (c: Category) => {
     if (c.reserved) {
@@ -58,7 +59,11 @@ export function CategoriesPage() {
                 {c.reserved && <span className="row-sub">Reservada</span>}
               </span>
               {!c.reserved && (
-                <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(c)}>
+                <button
+                  className="icon-btn ghost"
+                  aria-label="Editar"
+                  onClick={() => nav(`/settings/categories/${c.id}/edit`)}
+                >
                   <Icon name="pencil" />
                 </button>
               )}
@@ -70,26 +75,51 @@ export function CategoriesPage() {
             </div>
           ))}
         </div>
-
       </main>
 
       <ActionBar>
-        <button className="btn primary" onClick={() => setEditing('new')}>
+        <button className="btn primary" onClick={() => nav('/settings/categories/new')}>
           <Icon name="plus" /> Nova categoria
         </button>
       </ActionBar>
-
-      {editing && (
-        <CategoryForm category={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />
-      )}
     </>
   )
 }
 
-function CategoryForm({ category, onClose }: { category: Category | null; onClose: () => void }) {
+export function CategoryFormPage() {
+  const { id } = useParams()
+  const editId = id != null ? Number(id) : null
+  // undefined = loading, null = not found (or create mode), Category = found.
+  const category = useLiveQuery(
+    async () => (editId == null ? null : ((await db.categories.get(editId)) ?? null)),
+    [editId],
+    editId == null ? null : undefined,
+  )
+
+  if (editId != null && category === undefined) {
+    return <BackBar title="Editar categoria" to="/settings/categories" />
+  }
+  if (editId != null && category === null) {
+    return (
+      <>
+        <BackBar title="Editar categoria" to="/settings/categories" />
+        <div className="empty">
+          <p>Categoria não encontrada.</p>
+        </div>
+      </>
+    )
+  }
+
+  return <CategoryForm category={category ?? null} />
+}
+
+function CategoryForm({ category }: { category: Category | null }) {
   const toast = useToast()
+  const nav = useNavigate()
   const [name, setName] = useState(category?.name ?? '')
   const [err, setErr] = useState('')
+
+  const back = () => nav('/settings/categories')
 
   const submit = async () => {
     try {
@@ -100,27 +130,39 @@ function CategoryForm({ category, onClose }: { category: Category | null; onClos
         await createCategory(name, db)
         toast('Categoria criada.')
       }
-      onClose()
+      back()
     } catch (e) {
       setErr(e instanceof ValidationError ? e.message : 'Erro ao salvar.')
     }
   }
 
   return (
-    <Sheet title={category ? 'Editar categoria' : 'Nova categoria'} onClose={onClose}>
-      <div className="field">
-        <label htmlFor="cat-name">Nome</label>
-        <input id="cat-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Peito" />
-        {err && <span className="err">{err}</span>}
-      </div>
-      <div className="sheet-actions">
-        <button className="btn subtle" onClick={onClose}>
-          Cancelar
-        </button>
-        <button className="btn primary" onClick={submit}>
-          Salvar
-        </button>
-      </div>
-    </Sheet>
+    <>
+      <BackBar title={category ? 'Editar categoria' : 'Nova categoria'} to="/settings/categories" />
+      <main className="screen has-action-bar">
+        <div className="field">
+          <label htmlFor="cat-name">Nome</label>
+          <input
+            id="cat-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            placeholder="Ex.: Peito"
+          />
+          {err && <span className="err">{err}</span>}
+        </div>
+      </main>
+
+      <ActionBar>
+        <div className="form-actions">
+          <button className="btn subtle" onClick={back}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={submit}>
+            Salvar
+          </button>
+        </div>
+      </ActionBar>
+    </>
   )
 }

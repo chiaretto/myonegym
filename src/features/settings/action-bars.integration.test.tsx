@@ -64,13 +64,16 @@ describe('Floating action bars on the create-screens', () => {
   ]
 
   for (const [path, label] of cases) {
-    it(`${path}: "${label}" is in a fixed bar and opens the form`, async () => {
+    it(`${path}: "${label}" is in a fixed bar and navigates to the create page`, async () => {
       const user = userEvent.setup()
       renderAt(path)
       const btn = await expectFloating(label)
       await user.click(btn)
-      // The form sheet opened (its title starts with the same "Nov…").
-      expect(await screen.findByRole('dialog')).toBeInTheDocument()
+      // The create form is now a PAGE (heading), not a modal dialog.
+      expect(await screen.findByRole('heading', { name: label, level: 1 })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      // Its Salvar/Cancelar are in the fixed action bar.
+      expect(document.querySelector('.action-bar')?.textContent).toMatch(/Salvar/)
     })
   }
 })

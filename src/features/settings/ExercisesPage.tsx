@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createExercise, deleteExercise, updateExercise, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Exercise } from '../../db/types'
@@ -10,7 +12,6 @@ import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
-import { Sheet } from '../../ui/Sheet'
 
 export function ExercisesPage() {
   const exs = useExercises()
@@ -19,7 +20,7 @@ export function ExercisesPage() {
   const days = useDays()
   const toast = useToast()
   const confirm = useConfirm()
-  const [editing, setEditing] = useState<Exercise | 'new' | null>(null)
+  const nav = useNavigate()
   const [search, setSearch] = useState('')
   const [categorySel, setCategorySel] = useState('all')
   const [daySel, setDaySel] = useState('all')
@@ -139,7 +140,11 @@ export function ExercisesPage() {
                   </span>
                 )}
               </span>
-              <button className="icon-btn ghost" aria-label="Editar" onClick={() => setEditing(e)}>
+              <button
+                className="icon-btn ghost"
+                aria-label="Editar"
+                onClick={() => nav(`/settings/exercises/${e.id}/edit`)}
+              >
                 <Icon name="pencil" />
               </button>
               <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(e)}>
@@ -150,27 +155,53 @@ export function ExercisesPage() {
           })}
         </div>
         )}
-
       </main>
 
       <ActionBar>
-        <button className="btn primary" onClick={() => setEditing('new')}>
+        <button className="btn primary" onClick={() => nav('/settings/exercises/new')}>
           <Icon name="plus" /> Novo exercício
         </button>
       </ActionBar>
-
-      {editing && <ExerciseForm exercise={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>
   )
 }
 
-function ExerciseForm({ exercise, onClose }: { exercise: Exercise | null; onClose: () => void }) {
+export function ExerciseFormPage() {
+  const { id } = useParams()
+  const editId = id != null ? Number(id) : null
+  const exercise = useLiveQuery(
+    async () => (editId == null ? null : ((await db.exercises.get(editId)) ?? null)),
+    [editId],
+    editId == null ? null : undefined,
+  )
+
+  if (editId != null && exercise === undefined) {
+    return <BackBar title="Editar exercício" to="/settings/exercises" />
+  }
+  if (editId != null && exercise === null) {
+    return (
+      <>
+        <BackBar title="Editar exercício" to="/settings/exercises" />
+        <div className="empty">
+          <p>Exercício não encontrado.</p>
+        </div>
+      </>
+    )
+  }
+
+  return <ExerciseForm exercise={exercise ?? null} />
+}
+
+function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const cats = useCategories()
   const toast = useToast()
+  const nav = useNavigate()
   const [name, setName] = useState(exercise?.name ?? '')
   const [mediaUrl, setMediaUrl] = useState(exercise?.mediaUrl ?? '')
   const [categoryId, setCategoryId] = useState<number | ''>(exercise?.categoryId ?? '')
   const [err, setErr] = useState('')
+
+  const back = () => nav('/settings/exercises')
 
   const submit = async () => {
     try {
@@ -186,47 +217,53 @@ function ExerciseForm({ exercise, onClose }: { exercise: Exercise | null; onClos
         await createExercise(input, db)
         toast('Exercício criado.')
       }
-      onClose()
+      back()
     } catch (e) {
       setErr(e instanceof ValidationError ? e.message : 'Erro ao salvar.')
     }
   }
 
   return (
-    <Sheet title={exercise ? 'Editar exercício' : 'Novo exercício'} onClose={onClose}>
-      <div className="field">
-        <label htmlFor="ex-name">Nome</label>
-        <input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Rosca Direta" />
-      </div>
-      <div className="field">
-        <label htmlFor="ex-media">URL da imagem ou GIF (opcional)</label>
-        <input id="ex-media" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/rosca.gif" />
-      </div>
-      <div className="field">
-        <label htmlFor="ex-cat">Categoria</label>
-        <select id="ex-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}>
-          <option value="">Sem categoria</option>
-          {cats?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      {mediaUrl && (
-        <div style={{ marginBottom: 14 }}>
-          <Media className="thumb" url={mediaUrl} alt="pré-visualização" />
+    <>
+      <BackBar title={exercise ? 'Editar exercício' : 'Novo exercício'} to="/settings/exercises" />
+      <main className="screen has-action-bar">
+        <div className="field">
+          <label htmlFor="ex-name">Nome</label>
+          <input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Rosca Direta" />
         </div>
-      )}
-      {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
-      <div className="sheet-actions">
-        <button className="btn subtle" onClick={onClose}>
-          Cancelar
-        </button>
-        <button className="btn primary" onClick={submit}>
-          Salvar
-        </button>
-      </div>
-    </Sheet>
+        <div className="field">
+          <label htmlFor="ex-media">URL da imagem ou GIF (opcional)</label>
+          <input id="ex-media" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/rosca.gif" />
+        </div>
+        <div className="field">
+          <label htmlFor="ex-cat">Categoria</label>
+          <select id="ex-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}>
+            <option value="">Sem categoria</option>
+            {cats?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        {mediaUrl && (
+          <div style={{ marginBottom: 14 }}>
+            <Media className="thumb" url={mediaUrl} alt="pré-visualização" />
+          </div>
+        )}
+        {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
+      </main>
+
+      <ActionBar>
+        <div className="form-actions">
+          <button className="btn subtle" onClick={back}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={submit}>
+            Salvar
+          </button>
+        </div>
+      </ActionBar>
+    </>
   )
 }

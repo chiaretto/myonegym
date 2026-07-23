@@ -175,6 +175,9 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
   background: var(--surface-0); border-top: 0.5px solid var(--border);
   box-shadow: 0 -14px 34px -14px rgba(0, 0, 0, 0.9);
 }
+/* Cancelar/Salvar side by side inside a form page's action bar (the bar itself
+   is a column). Same shape the modal footer had, now on the page. */
+.action-bar .form-actions { display: flex; gap: 10px; }
 /* Reserve the bar's MEASURED height (--action-bar-h, published by ActionBar) plus
    breathing room. A fixed value would hide content at large font scales, since
    the bar grows with --font-scale. Overrides .screen's default bottom padding. */

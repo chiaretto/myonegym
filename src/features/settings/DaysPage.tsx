@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createDay, deleteDay, reorderDays, updateDay, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
@@ -18,7 +20,7 @@ export function DaysPage() {
   const exMap = useExerciseMap()
   const toast = useToast()
   const confirm = useConfirm()
-  const [editing, setEditing] = useState<Day | 'new' | null>(null)
+  const nav = useNavigate()
 
   const onDelete = async (day: Day) => {
     const ok = await confirm({ title: `Excluir "${day.name}"?`, confirmLabel: 'Excluir', danger: true })
@@ -65,7 +67,11 @@ export function DaysPage() {
         <div className="group">
           {days?.map((day, i) => (
             <div key={day.id} className="row">
-              <button style={dayEditStyle} aria-label={`Editar ${day.name}`} onClick={() => setEditing(day)}>
+              <button
+                style={dayEditStyle}
+                aria-label={`Editar ${day.name}`}
+                onClick={() => nav(`/settings/days/${day.id}/edit`)}
+              >
                 <span className="row-ic">
                   <Icon name="calendar-event" />
                 </span>
@@ -96,29 +102,55 @@ export function DaysPage() {
             </div>
           ))}
         </div>
-
       </main>
 
       <ActionBar>
-        <button className="btn primary" onClick={() => setEditing('new')}>
+        <button className="btn primary" onClick={() => nav('/settings/days/new')}>
           <Icon name="plus" /> Novo dia
         </button>
       </ActionBar>
-
-      {editing && <DayForm day={editing === 'new' ? null : editing} onClose={() => setEditing(null)} />}
     </>
   )
 }
 
-function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
+export function DayFormPage() {
+  const { id } = useParams()
+  const editId = id != null ? Number(id) : null
+  const day = useLiveQuery(
+    async () => (editId == null ? null : ((await db.days.get(editId)) ?? null)),
+    [editId],
+    editId == null ? null : undefined,
+  )
+
+  if (editId != null && day === undefined) {
+    return <BackBar title="Editar dia" to="/settings/days" />
+  }
+  if (editId != null && day === null) {
+    return (
+      <>
+        <BackBar title="Editar dia" to="/settings/days" />
+        <div className="empty">
+          <p>Dia não encontrado.</p>
+        </div>
+      </>
+    )
+  }
+
+  return <DayForm day={day ?? null} />
+}
+
+function DayForm({ day }: { day: Day | null }) {
   const exs = useExercises()
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
   const toast = useToast()
+  const nav = useNavigate()
   const [name, setName] = useState(day?.name ?? '')
   const [selected, setSelected] = useState<number[]>(day?.exerciseIds ?? [])
   const [preview, setPreview] = useState<Exercise | null>(null)
   const [err, setErr] = useState('')
+
+  const back = () => nav('/settings/days')
 
   const catNameOf = (ex?: Exercise) =>
     ex?.categoryId != null ? catMap.get(ex.categoryId)?.name : undefined
@@ -146,7 +178,7 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
         await createDay(input, db)
         toast('Dia criado.')
       }
-      onClose()
+      back()
     } catch (e) {
       setErr(e instanceof ValidationError ? e.message : 'Erro ao salvar.')
     }
@@ -154,105 +186,110 @@ function DayForm({ day, onClose }: { day: Day | null; onClose: () => void }) {
 
   return (
     <>
-    <Sheet title={day ? 'Editar dia' : 'Novo dia'} onClose={onClose}>
-      <div className="field">
-        <label htmlFor="day-name">Nome</label>
-        <input id="day-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Dia 1" />
-      </div>
-
-      <div className="field">
-        <label>Exercícios do dia ({selected.length})</label>
-        <div className="group">
-          {selected.length === 0 && <div className="row" style={{ color: 'var(--text-muted)', fontSize: 13 }}>Nenhum selecionado</div>}
-          {selected.map((id, i) => {
-            const ex = exMap.get(id)
-            const cat = catNameOf(ex)
-            return (
-              <div key={id} className="row">
-                <span className="row-body">
-                  <span className="row-title">{ex?.name ?? '—'}</span>
-                  {cat && <span className="row-sub">{cat}</span>}
-                </span>
-                <button
-                  className="icon-btn ghost"
-                  aria-label={`Detalhes de ${ex?.name ?? 'exercício'}`}
-                  disabled={!ex}
-                  onClick={() => ex && setPreview(ex)}
-                >
-                  <Icon name="info-circle" />
-                </button>
-                <button className="icon-btn ghost" aria-label="Subir" disabled={i === 0} onClick={() => move(i, -1)}>
-                  <Icon name="chevron-up" />
-                </button>
-                <button className="icon-btn ghost" aria-label="Descer" disabled={i === selected.length - 1} onClick={() => move(i, 1)}>
-                  <Icon name="chevron-down" />
-                </button>
-                <button className="icon-btn ghost" aria-label="Remover" onClick={() => toggle(id)}>
-                  <Icon name="x" />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-
-      {available.length > 0 && (
+      <BackBar title={day ? 'Editar dia' : 'Novo dia'} to="/settings/days" />
+      <main className="screen has-action-bar">
         <div className="field">
-          <label>Adicionar exercício</label>
+          <label htmlFor="day-name">Nome</label>
+          <input id="day-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Dia 1" />
+        </div>
+
+        <div className="field">
+          <label>Exercícios do dia ({selected.length})</label>
           <div className="group">
-            {available.map((e) => {
-              const cat = catNameOf(e)
+            {selected.length === 0 && <div className="row" style={{ color: 'var(--text-muted)', fontSize: 13 }}>Nenhum selecionado</div>}
+            {selected.map((id, i) => {
+              const ex = exMap.get(id)
+              const cat = catNameOf(ex)
               return (
-                <div key={e.id} className="row">
-                  <button
-                    aria-label={`Adicionar ${e.name}`}
-                    onClick={() => toggle(e.id!)}
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 12,
-                      background: 'none',
-                      border: 0,
-                      textAlign: 'left',
-                      color: 'inherit',
-                      padding: 0,
-                    }}
-                  >
-                    <span className="row-ic">
-                      <Icon name="plus" />
-                    </span>
-                    <span className="row-body">
-                      <span className="row-title">{e.name}</span>
-                      {cat && <span className="row-sub">{cat}</span>}
-                    </span>
-                  </button>
+                <div key={id} className="row">
+                  <span className="row-body">
+                    <span className="row-title">{ex?.name ?? '—'}</span>
+                    {cat && <span className="row-sub">{cat}</span>}
+                  </span>
                   <button
                     className="icon-btn ghost"
-                    aria-label={`Detalhes de ${e.name}`}
-                    onClick={() => setPreview(e)}
+                    aria-label={`Detalhes de ${ex?.name ?? 'exercício'}`}
+                    disabled={!ex}
+                    onClick={() => ex && setPreview(ex)}
                   >
                     <Icon name="info-circle" />
+                  </button>
+                  <button className="icon-btn ghost" aria-label="Subir" disabled={i === 0} onClick={() => move(i, -1)}>
+                    <Icon name="chevron-up" />
+                  </button>
+                  <button className="icon-btn ghost" aria-label="Descer" disabled={i === selected.length - 1} onClick={() => move(i, 1)}>
+                    <Icon name="chevron-down" />
+                  </button>
+                  <button className="icon-btn ghost" aria-label="Remover" onClick={() => toggle(id)}>
+                    <Icon name="x" />
                   </button>
                 </div>
               )
             })}
           </div>
         </div>
-      )}
 
-      {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
-      <div className="sheet-actions">
-        <button className="btn subtle" onClick={onClose}>
-          Cancelar
-        </button>
-        <button className="btn primary" onClick={submit}>
-          Salvar
-        </button>
-      </div>
-    </Sheet>
+        {available.length > 0 && (
+          <div className="field">
+            <label>Adicionar exercício</label>
+            <div className="group">
+              {available.map((e) => {
+                const cat = catNameOf(e)
+                return (
+                  <div key={e.id} className="row">
+                    <button
+                      aria-label={`Adicionar ${e.name}`}
+                      onClick={() => toggle(e.id!)}
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 12,
+                        background: 'none',
+                        border: 0,
+                        textAlign: 'left',
+                        color: 'inherit',
+                        padding: 0,
+                      }}
+                    >
+                      <span className="row-ic">
+                        <Icon name="plus" />
+                      </span>
+                      <span className="row-body">
+                        <span className="row-title">{e.name}</span>
+                        {cat && <span className="row-sub">{cat}</span>}
+                      </span>
+                    </button>
+                    <button
+                      className="icon-btn ghost"
+                      aria-label={`Detalhes de ${e.name}`}
+                      onClick={() => setPreview(e)}
+                    >
+                      <Icon name="info-circle" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
+        {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
+      </main>
+
+      <ActionBar>
+        <div className="form-actions">
+          <button className="btn subtle" onClick={back}>
+            Cancelar
+          </button>
+          <button className="btn primary" onClick={submit}>
+            Salvar
+          </button>
+        </div>
+      </ActionBar>
+
+      {/* Read-only exercise peek — stays a modal (not a form). */}
       {preview && (
         <Sheet title={preview.name} onClose={() => setPreview(null)}>
           <div className="hero" style={{ marginBottom: 14 }}>
