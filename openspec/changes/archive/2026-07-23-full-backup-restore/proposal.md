@@ -176,3 +176,66 @@ round-trip are **fully unit-tested** — no browser needed for correctness, beca
 photos are `ArrayBuffer` bytes (not `Blob`) and `btoa`/`atob` exist in jsdom. The
 real browser was used only for what jsdom can't show: actual file size and
 export/restore timing on a realistic dataset.
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-23
+**Duration:** 0 days (created, implemented and archived 2026-07-23)
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/data/base64.ts` — **new**; chunked `ArrayBuffer ↔ base64` (the naïve
+  single-call path overflows the stack on a real photo)
+- `src/data/base64.test.ts` — **new** (5 tests, incl. a 1 MB overflow-sized buffer)
+- `src/data/portability.ts` — `BackupDoc` gains `weightHistory` / `sessions` /
+  `sessionEntries` / `exercisePhotos` (photos as base64); `exportBackup`,
+  `parseBackup` (defaults the new arrays for old backups), and
+  `importBackupReplaceAll` (restores all ten tables with original ids, decoding
+  photos) cover them; `SCHEMA_VERSION` 3 → 4; header comments corrected
+- `src/data/portability.test.ts` — inverted the sessions/photos "excluded" blocks
+  to assert inclusion + round-trip; added a full-snapshot fidelity test (every
+  table compared before/after, a photo byte-for-byte) and a pre-v4 forward-compat
+  import
+- `src/features/settings/DataPage.tsx` — export copy → "backup completo"; removed
+  the "photos excluded" note; compact (non-pretty) backup JSON; `busy` on export
+- `src/features/settings/backup-restore.integration.test.tsx` — **new** (2 tests);
+  drives the Data screen export → import → restore, capturing the download blob
+- `vitest.setup.ts` — `Blob.text()`/`arrayBuffer()` polyfill (jsdom gap; the
+  import path does `file.text()`)
+- `README.md` — the backup is now a complete snapshot; import is a full restore
+
+**No new dependencies** — base64 via built-in `btoa`/`atob`.
+
+### Specs Updated
+- `openspec/specs/data-portability/spec.md` — *Export Full Backup JSON* (now the
+  **entire database**, photos base64) and *Import JSON (Replace All)* (a full
+  **restore**, ids preserved, byte-exact photos, pre-v4 backups still import),
+  both replaced in place
+- `openspec/specs/exercise-photos/spec.md` — Purpose sentence flipped: photos are
+  now part of the backup, not "never exported"
+
+### Verification
+- `npm test` (205/205), `npm run typecheck`, `npm run build` — all pass
+- **base64 codec mutation-checked**: the naïve
+  `btoa(String.fromCharCode(...bytes))` fails the 1 MB test with
+  `RangeError: Maximum call stack size exceeded`; the chunked codec round-trips it
+  byte-for-byte
+- **Fidelity byte-exact**: a test seeds one row in every one of the ten tables,
+  round-trips through JSON, wipes, restores, and asserts table counts identical +
+  a photo compared byte-for-byte; a separate test proves a restored photo's
+  `exerciseId` still resolves (references survive)
+- **Size/perf in a real browser** (headless Chromium): a realistic backup (30
+  structured ~49 KB JPEGs) is **2.0 MB** and round-trips instantly; a pathological
+  worst case (30 pure-noise 1 MB JPEGs) is **43.5 MB** and still round-trips
+  byte-perfect in <1 s on desktop. Size is entirely photo-driven
+
+### Worth carrying forward
+- **A load-induced flake** was seen once: on a heavily-loaded machine, three tests
+  this change never touched (`App.onboarding`, `day-nav`) timed out on `findBy*`
+  (durations 1.1–1.7 s). Two consecutive clean full runs (205/205) and
+  isolated/paired runs confirm it was CPU contention, not a data leak — but the
+  shared `db` singleton + zustand stores across test files is a latent fragility.
+- **gzip via `CompressionStream`** (built-in, no dep) remains the obvious next
+  step if backup size ever bites — deferred by choice for inspectability.

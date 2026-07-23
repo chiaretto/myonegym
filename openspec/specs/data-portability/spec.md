@@ -39,102 +39,103 @@ when no gym exists yet**; the categories/exercises/days are always added.
 
 ### Requirement: Export Full Backup JSON
 
-From Settings, the user MUST be able to export the app's persistent data
-(gyms, categories, exercises, days, the **current** per-gym weight for each
-exercise, and the **per-gym exercise notes**) as a single versioned JSON file for
-backup. **Device-local data MUST NOT be exported** — this includes the
-**weight-change history log** (see weights spec), **workout sessions and their
-entries**, and the per-gym exercise **photos** (see the `exercise-photos`
-capability). The current weight value/unit per `(gymId, exerciseId)` and the note
-text per `(gymId, exerciseId)` are exported; the weight history, sessions and
-photos stay on the device.
+From Settings, the user MUST be able to export **the entire database** as a single
+versioned JSON file, so that the export can serve as a true **backup** against the
+loss of the PWA's local storage. The export MUST include **all** persistent user
+data:
 
-Photos are excluded because they are **binary**: a JSON backup would have to
-base64-encode them (+33%), turning a ~50 KB document into tens of megabytes and
-making export and import on a phone slow and memory-hungry. The consequence is
-real and MUST be **stated to the user on the Backup screen** — photos are the only
-user-created content a restore cannot bring back.
+- gyms, categories, exercises, training days;
+- the current per-gym **weight** for each exercise, and the full per-gym
+  **weight-change history**;
+- the per-gym exercise **notes**;
+- every **workout session** and its **entries** (with their done states);
+- every per-gym exercise **photo**, with its image bytes.
 
-#### Scenario: Export backup
-- GIVEN the user has gyms, exercises, days, weights, notes, and completed sessions
+Because a JSON document cannot carry binary directly, photo image bytes MUST be
+**base64-encoded** into the document. The file is therefore self-contained and
+restorable with no special tool, at the cost of size — a backup with many photos
+may be several megabytes, which is acceptable for a safety-net backup.
+
+Device-local **UI preferences** — the font-size setting and the first-launch
+"already asked" flag — are NOT user data and MUST remain outside the backup.
+
+#### Scenario: Export the whole database
+- GIVEN the user has gyms, exercises, days, weights, weight history, notes, workout sessions, and photos
 - WHEN the user taps "Exportar backup"
-- THEN a versioned JSON document with gyms, categories, exercises, days, current weights, and exercise notes is produced/downloaded
+- THEN a single versioned JSON document is produced containing all of them
 
-#### Scenario: Weight history is not exported
-- GIVEN "Rosca Direta" in gym "A" has 5 history entries and a current weight of 25 KG
-- WHEN the user exports the full backup
-- THEN the JSON contains the current weight `(A, Rosca Direta) = 25 KG`
-- AND the JSON contains no `weight_history` (or equivalent) entries
+#### Scenario: Weight history IS exported
+- GIVEN "Rosca Direta" in gym "A" has 5 weight-history entries and a current weight of 25 KG
+- WHEN the user exports the backup
+- THEN the JSON contains the current weight AND all 5 history entries
 
-#### Scenario: Exercise notes are exported
-- GIVEN "Rosca Direta" in gym "A" has the note "manter cotovelo fixo"
-- WHEN the user exports the full backup
-- THEN the JSON contains the note `(A, Rosca Direta) = "manter cotovelo fixo"`
+#### Scenario: Sessions ARE exported
+- GIVEN gym "A" has a completed workout session with entries and their done states
+- WHEN the user exports the backup
+- THEN the JSON contains the session and its entries, done states preserved
 
-#### Scenario: Sessions are not exported
-- GIVEN gym "A" has completed workout sessions with entries
-- WHEN the user exports the full backup
-- THEN the JSON contains no `sessions` or `sessionEntries` (they are device-local)
+#### Scenario: Photos ARE exported, as base64
+- GIVEN an exercise in gym "A" has a photo attached
+- WHEN the user exports the backup
+- THEN the JSON contains the photo record with its image bytes base64-encoded and its mime type
 
-#### Scenario: Photos are not exported
-- GIVEN exercises in gym "A" have photos attached
-- WHEN the user exports the full backup
-- THEN the JSON contains no photo records or image bytes
-- AND the backup's size is unaffected by how many photos exist
-
-#### Scenario: The Backup screen states photos are excluded
+#### Scenario: The Backup screen states the backup is complete
 - GIVEN the user opens Configurações → Backup
 - WHEN they read the export section
-- THEN it states plainly that photos are not included in the backup
+- THEN it states the backup includes everything (weights, notes, sessions, history, and photos)
+- AND it no longer claims photos are excluded
 
 ### Requirement: Import JSON (Replace All)
 
-From Settings, the user MUST be able to import a previously exported **full-backup**
-JSON. Import **replaces all existing local data** with the imported document.
-Import MUST validate the document first and MUST NOT corrupt existing data on
-failure. The user MUST be warned that current data will be overwritten. The
-imported gyms, categories, exercises, days, current weights, and **exercise
-notes** are restored. **Device-local data is NOT restored** — after import, the
-weight-change history, the workout sessions, and the exercise **photos** are empty
-(any `sessions` present in an older backup are ignored). Because import
-**replaces all**, the photos on the device before the import are **erased** and
-cannot be recovered from the backup file. A backup produced by an **older version without
-`exerciseNotes`** MUST import cleanly, restoring **zero notes**. Only **full-backup**
-documents are accepted — any other file (including a legacy exercises-share
-document) MUST be rejected with a clear message and MUST NOT change existing data.
+From Settings, the user MUST be able to import a previously exported backup JSON,
+performing a full **restore**. Import **replaces all existing local data** with
+the document's contents — after a successful import, the device holds **exactly**
+what the backup contained and nothing else. Import MUST validate the document
+first and MUST NOT corrupt existing data on failure. The user MUST be warned,
+with a destructive-action confirmation, that **all** current data — **including
+photos** — will be overwritten.
 
-#### Scenario: Import replaces existing data
-- GIVEN the user currently has gym "A" with exercises and weights
-- WHEN the user imports a valid backup that contains gym "B"
-- THEN after confirming the overwrite, local data contains only the imported content (gym "B")
-- AND the previous gym "A" and its data are no longer present
+The restore MUST reproduce the source faithfully: gyms, categories, exercises,
+days, weights, **weight history**, **workout sessions and entries**, notes, and
+**photos** are all restored, with their **original identifiers preserved** so that
+every cross-reference (a session's entries, a photo's exercise, a weight's gym)
+remains valid. Base64 photo bytes MUST be decoded back to their original binary
+form, **byte-for-byte**.
 
-#### Scenario: Round-trip restore (weights and notes, no sessions)
-- GIVEN the user exported a full backup and then cleared local storage
-- WHEN the user imports that backup JSON
-- THEN all gyms, categories, exercises, days, current weights, and exercise notes are restored identically
-- AND the weight history and workout sessions are empty on the imported side (device-local by design)
+A backup produced by an **older version** that lacks some arrays (e.g. no
+`sessions`, `exercisePhotos`, or `weightHistory`) MUST import cleanly, restoring
+**zero** rows for the missing tables and everything else normally. Only genuine
+backup documents MUST be accepted — any other file (malformed, or not a MyOneGym
+backup) MUST be rejected with a clear message **before** any data is touched.
 
-#### Scenario: Older backup without notes imports as zero notes
-- GIVEN a backup JSON produced before exercise notes existed (no `exerciseNotes` field)
+#### Scenario: Full round-trip restore
+- GIVEN the user exported a complete backup and then cleared local storage
+- WHEN the user imports that backup
+- THEN all gyms, categories, exercises, days, weights, weight history, notes, sessions and entries, and photos are restored identically
+- AND a restored photo displays correctly (its bytes and mime type are intact)
+
+#### Scenario: Restore replaces existing data, including photos
+- GIVEN the device currently has gym "A" with its own exercises and photos
+- WHEN the user imports a backup containing gym "B" and confirms the overwrite
+- THEN local data contains only the imported content (gym "B" and its photos)
+- AND gym "A", its data, and its photos are gone
+
+#### Scenario: References survive the restore
+- GIVEN a backup with a completed session whose entries reference exercises, and photos attached to those exercises
 - WHEN the user imports it
-- THEN the import succeeds and local data has zero exercise notes
+- THEN opening the restored session shows its entries
+- AND opening the restored exercises shows their photos (ids line up)
 
-#### Scenario: Sessions in an older backup are ignored
-- GIVEN a backup JSON that happens to contain `sessions`/`sessionEntries` (produced by an older version)
+#### Scenario: Older backup without the new tables imports cleanly
+- GIVEN a backup JSON produced before sessions/history/photos were exported (those keys absent)
 - WHEN the user imports it
-- THEN the import succeeds and local data has zero workout sessions
+- THEN the import succeeds, those tables are empty, and gyms/exercises/days/weights/notes are restored
 
 #### Scenario: Reject a non-backup file
-- GIVEN a file that is not a MyOneGym full backup (malformed, or a legacy exercises-share document)
+- GIVEN a file that is not a MyOneGym backup (malformed, or some other document)
 - WHEN the user imports it
 - THEN import is rejected with a clear error before any replacement occurs
 - AND existing local data is left unchanged
-
-#### Scenario: Import clears existing photos
-- GIVEN the device has exercises with photos attached
-- WHEN the user imports a valid backup and confirms the overwrite
-- THEN the imported data is in place and no photos remain
 
 ### Requirement: Reset App (Erase All Data)
 

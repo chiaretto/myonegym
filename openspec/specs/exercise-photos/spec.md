@@ -7,7 +7,8 @@ prose cannot: the machine's own setup in *that* gym (seat height, pin position,
 plate layout). They are distinct from `Exercise.mediaUrl`, the remote demo image
 that is identical in every gym. Photos persist across workout sessions and are
 shared between the in-session entry detail and the catalog exercise detail.
-They are **device-local** — never exported in a backup.
+Photos are part of the full **backup** (base64-encoded into the backup JSON) and
+are restored by an import (see the `data-portability` spec).
 
 ## Requirements
 ### Requirement: Persist Per-Gym Exercise Photos
