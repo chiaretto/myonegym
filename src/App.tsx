@@ -6,6 +6,7 @@ import { generateExample } from './data/portability'
 import { useActiveGym } from './state/activeGym'
 import { useOnboarding } from './state/onboarding'
 import { applyFontScale, useSettings } from './state/settings'
+import { useKeyboardInset } from './lib/keyboardInset'
 import { FeedbackProvider } from './ui/Feedback'
 import { Sheet } from './ui/Sheet'
 import { HomePage } from './features/home/HomePage'
@@ -25,6 +26,10 @@ export function App() {
   const reconcile = useActiveGym((s) => s.reconcile)
   const fontScale = useSettings((s) => s.fontScale)
   const markPromptSeen = useOnboarding((s) => s.markPromptSeen)
+
+  // Publish `--kb-inset` so the fixed action bar / toast lift above the on-screen
+  // keyboard instead of hiding behind it. One global listener.
+  useKeyboardInset()
   const [showExamplePrompt, setShowExamplePrompt] = useState(false)
   const [generating, setGenerating] = useState(false)
 

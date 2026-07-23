@@ -121,7 +121,9 @@ npm run typecheck  # tsc --noEmit
   treino"** on the session runner. Inside a form modal, the **Cancelar/Salvar**
   footer stays pinned as the content scrolls. All of these reserve their measured
   height so they never cover content, at any font size (`ui/ActionBar`, shared
-  with the exercise stepper).
+  with the exercise stepper), and **rise above the on-screen keyboard** when it
+  opens so a form's Salvar/Cancelar stays reachable (via the `visualViewport` API
+  → a `--kb-inset` CSS variable; see `lib/keyboardInset`).
 - **Appearance** — **Configurações → Aparência** has a **font-size** slider
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.
