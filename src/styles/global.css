@@ -176,7 +176,9 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
    (20) and the toast (30), so a confirmation still covers it. Width matches the
    .app shell rather than the viewport, so it doesn't span a wide desktop window. */
 .action-bar {
-  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  /* --kb-inset lifts the bar above the on-screen keyboard (see lib/keyboardInset);
+     0 when closed or unsupported, so this reduces to bottom: 0. */
+  position: fixed; bottom: var(--kb-inset, 0px); left: 50%; transform: translateX(-50%);
   width: 100%; max-width: 480px; z-index: 10;
   display: flex; flex-direction: column; gap: 8px;
   padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
@@ -193,7 +195,7 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
 
 /* 76px default keeps the historical 92px offset where there is no bar (Home,
    above the tab bar); with one, the toast rides above the bar instead of under it. */
-.toast { position: fixed; bottom: calc(16px + var(--action-bar-h, 76px)); left: 50%; transform: translateX(-50%);
+.toast { position: fixed; bottom: calc(16px + var(--action-bar-h, 76px) + var(--kb-inset, 0px)); left: 50%; transform: translateX(-50%);
   background: var(--surface-2); color: var(--text-primary); padding: 11px 18px; border-radius: var(--r-pill);
   border: 0.5px solid var(--border-strong); font-size: var(--fs-sm); z-index: 30; max-width: 90%;
   text-align: center; box-shadow: 0 12px 32px -12px rgba(0,0,0,0.8); }
