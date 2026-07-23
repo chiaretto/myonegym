@@ -20,9 +20,9 @@ afterEach(async () => {
 async function setup() {
   const biceps = await createCategory('Bíceps', db)
   const costas = await createCategory('Costas', db)
-  const roscaDireta = await createExercise({ name: 'Rosca Direta', categoryId: biceps }, db)
-  const roscaScott = await createExercise({ name: 'Rosca Scott', categoryId: biceps }, db)
-  await createExercise({ name: 'Supino Reto', categoryId: costas }, db)
+  const roscaDireta = await createExercise({ name: 'Rosca Direta', categoryIds: [biceps] }, db)
+  const roscaScott = await createExercise({ name: 'Rosca Scott', categoryIds: [biceps] }, db)
+  await createExercise({ name: 'Supino Reto', categoryIds: [costas] }, db)
   await createExercise({ name: 'Alongamento' }, db) // no category, no day
   await createDay({ name: 'Dia 1', exerciseIds: [] }, db)
   await createDay({ name: 'Dia 2', exerciseIds: [roscaDireta] }, db)

@@ -28,7 +28,7 @@ afterEach(async () => {
 async function seed() {
   const gym = await createGym('Academia A', undefined, db)
   const peito = await createCategory('Peito', db)
-  const supino = await createExercise({ name: 'Supino Reto', categoryId: peito }, db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
   await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
   return { gym, supino }
 }

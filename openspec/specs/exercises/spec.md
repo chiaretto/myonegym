@@ -6,10 +6,17 @@ TBD - created by archiving change bootstrap-myonegym. Update Purpose after archi
 ### Requirement: Register an Exercise
 
 The user MUST be able to create an exercise with a name (e.g. "Rosca Direta"), a
-**media URL**, and a **category**. The media MAY be a **static image**
-(PNG/JPG/JPEG/WebP) or an **animated GIF** — a single URL field accepts either.
-Exercises are global (not tied to a gym) and MAY be reused across multiple
-training days and categories.
+**media URL**, and **zero or more categories**. A compound exercise (e.g. a bench
+press training Peito **and** Tríceps) MAY carry several categories; an exercise
+MAY also carry **none** — an exercise with no categories is **uncategorized** and
+is shown with the label "Sem categoria". There is **no reserved "Sem categoria"
+category**: uncategorized simply means an empty category list. The media MAY be a
+**static image** (PNG/JPG/JPEG/WebP) or an **animated GIF** — a single URL field
+accepts either. Exercises are global (not tied to a gym) and MAY be reused across
+multiple training days and categories.
+
+The category picker MUST let the user select **multiple** categories (e.g.
+tap-to-toggle), and selecting none MUST be valid.
 
 #### Scenario: Create an exercise with a static image
 - GIVEN category "Bíceps" exists
@@ -38,6 +45,21 @@ training days and categories.
 - GIVEN an exercise whose media URL is an animated GIF
 - WHEN its detail view (or list thumbnail) renders the media
 - THEN the GIF is shown and plays its animation (not a frozen frame)
+
+#### Scenario: Create an exercise with multiple categories
+- GIVEN categories "Peito" and "Tríceps" exist
+- WHEN the user creates "Supino Reto" and selects both "Peito" and "Tríceps"
+- THEN the exercise is persisted carrying both categories
+
+#### Scenario: Create an exercise with no category
+- GIVEN the exercise form is open
+- WHEN the user creates "Alongamento" without selecting any category
+- THEN the exercise is persisted with no categories and is shown as "Sem categoria"
+
+#### Scenario: All of an exercise's categories are shown
+- GIVEN "Supino Reto" is categorized as "Peito" and "Tríceps"
+- WHEN it is shown in a listing or on its detail
+- THEN both "Peito" and "Tríceps" are shown
 
 ### Requirement: Reuse Exercises Across Days and Categories
 
@@ -189,8 +211,8 @@ displayed exercises without changing any underlying data.
 - The **search field** MUST match exercises whose name contains the typed text
   (case-insensitive and accent-insensitive).
 - The **category filter** MUST support "all categories" (no filtering), a
-  specific category, and "no category" (matching exercises with no category
-  assigned).
+  specific category (matching exercises that **include** that category among their
+  categories), and "no category" (matching exercises with **no** categories).
 - The **day filter** MUST support "all days" (no filtering), a specific
   training day (matching exercises registered in that day), and "no day"
   (matching exercises registered in no training day).
@@ -211,10 +233,10 @@ displayed exercises without changing any underlying data.
 - WHEN the user types "elevacao" (no accent) in the search field
 - THEN "Elevação Lateral" is shown
 
-#### Scenario: Filter by a specific category
-- GIVEN exercises exist in categories "Bíceps" and "Costas"
+#### Scenario: Filter by a specific category (including compound exercises)
+- GIVEN "Rosca Direta" is categorized "Bíceps" and "Remada" is categorized "Costas" and "Bíceps"
 - WHEN the user selects category "Bíceps" in the category filter
-- THEN only exercises categorized as "Bíceps" are shown
+- THEN both "Rosca Direta" and "Remada" are shown (any exercise that includes "Bíceps")
 
 #### Scenario: Filter by "no category"
 - GIVEN "Alongamento" has no category and "Rosca Direta" is categorized as "Bíceps"

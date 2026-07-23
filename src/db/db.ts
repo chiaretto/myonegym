@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie'
+import { UNCATEGORIZED } from './types'
 import type {
   Category,
   Day,
@@ -62,6 +63,29 @@ export class MyOneGymDB extends Dexie {
     this.version(5).stores({
       exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt',
     })
+    // v6 — an exercise carries MANY categories (categoryIds) instead of one
+    // (categoryId). `*categoryIds` is a multiEntry index, so "exercises in
+    // category X" stays an indexed query. The upgrade converts each exercise
+    // (reserved-bucket or unset → []) and deletes the reserved "Sem categoria"
+    // category — uncategorized is now an empty list, not a record.
+    this.version(6)
+      .stores({ exercises: '++id, name, *categoryIds' })
+      .upgrade(async (tx) => {
+        const reserved = await tx
+          .table('categories')
+          .filter((c: { name?: string }) => c.name === UNCATEGORIZED)
+          .first()
+        const reservedId = reserved?.id
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            const old = e.categoryId as number | undefined
+            e.categoryIds = old != null && old !== reservedId ? [old] : []
+            delete e.categoryId
+          })
+        if (reservedId != null) await tx.table('categories').delete(reservedId)
+      })
   }
 }
 

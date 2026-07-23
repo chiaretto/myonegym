@@ -10,7 +10,7 @@ import {
   useSessionSummaries,
 } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
-import { daySubtitle, nextWorkoutDayId } from '../../lib/days'
+import { daySubtitle, exerciseCategoryNames, nextWorkoutDayId } from '../../lib/days'
 import { fmtWeight } from '../../lib/format'
 import { startOfWeek } from '../../lib/week'
 import { useToast } from '../../ui/Feedback'
@@ -177,14 +177,14 @@ export function HomePage() {
                       const ex = exMap.get(exId)
                       if (!ex) return null
                       const w = weights.get(exId)
-                      const exCat = ex.categoryId != null ? catMap.get(ex.categoryId) : undefined
+                      const exCats = exerciseCategoryNames(ex, catMap)
                       return (
                         <li key={`${exId}-${i}`}>
                           <Link className="exercise" to={`/exercise/${exId}?day=${day.id}`}>
                             <Media className="thumb" url={ex.mediaUrl} alt={ex.name} />
                             <span className="ex-body">
                               <span className="ex-name">{ex.name}</span>
-                              {exCat && <span className="ex-cat">{exCat.name}</span>}
+                              {exCats.length > 0 && <span className="ex-cat">{exCats.join(' · ')}</span>}
                             </span>
                             {w ? (
                               <span className="weight-badge">{fmtWeight(w.value, w.unit)}</span>

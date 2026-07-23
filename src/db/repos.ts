@@ -1,6 +1,5 @@
 import { db, type MyOneGymDB } from './db'
 import {
-  UNCATEGORIZED,
   type Category,
   type Day,
   type Exercise,
@@ -103,13 +102,6 @@ export async function listCategories(d: MyOneGymDB = db): Promise<Category[]> {
   return d.categories.orderBy('name').toArray()
 }
 
-/** Get or lazily create the reserved "Sem categoria" bucket. */
-export async function ensureUncategorized(d: MyOneGymDB = db): Promise<number> {
-  const existing = await d.categories.where('name').equals(UNCATEGORIZED).first()
-  if (existing?.id != null) return existing.id
-  return d.categories.add({ name: UNCATEGORIZED, reserved: true })
-}
-
 async function assertUniqueCategory(name: string, d: MyOneGymDB, exceptId?: number) {
   const clash = await d.categories.where('name').equalsIgnoreCase(name).first()
   if (clash && clash.id !== exceptId) {
@@ -134,27 +126,22 @@ export async function renameCategory(id: number, name: string, d: MyOneGymDB = d
 }
 
 /**
- * Delete a category. Exercises pointing at it are reassigned to the reserved
- * "Sem categoria" bucket — never orphaned. Days reference exercises (not
- * categories), so they need no reassignment. The reserved bucket itself cannot
- * be deleted.
+ * Delete a category. It is removed from every exercise's category list; an
+ * exercise left with no categories becomes uncategorized (empty list, shown as
+ * "Sem categoria"). Days reference exercises (not categories), so they need no
+ * change. Any category may be deleted — there is no reserved bucket.
  */
 export async function deleteCategory(id: number, d: MyOneGymDB = db): Promise<void> {
   await d.transaction('rw', d.categories, d.exercises, async () => {
-    const cat = await d.categories.get(id)
-    if (!cat) return
-    if (cat.reserved) throw new ValidationError('A categoria "Sem categoria" não pode ser excluída.')
-    const fallback = await ensureUncategorizedTx(d)
-    await d.exercises.where('categoryId').equals(id).modify({ categoryId: fallback })
+    if (!(await d.categories.get(id))) return
+    await d.exercises
+      .where('categoryIds')
+      .equals(id)
+      .modify((e) => {
+        e.categoryIds = e.categoryIds.filter((c) => c !== id)
+      })
     await d.categories.delete(id)
   })
-}
-
-// Same as ensureUncategorized but reuses the current transaction.
-async function ensureUncategorizedTx(d: MyOneGymDB): Promise<number> {
-  const existing = await d.categories.where('name').equals(UNCATEGORIZED).first()
-  if (existing?.id != null) return existing.id
-  return d.categories.add({ name: UNCATEGORIZED, reserved: true })
 }
 
 /* ------------------------------------------------------------- exercises */
@@ -178,22 +165,22 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
 }
 
 export async function createExercise(
-  input: { name: string; mediaUrl?: string; categoryId?: number },
+  input: { name: string; mediaUrl?: string; categoryIds?: number[] },
   d: MyOneGymDB = db,
 ): Promise<number> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
-  return d.exercises.add({ name, mediaUrl, categoryId: input.categoryId })
+  return d.exercises.add({ name, mediaUrl, categoryIds: input.categoryIds ?? [] })
 }
 
 export async function updateExercise(
   id: number,
-  input: { name: string; mediaUrl?: string; categoryId?: number },
+  input: { name: string; mediaUrl?: string; categoryIds?: number[] },
   d: MyOneGymDB = db,
 ): Promise<void> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
-  await d.exercises.update(id, { name, mediaUrl, categoryId: input.categoryId })
+  await d.exercises.update(id, { name, mediaUrl, categoryIds: input.categoryIds ?? [] })
 }
 
 /**

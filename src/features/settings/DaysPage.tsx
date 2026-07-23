@@ -5,7 +5,7 @@ import { createDay, deleteDay, reorderDays, updateDay, ValidationError } from '.
 import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
 import { useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
-import { daySubtitle } from '../../lib/days'
+import { daySubtitle, exerciseCategoryNames } from '../../lib/days'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
@@ -152,8 +152,10 @@ function DayForm({ day }: { day: Day | null }) {
 
   const back = () => nav('/settings/days')
 
-  const catNameOf = (ex?: Exercise) =>
-    ex?.categoryId != null ? catMap.get(ex.categoryId)?.name : undefined
+  const catNameOf = (ex?: Exercise) => {
+    const names = exerciseCategoryNames(ex, catMap)
+    return names.length ? names.join(' · ') : undefined
+  }
 
   const toggle = (id: number) =>
     setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))

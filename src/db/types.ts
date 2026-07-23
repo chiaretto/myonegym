@@ -12,8 +12,6 @@ export interface Gym {
 export interface Category {
   id?: number
   name: string
-  /** true for the reserved "Sem categoria" bucket — cannot be deleted. */
-  reserved?: boolean
 }
 
 export interface Exercise {
@@ -21,7 +19,9 @@ export interface Exercise {
   name: string
   /** URL of a static image or an animated GIF (optional). */
   mediaUrl?: string
-  categoryId?: number
+  /** Zero or more categories. Empty = uncategorized (shown as "Sem categoria").
+   *  There is no reserved category — an empty list IS uncategorized. */
+  categoryIds: number[]
 }
 
 export interface Day {

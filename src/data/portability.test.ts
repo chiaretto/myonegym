@@ -36,7 +36,7 @@ afterEach(async () => {
 async function seed() {
   const cat = await createCategory('Peito', d)
   const g = await createGym('A', undefined, d)
-  const ex = await createExercise({ name: 'Supino', mediaUrl: 'https://x.com/s.gif', categoryId: cat }, d)
+  const ex = await createExercise({ name: 'Supino', mediaUrl: 'https://x.com/s.gif', categoryIds: [cat] }, d)
   await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
   await saveWeight(g, ex, 40, 'KG', d)
   await saveWeight(g, ex, 42.5, 'KG', d) // creates history
@@ -143,12 +143,49 @@ describe('backup includes per-gym exercise notes', () => {
   })
 })
 
+describe('exercise categories: multi-category and back-compat', () => {
+  it('round-trips an exercise with multiple categories', async () => {
+    const peito = await createCategory('Peito', d)
+    const triceps = await createCategory('Tríceps', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peito, triceps] }, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peito, triceps])
+  })
+
+  it('imports a pre-multi-category backup (singular categoryId + reserved bucket)', async () => {
+    const peito = await createCategory('Peito', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peito] }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+
+    // Rewrite the doc to look like an OLD backup: singular categoryId, a reserved
+    // "Sem categoria" category, and an exercise pointing at it.
+    const cats = doc.categories as Record<string, unknown>[]
+    const reservedId = 9999
+    cats.push({ id: reservedId, name: 'Sem categoria', reserved: true })
+    const exs = doc.exercises as Record<string, unknown>[]
+    exs[0] = { id: exs[0].id, name: 'Supino', categoryId: peito }
+    exs.push({ id: 8888, name: 'Alongamento', categoryId: reservedId })
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    // Singular → one-element list; reserved category dropped, its ref emptied.
+    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peito])
+    expect((await d.exercises.get(8888))?.categoryIds).toEqual([])
+    expect(await d.categories.get(reservedId)).toBeUndefined()
+    expect((await d.categories.toArray()).some((c) => c.name === 'Sem categoria')).toBe(false)
+  })
+})
+
 describe('full backup is a complete snapshot', () => {
   /** Seed one of everything, then export/JSON/parse/wipe/import and compare. */
   async function seedEverything() {
     const g = await createGym('Academia A', undefined, d)
     const cat = await createCategory('Peito', d)
-    const ex = await createExercise({ name: 'Supino', categoryId: cat }, d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 40, 'KG', d)
     await saveWeight(g, ex, 42.5, 'KG', d) // history

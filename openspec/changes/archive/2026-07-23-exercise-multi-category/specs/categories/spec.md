@@ -1,29 +1,18 @@
-# categories Specification
+# Delta: categories
 
-## Purpose
-TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
-## Requirements
-### Requirement: Manage Muscle Categories
+**Change ID:** `exercise-multi-category`
+**Affects:** the reserved "Sem categoria" bucket is retired; deleting a category
+removes it from exercises' category lists
 
-The user MUST be able to create, **edit (rename)**, and delete categories (e.g.
-Peito, Tríceps, Costas, Bíceps). Categories are used to classify exercises and,
-optionally, training days.
+---
 
-#### Scenario: Create a category
-- GIVEN the categories screen is open
-- WHEN the user creates a category "Peito"
-- THEN "Peito" is persisted and available for selection when creating exercises
+## ADDED Requirements
 
-#### Scenario: Edit (rename) a category
-- GIVEN category "Peito" exists and is used by exercise "Supino"
-- WHEN the user renames it to "Peitoral"
-- THEN the category is renamed
-- AND exercise "Supino" reflects the new category name (reference preserved)
+(None)
 
-#### Scenario: Reject duplicate or empty category name
-- GIVEN category "Peito" exists
-- WHEN the user tries to create another "Peito" or an empty name
-- THEN creation is blocked with a validation message
+---
+
+## MODIFIED Requirements
 
 ### Requirement: Handle Category Deletion Safely
 
@@ -49,3 +38,10 @@ reassignment. Any category MAY be deleted (nothing is protected).
 - GIVEN the categories list
 - THEN it contains only user-created categories (no reserved "Sem categoria" entry)
 - AND every category can be deleted
+
+---
+
+## REMOVED Requirements
+
+(None — the reserved-bucket behaviour is folded into the modified deletion
+requirement above; "uncategorized" is now an empty category list, not a record.)

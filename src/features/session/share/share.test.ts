@@ -22,8 +22,8 @@ const catMap = new Map<number, Category>([
 ])
 
 const exMap = new Map<number, Exercise>([
-  [1, { id: 1, name: 'Rosca Direta', categoryId: 1, mediaUrl: 'https://x.com/a.gif' }],
-  [2, { id: 2, name: 'Supino', categoryId: 2 }],
+  [1, { id: 1, name: 'Rosca Direta', categoryIds: [1], mediaUrl: 'https://x.com/a.gif' }],
+  [2, { id: 2, name: 'Supino', categoryIds: [2] }],
 ])
 
 const weights = new Map<number, Weight>([

@@ -1,4 +1,5 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
+import { UNCATEGORIZED } from '../db/types'
 import type {
   Category,
   Day,
@@ -150,7 +151,35 @@ export function parseBackup(json: string): BackupDoc {
       throw new PortabilityError(`Documento inválido: "${k}" deve ser uma lista.`)
     }
   }
+  normalizeCategories(obj)
   return obj as unknown as BackupDoc
+}
+
+/**
+ * Back-compat for backups made before an exercise had multiple categories:
+ * - a reserved "Sem categoria" category is dropped (uncategorized is now an
+ *   empty list, not a record);
+ * - an exercise's singular `categoryId` becomes a one-element `categoryIds`
+ *   (or `[]` when it was unset or pointed at the dropped reserved category);
+ * - a reference to any dropped reserved category is removed from `categoryIds`.
+ */
+function normalizeCategories(obj: Record<string, unknown>): void {
+  const categories = obj.categories as { id?: number; name?: string; reserved?: boolean }[]
+  const reservedIds = new Set(
+    categories.filter((c) => c.reserved || c.name === UNCATEGORIZED).map((c) => c.id),
+  )
+  if (reservedIds.size) {
+    obj.categories = categories.filter((c) => !reservedIds.has(c.id))
+  }
+  for (const ex of obj.exercises as Record<string, unknown>[]) {
+    const ids: number[] = Array.isArray(ex.categoryIds)
+      ? (ex.categoryIds as number[])
+      : ex.categoryId != null
+        ? [ex.categoryId as number]
+        : []
+    ex.categoryIds = ids.filter((id) => !reservedIds.has(id))
+    delete ex.categoryId
+  }
 }
 
 /* ------------------------------------------------------------------ import */
@@ -219,8 +248,9 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
 
   const exRemap = new Map<number, number>() // dataset exerciseId -> local id
   for (const e of EXAMPLE_DATA.exercises) {
-    const categoryId = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
-    const id = await d.exercises.add({ name: e.name, mediaUrl: e.mediaUrl, categoryId })
+    const mapped = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
+    const categoryIds = mapped != null ? [mapped] : []
+    const id = await d.exercises.add({ name: e.name, mediaUrl: e.mediaUrl, categoryIds })
     if (e.id != null) exRemap.set(e.id, id)
   }
 

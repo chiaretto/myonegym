@@ -1,9 +1,35 @@
 import type { Category, Day, Exercise } from '../db/types'
 
 /**
- * Distinct category names of a day's exercises, in first-appearance order
- * (following the day's exercise order). Exercises without a category — or whose
- * category no longer exists — are ignored.
+ * Category names of one exercise, in its `categoryIds` order, skipping any that
+ * no longer exist. Empty when the exercise is uncategorized.
+ */
+export function exerciseCategoryNames(
+  ex: Exercise | undefined,
+  catMap: Map<number, Category>,
+): string[] {
+  const out: string[] = []
+  for (const id of ex?.categoryIds ?? []) {
+    const name = catMap.get(id)?.name
+    if (name) out.push(name)
+  }
+  return out
+}
+
+/** One exercise's categories joined by " · ", or "Sem categoria" when none. */
+export function exerciseCategoryLabel(
+  ex: Exercise | undefined,
+  catMap: Map<number, Category>,
+): string {
+  const names = exerciseCategoryNames(ex, catMap)
+  return names.length ? names.join(' · ') : 'Sem categoria'
+}
+
+/**
+ * Distinct category names across a day's exercises — the UNION of each
+ * exercise's categories — in first-appearance order (by exercise order, then by
+ * category order within an exercise). Categories that no longer exist are
+ * ignored; uncategorized exercises contribute nothing.
  */
 export function dayCategoryNames(
   day: Day,
@@ -13,12 +39,13 @@ export function dayCategoryNames(
   const seen = new Set<number>()
   const names: string[] = []
   for (const exId of day.exerciseIds) {
-    const catId = exMap.get(exId)?.categoryId
-    if (catId == null || seen.has(catId)) continue
-    const name = catMap.get(catId)?.name
-    if (!name) continue
-    seen.add(catId)
-    names.push(name)
+    for (const catId of exMap.get(exId)?.categoryIds ?? []) {
+      if (seen.has(catId)) continue
+      const name = catMap.get(catId)?.name
+      if (!name) continue
+      seen.add(catId)
+      names.push(name)
+    }
   }
   return names
 }

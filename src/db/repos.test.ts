@@ -13,7 +13,6 @@ import {
   deleteGym,
   deletePhoto,
   deleteSession,
-  ensureUncategorized,
   getActiveSession,
   getNote,
   getSession,
@@ -99,25 +98,32 @@ describe('categories', () => {
 
   it('rename preserves the reference on exercises', async () => {
     const cat = await createCategory('Peito', d)
-    const ex = await createExercise({ name: 'Supino', categoryId: cat }, d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     await renameCategory(cat, 'Peitoral', d)
-    expect((await d.exercises.get(ex))?.categoryId).toBe(cat)
+    expect((await d.exercises.get(ex))?.categoryIds).toEqual([cat])
     expect((await d.categories.get(cat))?.name).toBe('Peitoral')
   })
 
-  it('delete reassigns exercises to "Sem categoria"', async () => {
+  it('delete removes the category from exercises (no reserved bucket)', async () => {
     const bic = await createCategory('Bíceps', d)
-    const ex = await createExercise({ name: 'Rosca Direta', categoryId: bic }, d)
+    const ante = await createCategory('Antebraço', d)
+    const compound = await createExercise({ name: 'Rosca Direta', categoryIds: [bic, ante] }, d)
+    const only = await createExercise({ name: 'Rosca Scott', categoryIds: [bic] }, d)
+
     await deleteCategory(bic, d)
-    const uncat = await ensureUncategorized(d)
-    expect((await d.exercises.get(ex))?.categoryId).toBe(uncat)
+
     expect(await d.categories.get(bic)).toBeUndefined()
+    // Bíceps is gone from both; the compound keeps Antebraço, the other is now empty.
+    expect((await d.exercises.get(compound))?.categoryIds).toEqual([ante])
+    expect((await d.exercises.get(only))?.categoryIds).toEqual([])
+    // No reserved category was created.
+    expect((await listCategories(d)).some((c) => c.name === 'Sem categoria')).toBe(false)
   })
 
-  it('reserved "Sem categoria" cannot be deleted', async () => {
-    const uncat = await ensureUncategorized(d)
-    await expect(deleteCategory(uncat, d)).rejects.toBeInstanceOf(ValidationError)
-    expect(await listCategories(d)).toHaveLength(1)
+  it('any category can be deleted (nothing reserved)', async () => {
+    const c = await createCategory('Qualquer', d)
+    await expect(deleteCategory(c, d)).resolves.not.toThrow()
+    expect(await listCategories(d)).toHaveLength(0)
   })
 })
 

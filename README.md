@@ -102,10 +102,12 @@ npm run typecheck  # tsc --noEmit
   sessions of that exercise in that gym; saving an empty note clears it. Notes are
   isolated per gym and are **included in the full backup**.
 - **Settings** — all CRUD: gyms (with *copy weights from another gym* on
-  create), categories (rename; deleting one reassigns its exercises to
-  "Sem categoria"), exercises (name, media URL, category — each item also shows
-  which training days it belongs to; the list has a name search plus category
-  and training-day filters, combinable, to narrow a growing catalog), and
+  create), categories (rename; deleting one just **removes it from every
+  exercise** — an exercise left with none is uncategorized), exercises (name,
+  media URL, and **zero or more categories** picked as toggle chips — a compound
+  lift can be *Peito · Tríceps*; none selected shows "Sem categoria"; each item
+  also shows which training days it belongs to; the list has a name search plus
+  category and training-day filters, combinable, to narrow a growing catalog), and
   training days (name + ordered exercise selection — exercises may repeat;
   days can be reordered). A day's categories are **derived from its exercises**
   (e.g. "Peito · Tríceps"), not set by hand. **Creating and editing each of these

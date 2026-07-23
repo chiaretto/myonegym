@@ -126,6 +126,12 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - THEN opening the restored session shows its entries
 - AND opening the restored exercises shows their photos (ids line up)
 
+#### Scenario: A backup with single-category exercises imports
+- GIVEN a backup produced before exercises had multiple categories (each exercise has a singular `categoryId`)
+- WHEN the user imports it
+- THEN each exercise is restored with that category as a one-element category list
+- AND if the backup contains a reserved "Sem categoria" category, it is dropped and its references become uncategorized
+
 #### Scenario: Older backup without the new tables imports cleanly
 - GIVEN a backup JSON produced before sessions/history/photos were exported (those keys absent)
 - WHEN the user imports it

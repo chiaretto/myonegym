@@ -68,7 +68,7 @@ describe('Create/edit forms are pages', () => {
 
   it('edits an exercise through its page', async () => {
     const cat = await createCategory('Peito', db)
-    const ex = await createExercise({ name: 'Supino', categoryId: cat }, db)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
     const user = userEvent.setup()
     renderAt('/settings/exercises')
 
@@ -129,7 +129,7 @@ describe('Create/edit forms are pages', () => {
 
   it('the day form is a page with the exercise picker; preview stays a modal', async () => {
     const cat = await createCategory('Peito', db)
-    await createExercise({ name: 'Supino', categoryId: cat }, db)
+    await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
     const user = userEvent.setup()
     renderAt('/settings/days/new')
 

@@ -17,13 +17,9 @@ export function CategoriesPage() {
   const nav = useNavigate()
 
   const onDelete = async (c: Category) => {
-    if (c.reserved) {
-      toast('"Sem categoria" não pode ser excluída.')
-      return
-    }
     const ok = await confirm({
       title: `Excluir "${c.name}"?`,
-      message: 'Os exercícios desta categoria serão movidos para "Sem categoria".',
+      message: 'Os exercícios desta categoria perdem esta etiqueta (os que ficarem sem nenhuma viram "Sem categoria").',
       confirmLabel: 'Excluir',
       danger: true,
     })
@@ -56,22 +52,17 @@ export function CategoriesPage() {
               </span>
               <span className="row-body">
                 <span className="row-title">{c.name}</span>
-                {c.reserved && <span className="row-sub">Reservada</span>}
               </span>
-              {!c.reserved && (
-                <button
-                  className="icon-btn ghost"
-                  aria-label="Editar"
-                  onClick={() => nav(`/settings/categories/${c.id}/edit`)}
-                >
-                  <Icon name="pencil" />
-                </button>
-              )}
-              {!c.reserved && (
-                <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(c)}>
-                  <Icon name="trash" />
-                </button>
-              )}
+              <button
+                className="icon-btn ghost"
+                aria-label="Editar"
+                onClick={() => nav(`/settings/categories/${c.id}/edit`)}
+              >
+                <Icon name="pencil" />
+              </button>
+              <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(c)}>
+                <Icon name="trash" />
+              </button>
             </div>
           ))}
         </div>

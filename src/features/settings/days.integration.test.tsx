@@ -21,9 +21,9 @@ describe('Home day header — derived categories', () => {
   it('shows the distinct categories of the day exercises and updates on change', async () => {
     const peito = await createCategory('Peito', db)
     const triceps = await createCategory('Tríceps', db)
-    const supino = await createExercise({ name: 'Supino', categoryId: peito }, db)
-    const crucifixo = await createExercise({ name: 'Crucifixo', categoryId: peito }, db)
-    const corda = await createExercise({ name: 'Tríceps Corda', categoryId: triceps }, db)
+    const supino = await createExercise({ name: 'Supino', categoryIds: [peito] }, db)
+    const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
+    const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [triceps] }, db)
     const dayId = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, corda] }, db)
 
     render(
