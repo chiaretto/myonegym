@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, deleteSession, setEntryDone } from '../../db/repos'
 import type { SessionEntry } from '../../db/types'
+import { exerciseCategoryNames } from '../../lib/days'
 import { fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
 import { renderCard } from './share/renderCard'
 import { shareFilename, shareSessionImage } from './share/shareCard'
@@ -55,7 +56,8 @@ export function SessionPage() {
 
   const catFor = (entry: SessionEntry) => {
     const ex = entry.exerciseId != null ? exMap.get(entry.exerciseId) : undefined
-    return ex?.categoryId != null ? catMap.get(ex.categoryId)?.name : undefined
+    const names = exerciseCategoryNames(ex, catMap)
+    return names.length ? names.join(' · ') : undefined
   }
   const mediaFor = (entry: SessionEntry) =>
     entry.exerciseId != null ? exMap.get(entry.exerciseId)?.mediaUrl : undefined

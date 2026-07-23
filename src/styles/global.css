@@ -131,6 +131,14 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
 .chip.sm { padding: 3px 9px; gap: 4px; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
 
+/* Toggle-chip multi-select (e.g. an exercise's categories). Tap to add/remove. */
+.chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 9px 14px;
+  border-radius: var(--r-pill); border: 0.5px solid var(--border-strong);
+  background: var(--surface-2); color: var(--text-secondary); font-size: var(--fs-sm); font-weight: 600; }
+.chip-toggle.on { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent); }
+.chip-toggle:active { filter: brightness(0.94); }
+
 /* Empty states */
 .empty { text-align: center; color: var(--text-secondary); padding: 48px 24px; display: grid;
   gap: 12px; justify-items: center; }

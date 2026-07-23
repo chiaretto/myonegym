@@ -3,11 +3,11 @@ import { filterExercises, matchesSearch, normalizeForSearch } from './exerciseFi
 import type { Day, Exercise } from '../db/types'
 
 const exercises: Exercise[] = [
-  { id: 1, name: 'Rosca Direta', categoryId: 1 },
-  { id: 2, name: 'Rosca Scott', categoryId: 1 },
-  { id: 3, name: 'Supino Reto', categoryId: 2 },
-  { id: 4, name: 'Elevação Lateral', categoryId: 2 },
-  { id: 5, name: 'Alongamento' }, // no category
+  { id: 1, name: 'Rosca Direta', categoryIds: [1] },
+  { id: 2, name: 'Rosca Scott', categoryIds: [1] },
+  { id: 3, name: 'Supino Reto', categoryIds: [2] },
+  { id: 4, name: 'Elevação Lateral', categoryIds: [2] },
+  { id: 5, name: 'Alongamento', categoryIds: [] }, // no category
 ]
 
 const days: Day[] = [
@@ -48,17 +48,39 @@ describe('filterExercises', () => {
   })
 
   it('narrows by a specific category', () => {
-    const result = filterExercises(exercises, { categoryId: 1 }, days)
+    const result = filterExercises(exercises, { category: 1 }, days)
     expect(result.map((e) => e.name)).toEqual(['Rosca Direta', 'Rosca Scott'])
   })
 
+  it('tolerates an exercise with a missing categoryIds (old/partial data)', () => {
+    // A view filter must not crash on unexpected data shape — such a record is
+    // treated as uncategorized. (Regression: selecting "Sem categoria" threw.)
+    const messy = [
+      { id: 1, name: 'Legado', categoryIds: undefined } as unknown as Exercise,
+      { id: 2, name: 'Peito', categoryIds: [1] },
+    ]
+    expect(() => filterExercises(messy, { category: 'none' }, days)).not.toThrow()
+    expect(filterExercises(messy, { category: 'none' }, days).map((e) => e.name)).toEqual(['Legado'])
+    expect(filterExercises(messy, { category: 1 }, days).map((e) => e.name)).toEqual(['Peito'])
+  })
+
+  it('a specific category matches any exercise that includes it (compound)', () => {
+    const compound: Exercise[] = [
+      { id: 1, name: 'Rosca Direta', categoryIds: [1] },
+      { id: 2, name: 'Remada', categoryIds: [2, 1] }, // includes cat 1
+      { id: 3, name: 'Supino', categoryIds: [2] }, // does not
+    ]
+    const result = filterExercises(compound, { category: 1 }, days)
+    expect(result.map((e) => e.id).sort()).toEqual([1, 2])
+  })
+
   it('narrows by "no category"', () => {
-    const result = filterExercises(exercises, { categoryId: 'none' }, days)
+    const result = filterExercises(exercises, { category: 'none' }, days)
     expect(result.map((e) => e.name)).toEqual(['Alongamento'])
   })
 
   it('"all" categories applies no category filter', () => {
-    const result = filterExercises(exercises, { categoryId: 'all' }, days)
+    const result = filterExercises(exercises, { category: 'all' }, days)
     expect(result).toHaveLength(exercises.length)
   })
 
@@ -80,7 +102,7 @@ describe('filterExercises', () => {
   it('combines search, category, and day filters with AND', () => {
     const result = filterExercises(
       exercises,
-      { search: 'rosca', categoryId: 1, dayId: 1 },
+      { search: 'rosca', category: 1, dayId: 1 },
       days,
     )
     expect(result.map((e) => e.name)).toEqual(['Rosca Scott'])
@@ -94,7 +116,7 @@ describe('filterExercises', () => {
   it('does not mutate the input arrays', () => {
     const exercisesCopy = [...exercises]
     const daysCopy = [...days]
-    filterExercises(exercises, { search: 'rosca', categoryId: 1, dayId: 2 }, days)
+    filterExercises(exercises, { search: 'rosca', category: 1, dayId: 2 }, days)
     expect(exercises).toEqual(exercisesCopy)
     expect(days).toEqual(daysCopy)
   })

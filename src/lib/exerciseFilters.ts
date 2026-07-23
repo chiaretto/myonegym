@@ -5,7 +5,7 @@ export type DayFilter = number | 'none' | 'all'
 
 export interface ExerciseFilters {
   search?: string
-  categoryId?: CategoryFilter
+  category?: CategoryFilter
   dayId?: DayFilter
 }
 
@@ -34,15 +34,19 @@ export function filterExercises(
   filters: ExerciseFilters,
   days: Day[],
 ): Exercise[] {
-  const { search = '', categoryId = 'all', dayId = 'all' } = filters
+  const { search = '', category = 'all', dayId = 'all' } = filters
 
   return exercises.filter((exercise) => {
     if (!matchesSearch(exercise.name, search)) return false
 
-    if (categoryId === 'none') {
-      if (exercise.categoryId != null) return false
-    } else if (categoryId !== 'all') {
-      if (exercise.categoryId !== categoryId) return false
+    // Guard against unexpected data shape (old/partial records where categoryIds
+    // is missing) — such an exercise is treated as uncategorized, never a crash.
+    const cats = exercise.categoryIds ?? []
+    if (category === 'none') {
+      if (cats.length > 0) return false
+    } else if (category !== 'all') {
+      // A specific category matches any exercise that INCLUDES it.
+      if (!cats.includes(category)) return false
     }
 
     if (dayId === 'none') {

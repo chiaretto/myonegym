@@ -1,4 +1,5 @@
 import type { Category, Exercise, Gym, Session, SessionEntry, Weight } from '../../../db/types'
+import { exerciseCategoryNames } from '../../../lib/days'
 import { fmtDuration, fmtFullDate, fmtWeight } from '../../../lib/format'
 
 /**
@@ -65,7 +66,7 @@ export function buildShareCard({
     const weight = full && entry.exerciseId != null ? weights.get(entry.exerciseId) : undefined
     return {
       name: entry.exerciseName,
-      category: ex?.categoryId != null ? catMap.get(ex.categoryId)?.name : undefined,
+      category: exerciseCategoryNames(ex, catMap).join(' · ') || undefined,
       weight: weight ? fmtWeight(weight.value, weight.unit) : undefined,
       done: entry.done,
       mediaUrl: ex?.mediaUrl,

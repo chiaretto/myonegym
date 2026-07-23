@@ -63,7 +63,7 @@ async function seedEverything() {
   const gym = await createGym('Academia A', undefined, db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
-  const ex = await createExercise({ name: 'Supino', categoryId: cat }, db)
+  const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   await saveWeight(gym, ex, 42.5, 'KG', db)
   await saveNote(gym, ex, 'cotovelo fixo', db)

@@ -11,6 +11,7 @@ import {
 } from '../../lib/hooks'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
+import { exerciseCategoryNames } from '../../lib/days'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { PhotoTab } from '../exercise/photo/PhotoTab'
@@ -53,7 +54,7 @@ export function SessionEntryPage() {
 
   const readOnly = session.status === 'completed'
   const exercise = entry.exerciseId != null ? exMap.get(entry.exerciseId) : undefined
-  const cat = exercise?.categoryId != null ? catMap.get(exercise.categoryId) : undefined
+  const catNames = exerciseCategoryNames(exercise, catMap)
 
   // Guided stepper over the session's exercises (in list order).
   const idx = entries.findIndex((e) => e.id === eId)
@@ -103,11 +104,11 @@ export function SessionEntryPage() {
                 <Icon name="check" size={12} /> Concluído
               </span>
             )}
-            {cat && (
-              <span className="chip">
-                <Icon name="tag" size={12} /> {cat.name}
+            {catNames.map((name) => (
+              <span key={name} className="chip">
+                <Icon name="tag" size={12} /> {name}
               </span>
-            )}
+            ))}
             <span className="chip">
               <Icon name="calendar-event" size={12} /> {session.dayName}
             </span>

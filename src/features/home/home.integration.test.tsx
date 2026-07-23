@@ -20,7 +20,7 @@ describe('Home end-to-end', () => {
     // Seed a controlled fixture (independent of the sample-data content).
     const gym = await createGym('Academia A', undefined, db)
     const cat = await createCategory('Peito', db)
-    const supino = await createExercise({ name: 'Supino Reto', categoryId: cat }, db)
+    const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
     await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
     await saveWeight(gym, supino, 40, 'KG', db)
     const user = userEvent.setup()

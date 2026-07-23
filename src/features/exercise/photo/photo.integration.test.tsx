@@ -63,7 +63,7 @@ async function seed() {
   const gym = await createGym('Academia A', undefined, db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
-  const ex = await createExercise({ name: 'Supino Reto', categoryId: cat }, db)
+  const ex = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   return { gym, ex, day }
 }

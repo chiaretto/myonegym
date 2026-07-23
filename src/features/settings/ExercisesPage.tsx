@@ -5,7 +5,7 @@ import { createExercise, deleteExercise, updateExercise, ValidationError } from 
 import { db } from '../../db/db'
 import type { Exercise } from '../../db/types'
 import { useCategories, useCategoryMap, useDays, useExercises } from '../../lib/hooks'
-import { dayNamesForExercise } from '../../lib/days'
+import { dayNamesForExercise, exerciseCategoryLabel } from '../../lib/days'
 import { filterExercises, type CategoryFilter, type DayFilter } from '../../lib/exerciseFilters'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
@@ -29,7 +29,7 @@ export function ExercisesPage() {
     categorySel === 'all' || categorySel === 'none' ? categorySel : Number(categorySel)
   const dayFilter: DayFilter = daySel === 'all' || daySel === 'none' ? daySel : Number(daySel)
   const filtersActive = search.trim() !== '' || categorySel !== 'all' || daySel !== 'all'
-  const filtered = filterExercises(exs, { search, categoryId: categoryFilter, dayId: dayFilter }, days)
+  const filtered = filterExercises(exs, { search, category: categoryFilter, dayId: dayFilter }, days)
 
   const clearFilters = () => {
     setSearch('')
@@ -123,9 +123,7 @@ export function ExercisesPage() {
               <Media className="thumb" url={e.mediaUrl} alt={e.name} />
               <span className="row-body">
                 <span className="row-title">{e.name}</span>
-                <span className="row-sub">
-                  {e.categoryId != null ? catMap.get(e.categoryId)?.name ?? 'Sem categoria' : 'Sem categoria'}
-                </span>
+                <span className="row-sub">{exerciseCategoryLabel(e, catMap)}</span>
                 {dayNames.length ? (
                   <span className="chip-row">
                     {dayNames.map((n, i) => (
@@ -198,17 +196,19 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const nav = useNavigate()
   const [name, setName] = useState(exercise?.name ?? '')
   const [mediaUrl, setMediaUrl] = useState(exercise?.mediaUrl ?? '')
-  const [categoryId, setCategoryId] = useState<number | ''>(exercise?.categoryId ?? '')
+  const [categoryIds, setCategoryIds] = useState<number[]>(exercise?.categoryIds ?? [])
   const [err, setErr] = useState('')
 
   const back = () => nav('/settings/exercises')
+  const toggleCat = (id: number) =>
+    setCategoryIds((cur) => (cur.includes(id) ? cur.filter((c) => c !== id) : [...cur, id]))
 
   const submit = async () => {
     try {
       const input = {
         name,
         mediaUrl: mediaUrl || undefined,
-        categoryId: categoryId === '' ? undefined : Number(categoryId),
+        categoryIds,
       }
       if (exercise) {
         await updateExercise(exercise.id!, input, db)
@@ -236,15 +236,27 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
           <input id="ex-media" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/rosca.gif" />
         </div>
         <div className="field">
-          <label htmlFor="ex-cat">Categoria</label>
-          <select id="ex-cat" value={categoryId} onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">Sem categoria</option>
-            {cats?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <label>Categorias</label>
+          {cats && cats.length > 0 ? (
+            <div className="chip-select" role="group" aria-label="Categorias">
+              {cats.map((c) => {
+                const on = categoryIds.includes(c.id!)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`chip-toggle${on ? ' on' : ''}`}
+                    aria-pressed={on}
+                    onClick={() => toggleCat(c.id!)}
+                  >
+                    {on && <Icon name="check" size={12} />} {c.name}
+                  </button>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="note-empty">Nenhuma categoria ainda. Crie categorias em Configurações → Categorias.</p>
+          )}
         </div>
         {mediaUrl && (
           <div style={{ marginBottom: 14 }}>

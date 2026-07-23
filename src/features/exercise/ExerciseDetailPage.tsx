@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { useCategoryMap, useDays } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
+import { exerciseCategoryNames } from '../../lib/days'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { BackBar } from '../../ui/Chrome'
@@ -51,7 +52,7 @@ export function ExerciseDetailPage() {
       : undefined
   // Stepping keeps the day, so the context survives across exercises.
   const goTo = (id: number) => nav(`/exercise/${id}?day=${fromDay!.id}`)
-  const cat = exercise?.categoryId != null ? catMap.get(exercise.categoryId) : undefined
+  const catNames = exerciseCategoryNames(exercise ?? undefined, catMap)
 
   if (exercise === undefined) return <BackBar title="Exercício" to={backTo} />
   if (exercise === null) {
@@ -76,11 +77,11 @@ export function ExerciseDetailPage() {
         <div className="ex-head">
           <h2 className="ex-title">{exercise.name}</h2>
           <div className="ex-chips">
-            {cat && (
-              <span className="chip">
-                <Icon name="tag" size={12} /> {cat.name}
+            {catNames.map((name) => (
+              <span key={name} className="chip">
+                <Icon name="tag" size={12} /> {name}
               </span>
-            )}
+            ))}
             {inDays.length > 0 && (
               <span className="chip">
                 <Icon name="calendar-event" size={12} />{' '}

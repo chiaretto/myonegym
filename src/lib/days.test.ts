@@ -8,11 +8,12 @@ const cats = new Map<number, Category>([
   [3, { id: 3, name: 'Costas' }],
 ])
 const exs = new Map<number, Exercise>([
-  [10, { id: 10, name: 'Supino', categoryId: 1 }],
-  [11, { id: 11, name: 'Crucifixo', categoryId: 1 }],
-  [12, { id: 12, name: 'Tríceps Corda', categoryId: 2 }],
-  [13, { id: 13, name: 'Puxada', categoryId: 3 }],
-  [14, { id: 14, name: 'Sem categoria' }], // no category
+  [10, { id: 10, name: 'Supino', categoryIds: [1] }],
+  [11, { id: 11, name: 'Crucifixo', categoryIds: [1] }],
+  [12, { id: 12, name: 'Tríceps Corda', categoryIds: [2] }],
+  [13, { id: 13, name: 'Puxada', categoryIds: [3] }],
+  [14, { id: 14, name: 'Sem categoria', categoryIds: [] }], // no category
+  [15, { id: 15, name: 'Supino Inclinado', categoryIds: [1, 2] }], // compound: Peito + Tríceps
 ])
 const day = (exerciseIds: number[]): Day => ({ id: 1, name: 'Dia 1', exerciseIds })
 
@@ -29,6 +30,11 @@ describe('dayCategoryNames', () => {
   it('order follows the exercise order', () => {
     expect(dayCategoryNames(day([13, 10]), exs, cats)).toEqual(['Costas', 'Peito'])
   })
+  it('a compound exercise contributes all its categories, in order', () => {
+    // Peito(1) then Tríceps(2) both come from the single exercise 15.
+    expect(dayCategoryNames(day([15]), exs, cats)).toEqual(['Peito', 'Tríceps'])
+  })
+
   it('empty when the day has no categorized exercises', () => {
     expect(dayCategoryNames(day([14]), exs, cats)).toEqual([])
   })
