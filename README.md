@@ -112,14 +112,16 @@ npm run typecheck  # tsc --noEmit
 - **Appearance** — **Configurações → Aparência** has a **font-size** slider
   (100%–200%, default 150%) with a live preview; the choice is saved locally and
   rescales the whole app instantly.
-- **Data** — generate an example routine, export a full backup JSON, and import
-  a backup (**replaces all** local data, with confirmation). The backup carries
-  gyms, categories, exercises, days, current per-gym weights, and per-gym exercise
-  notes. Device-local data (weight-change history, workout sessions, and
-  **exercise photos**) is **not** included in backups. Photos are excluded
-  because they are binary: base64 in JSON would turn a ~50 KB backup into tens of
-  MB. The screen says so — they are the only user-created content a restore
-  cannot bring back.
+- **Data** — generate an example routine, export a **complete backup** JSON, and
+  import one to **restore** (a **replace-all**, with a destructive confirmation).
+  The backup is a full snapshot of the database: gyms, categories, exercises,
+  days, current weights **and their history**, exercise notes, **every workout
+  session** and its entries, and **all exercise photos** (embedded as base64).
+  Restore reproduces the device exactly, keeping original ids so every reference
+  stays valid. Because photos are embedded, the file can be a few MB (much more if
+  photos are large); a backup with no photos stays tiny. The only things left out
+  are **device-local UI preferences** (font-size, the first-launch flag) — not
+  user data. This is the safety net for the PWA's storage being evicted or lost.
   A **"Zona de perigo"** section adds **Resetar app**, which erases all
   registered data on the device after an explicit "cannot be undone"
   confirmation — equivalent to a fresh install.
@@ -133,9 +135,11 @@ npm run typecheck  # tsc --noEmit
 - **Weight is keyed by `(gym, exercise)`**, with its own unit — the same
   exercise can be 40 KG in one gym and 15 LB in another; the value is identical
   across every day it appears in.
-- **Weight history is device-local and never exported.** The full-backup JSON
-  contains only the *current* weight per `(gym, exercise)`; the change log stays
-  on the device. Importing a backup starts a fresh history.
+- **The backup is a full snapshot, meant for restore.** It carries the whole
+  database — including the weight-change history, workout sessions, and photos —
+  so importing it on a fresh device reproduces the old one exactly. Photos are
+  base64-encoded into the JSON (chunked, to avoid a stack overflow on large
+  buffers); the file is self-contained and needs no special tool to read.
 - **Offline-first.** All data operations are local; the service worker caches the
   app shell so it opens and works with no network.
 

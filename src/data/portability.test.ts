@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { MyOneGymDB } from '../db/db'
+import { allTables, MyOneGymDB } from '../db/db'
 import {
   addPhoto,
   completeSession,
@@ -44,18 +44,19 @@ async function seed() {
 }
 
 describe('backup export/import', () => {
-  it('export excludes weight history but keeps current weight', async () => {
-    const { g, ex } = await seed()
+  it('exports the current weight AND its full history', async () => {
+    const { g, ex } = await seed() // saveWeight twice → 2 history entries
     const doc = await exportBackup(d)
     expect(doc.weights).toHaveLength(1)
     expect(doc.weights[0]).toMatchObject({ gymId: g, exerciseId: ex, value: 42.5, unit: 'KG' })
-    // no history field of any kind in the document
-    expect('weightHistory' in doc).toBe(false)
-    expect(JSON.stringify(doc)).not.toContain('changedAt')
+    expect(doc.weightHistory.length).toBe(await d.weightHistory.count())
+    expect(doc.weightHistory.length).toBeGreaterThan(0)
+    expect(JSON.stringify(doc)).toContain('changedAt')
   })
 
-  it('round-trip: export -> wipe -> import restores current data', async () => {
+  it('round-trip: export -> wipe -> import restores current data AND history', async () => {
     await seed()
+    const historyBefore = await d.weightHistory.count()
     const doc = await exportBackup(d)
 
     // wipe everything
@@ -67,8 +68,9 @@ describe('backup export/import', () => {
     expect(await d.exercises.count()).toBe(1)
     expect(await d.days.count()).toBe(1)
     expect((await d.weights.toArray())[0].value).toBe(42.5)
-    // history starts empty on the imported side
-    expect(await d.weightHistory.count()).toBe(0)
+    // history is restored now, not dropped
+    expect(await d.weightHistory.count()).toBe(historyBefore)
+    expect(historyBefore).toBeGreaterThan(0)
   })
 
   it('import replaces all existing data', async () => {
@@ -141,42 +143,110 @@ describe('backup includes per-gym exercise notes', () => {
   })
 })
 
-describe('exercise photos are device-local (never in a backup)', () => {
-  /** ~90 KB of bytes — big enough that leaking them into the JSON would show. */
-  const bigPhoto = () => new Uint8Array(90_000).fill(7).buffer as ArrayBuffer
+describe('full backup is a complete snapshot', () => {
+  /** Seed one of everything, then export/JSON/parse/wipe/import and compare. */
+  async function seedEverything() {
+    const g = await createGym('Academia A', undefined, d)
+    const cat = await createCategory('Peito', d)
+    const ex = await createExercise({ name: 'Supino', categoryId: cat }, d)
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
+    await saveWeight(g, ex, 40, 'KG', d)
+    await saveWeight(g, ex, 42.5, 'KG', d) // history
+    await saveNote(g, ex, 'cotovelo fixo', d)
+    await addPhoto(g, ex, new Uint8Array([9, 8, 7, 200, 255]).buffer as ArrayBuffer, 'image/jpeg', 100, 80, d)
+    const sid = await startSession(g, day, d)
+    await setEntryDone((await listSessionEntries(sid, d))[0].id!, true, d)
+    await completeSession(sid, d)
+    return { g, ex, day, sid }
+  }
 
-  it('export carries no photo records or bytes, whatever the photo count', async () => {
-    const { g, ex } = await seed()
-    const bare = JSON.stringify(await exportBackup(d)).length
+  const counts = async () =>
+    Object.fromEntries(
+      await Promise.all(
+        allTables(d).map(async (t) => [t.name, await t.count()] as const),
+      ),
+    )
 
-    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
-    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
-    expect(await d.exercisePhotos.count()).toBe(2)
+  it('restores every table identically after a JSON round-trip', async () => {
+    await seedEverything()
+    const before = await counts()
+    // Every table has at least one row, or the test proves nothing.
+    for (const [name, n] of Object.entries(before)) expect(n, name).toBeGreaterThan(0)
 
-    const doc = await exportBackup(d)
-    const json = JSON.stringify(doc)
-    expect(json).not.toContain('exercisePhotos')
-    expect(json).not.toContain('bytes')
-    expect(Object.keys(doc)).not.toContain('exercisePhotos')
-    // 180 KB of photos must not move the needle — allow only formatting noise.
-    expect(json.length).toBeLessThan(bare + 1_000)
-  })
-
-  it('import replaces all and leaves zero photos', async () => {
-    const { g, ex } = await seed()
-    const doc = await exportBackup(d)
-    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
-    expect(await d.exercisePhotos.count()).toBe(1)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    expect(Object.values(await counts()).every((n) => n === 0)).toBe(true)
 
     await importBackupReplaceAll(doc, d)
+    expect(await counts()).toEqual(before)
+  })
 
-    expect(await d.gyms.count()).toBe(1) // the rest restored
-    expect(await d.exercisePhotos.count()).toBe(0) // photos cannot be restored
+  it("restores a photo's exercise reference (ids preserved)", async () => {
+    const { ex } = await seedEverything()
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    const photo = (await d.exercisePhotos.toArray())[0]
+    expect(photo.exerciseId).toBe(ex)
+    expect(await d.exercises.get(ex)).toBeDefined() // the exercise it points at is really there
+  })
+
+  it('imports a pre-v4 backup (no history/sessions/photos keys) cleanly', async () => {
+    await seedEverything()
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d)))
+    // Simulate an old backup: strip the tables v4 added.
+    delete doc.weightHistory
+    delete doc.sessions
+    delete doc.sessionEntries
+    delete doc.exercisePhotos
+    doc.version = 3
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+    expect(await d.gyms.count()).toBe(1)
+    expect(await d.exercises.count()).toBe(1)
+    expect(await d.weights.count()).toBe(1)
+    // The stripped tables restore empty, not with an error.
+    expect(await d.weightHistory.count()).toBe(0)
+    expect(await d.sessions.count()).toBe(0)
+    expect(await d.exercisePhotos.count()).toBe(0)
+  })
+})
+
+describe('exercise photos are part of the backup', () => {
+  /** Distinctive bytes so a round-trip can be checked exactly. */
+  const photoBytes = () => new Uint8Array([0, 1, 2, 253, 254, 255, 128, 7]).buffer as ArrayBuffer
+
+  it('exports photos base64-encoded', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photoBytes(), 'image/jpeg', 1600, 1200, d)
+
+    const doc = await exportBackup(d)
+    expect(doc.exercisePhotos).toHaveLength(1)
+    const p = doc.exercisePhotos[0]
+    expect(p).toMatchObject({ gymId: g, exerciseId: ex, type: 'image/jpeg', width: 1600, height: 1200 })
+    expect(typeof p.bytes).toBe('string') // base64, not an ArrayBuffer
+    expect(p.bytes.length).toBeGreaterThan(0)
+  })
+
+  it('round-trips a photo byte-for-byte through export -> wipe -> import', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photoBytes(), 'image/png', 800, 600, d)
+
+    const doc = await exportBackup(d)
+    // serialize + parse, so the base64 really goes through JSON like a real backup
+    const restored = parseBackup(JSON.stringify(doc))
+    await Promise.all([d.gyms, d.exercises, d.exercisePhotos].map((t) => t.clear()))
+    await importBackupReplaceAll(restored, d)
+
+    const [back] = await d.exercisePhotos.toArray()
+    expect(back).toMatchObject({ gymId: g, exerciseId: ex, type: 'image/png', width: 800, height: 600 })
+    expect([...new Uint8Array(back.bytes)]).toEqual([0, 1, 2, 253, 254, 255, 128, 7])
   })
 
   it('resetAll clears photos', async () => {
     const { g, ex } = await seed()
-    await addPhoto(g, ex, bigPhoto(), 'image/jpeg', 1600, 1200, d)
+    await addPhoto(g, ex, photoBytes(), 'image/jpeg', 1600, 1200, d)
     await resetAll(d)
     expect(await d.exercisePhotos.count()).toBe(0)
   })
@@ -264,7 +334,7 @@ describe('resetAll', () => {
   })
 })
 
-describe('backup excludes workout sessions (device-local)', () => {
+describe('backup includes workout sessions', () => {
   async function seedWithSession() {
     const { g, ex } = await seed()
     const day = (await d.days.toArray())[0].id!
@@ -275,26 +345,25 @@ describe('backup excludes workout sessions (device-local)', () => {
     return { g, ex, sid }
   }
 
-  it('does not export sessions or entries', async () => {
-    await seedWithSession()
+  it('exports sessions and their entries with done states', async () => {
+    const { sid } = await seedWithSession()
     const doc = await exportBackup(d)
-    expect('sessions' in doc).toBe(false)
-    expect('sessionEntries' in doc).toBe(false)
-    expect(JSON.stringify(doc)).not.toContain('sessionId')
-    expect(JSON.stringify(doc)).not.toContain('startedAt')
+    expect(doc.sessions.map((s) => s.id)).toContain(sid)
+    expect(doc.sessions[0].status).toBe('completed')
+    expect(doc.sessionEntries.some((e) => e.sessionId === sid && e.done)).toBe(true)
   })
 
-  it('import does not restore sessions (they stay device-local, like history)', async () => {
-    // Even if an older backup happens to carry sessions, they are ignored.
-    await seedWithSession()
-    const doc = await exportBackup(d)
-    const legacy = JSON.parse(JSON.stringify(doc))
-    legacy.sessions = [{ id: 99, gymId: 1, dayName: 'X', startedAt: 1, status: 'completed' }]
-    legacy.sessionEntries = [{ id: 99, sessionId: 99, exerciseName: 'Y', done: true }]
+  it('round-trip restores sessions and keeps entry→session references valid', async () => {
+    const { sid } = await seedWithSession()
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
 
-    await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
-    expect(await d.sessions.count()).toBe(0)
-    expect(await d.sessionEntries.count()).toBe(0)
-    expect(await d.gyms.count()).toBe(1) // the rest still imports
+    await importBackupReplaceAll(doc, d)
+    const session = await d.sessions.get(sid)
+    expect(session?.status).toBe('completed')
+    // The entry still points at the restored session (original ids preserved).
+    const entries = await listSessionEntries(sid, d)
+    expect(entries.length).toBeGreaterThan(0)
+    expect(entries.some((e) => e.done)).toBe(true)
   })
 })

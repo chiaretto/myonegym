@@ -1,9 +1,25 @@
 import { allTables, db, type MyOneGymDB } from '../db/db'
-import type { Category, Day, Exercise, ExerciseNote, Gym, Unit, Weight } from '../db/types'
+import type {
+  Category,
+  Day,
+  Exercise,
+  ExerciseNote,
+  ExercisePhoto,
+  Gym,
+  Session,
+  SessionEntry,
+  Unit,
+  Weight,
+  WeightHistory,
+} from '../db/types'
+import { base64ToBytes, bytesToBase64 } from './base64'
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
-export const SCHEMA_VERSION = 3
+// v4: the backup carries the WHOLE database — weight history, sessions and photos
+// included (photos base64-encoded). Older backups (v3 and earlier) omit some of
+// these arrays and still import (missing tables restore empty).
+export const SCHEMA_VERSION = 4
 
 /** Bundled sample routine (issue #4) used by "Gerar exemplo". */
 const EXAMPLE_DATA = exampleBackup as unknown as {
@@ -17,9 +33,18 @@ const EXAMPLE_DATA = exampleBackup as unknown as {
 export class PortabilityError extends Error {}
 
 /**
- * Full backup document — current weights and per-gym exercise notes. Device-local
- * data is NOT exported: the weight-change history log AND workout sessions/entries
- * stay on the device (a backup carries no `sessions`).
+ * On-disk form of a photo: identical to `ExercisePhoto` except the binary
+ * `bytes` (`ArrayBuffer`) is base64-encoded to a string, since JSON can't carry
+ * binary. Rebuilt into an `ExercisePhoto` on import.
+ */
+export type SerializedPhoto = Omit<ExercisePhoto, 'bytes'> & { bytes: string }
+
+/**
+ * Full backup document — a **complete** snapshot of the database, so an import can
+ * fully restore a device after its local storage is lost. Carries every table:
+ * catalog, weights AND their history, workout sessions AND entries, notes, and
+ * photos (base64-encoded). Device-local **UI preferences** (font size, the
+ * first-launch flag) are not user data and are intentionally NOT part of this.
  */
 export interface BackupDoc {
   app: typeof APP_TAG
@@ -31,22 +56,38 @@ export interface BackupDoc {
   exercises: Exercise[]
   days: Day[]
   weights: Weight[]
+  weightHistory: WeightHistory[]
+  sessions: Session[]
+  sessionEntries: SessionEntry[]
   exerciseNotes: ExerciseNote[]
+  exercisePhotos: SerializedPhoto[]
 }
 
 /* ------------------------------------------------------------------ export */
 
 export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
-  const [gyms, categories, exercises, days, weights, exerciseNotes] = await Promise.all([
+  const [
+    gyms,
+    categories,
+    exercises,
+    days,
+    weights,
+    weightHistory,
+    sessions,
+    sessionEntries,
+    exerciseNotes,
+    exercisePhotos,
+  ] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
     d.exercises.toArray(),
     d.days.toArray(),
-    // Current weights only. weightHistory, sessions and exercisePhotos are
-    // device-local and never leave the device (photos would also bloat the JSON
-    // by tens of MB as base64).
     d.weights.toArray(),
+    d.weightHistory.toArray(),
+    d.sessions.toArray(),
+    d.sessionEntries.toArray(),
     d.exerciseNotes.toArray(),
+    d.exercisePhotos.toArray(),
   ])
   return {
     app: APP_TAG,
@@ -58,7 +99,12 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     exercises,
     days,
     weights,
+    weightHistory,
+    sessions,
+    sessionEntries,
     exerciseNotes,
+    // Photo bytes → base64 so they survive JSON. Everything else verbatim.
+    exercisePhotos: exercisePhotos.map((p) => ({ ...p, bytes: bytesToBase64(p.bytes) })),
   }
 }
 
@@ -82,29 +128,45 @@ function assertArrays(obj: Record<string, unknown>, keys: string[]) {
   }
 }
 
+/** Arrays that older backups may lack — default to [] rather than reject, so a
+ *  pre-v4 file (no history/sessions/photos) still restores everything it has. */
+const OPTIONAL_ARRAYS = [
+  'weightHistory',
+  'sessions',
+  'sessionEntries',
+  'exerciseNotes',
+  'exercisePhotos',
+] as const
+
 export function parseBackup(json: string): BackupDoc {
   const obj = parse(json)
   if (!isRecord(obj) || obj.app !== APP_TAG || obj.kind !== 'backup') {
     throw new PortabilityError('Este arquivo não é um backup do MyOneGym.')
   }
   assertArrays(obj, ['gyms', 'categories', 'exercises', 'days', 'weights'])
-  // `exerciseNotes` is optional: backups from before notes existed have zero.
-  if (obj.exerciseNotes === undefined) obj.exerciseNotes = []
-  else if (!Array.isArray(obj.exerciseNotes)) {
-    throw new PortabilityError('Documento inválido: "exerciseNotes" deve ser uma lista.')
+  for (const k of OPTIONAL_ARRAYS) {
+    if (obj[k] === undefined) obj[k] = []
+    else if (!Array.isArray(obj[k])) {
+      throw new PortabilityError(`Documento inválido: "${k}" deve ser uma lista.`)
+    }
   }
-  // Any `sessions`/`sessionEntries` in an older backup are ignored (device-local).
   return obj as unknown as BackupDoc
 }
 
 /* ------------------------------------------------------------------ import */
 
 /**
- * Replace ALL local data with the backup. Validates first; on any failure the
- * store is left untouched. Device-local data (weight history AND workout
- * sessions) is cleared and not restored — a backup never carries them.
+ * Full RESTORE: replace ALL local data with the backup. Validates first; on any
+ * failure the store is left untouched. Every table is cleared and repopulated
+ * **with the backup's original ids**, so cross-references (a session's entries, a
+ * photo's exercise, a weight's gym) all line up and the device becomes an exact
+ * copy of the source. Photo bytes are decoded from base64 back to binary.
  */
 export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db): Promise<void> {
+  const photos: ExercisePhoto[] = (doc.exercisePhotos ?? []).map((p) => ({
+    ...p,
+    bytes: base64ToBytes(p.bytes),
+  }))
   await d.transaction('rw', allTables(d), async () => {
     await Promise.all(allTables(d).map((t) => t.clear()))
     await d.gyms.bulkAdd(doc.gyms)
@@ -112,8 +174,11 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
+    if (doc.weightHistory?.length) await d.weightHistory.bulkAdd(doc.weightHistory)
+    if (doc.sessions?.length) await d.sessions.bulkAdd(doc.sessions)
+    if (doc.sessionEntries?.length) await d.sessionEntries.bulkAdd(doc.sessionEntries)
     if (doc.exerciseNotes?.length) await d.exerciseNotes.bulkAdd(doc.exerciseNotes)
-    // weightHistory + sessions/sessionEntries stay empty by design (device-local)
+    if (photos.length) await d.exercisePhotos.bulkAdd(photos)
   })
 }
 
