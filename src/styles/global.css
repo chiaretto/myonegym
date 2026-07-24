@@ -123,6 +123,17 @@ h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.01em; }
 .filters-row .field { margin-bottom: 14px; min-width: 0; }
 .filters-row .field select { width: 100%; min-width: 0; }
 
+/* Exercise media, large (detail screen, and the preview in the exercise form).
+   Media box sizes to the image's natural proportions (no fixed aspect ratio),
+   so portrait/square exercise media shows at full height instead of being
+   shrunk into a short landscape box. Very tall media is capped to the viewport. */
+.hero { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  overflow: hidden; display: grid; place-items: center; margin-bottom: 16px; }
+img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contain; display: block; }
+/* Placeholder has no intrinsic size — keep it a tidy landscape box. */
+.media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
+  color: var(--text-accent); font-size: var(--fs-7xl); }
+
 /* Chips */
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px; border-radius: var(--r-pill);
   border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-secondary);

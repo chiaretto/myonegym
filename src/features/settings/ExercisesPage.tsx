@@ -235,6 +235,13 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
           <label htmlFor="ex-media">URL da imagem ou GIF (opcional)</label>
           <input id="ex-media" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="https://…/rosca.gif" />
         </div>
+        {/* Same hero treatment as the exercise detail screen, right under the
+            field that feeds it: what you see here is what that screen shows.
+            Always rendered (placeholder when empty) so typing a URL doesn't
+            shift the fields below. */}
+        <div className="hero">
+          <Media className="hero-media" url={mediaUrl || undefined} alt="Pré-visualização da mídia" />
+        </div>
         <div className="field">
           <label>Categorias</label>
           {cats && cats.length > 0 ? (
@@ -258,11 +265,6 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
             <p className="note-empty">Nenhuma categoria ainda. Crie categorias em Configurações → Categorias.</p>
           )}
         </div>
-        {mediaUrl && (
-          <div style={{ marginBottom: 14 }}>
-            <Media className="thumb" url={mediaUrl} alt="pré-visualização" />
-          </div>
-        )}
         {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
       </main>
 
