@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
@@ -28,11 +28,6 @@ export function ExerciseDetailPage() {
   const [params] = useSearchParams()
 
   const [tab, setTab] = useState<DetailTab>('detail')
-
-  const inDays = useMemo(
-    () => (days ?? []).filter((day) => day.exerciseIds.includes(exerciseId)),
-    [days, exerciseId],
-  )
 
   // The training day this exercise was opened from. An exercise can belong to
   // several days, so it cannot be inferred — it is carried in the URL, which is
@@ -74,22 +69,19 @@ export function ExerciseDetailPage() {
           <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
         </div>
 
-        <div className="ex-head">
-          <h2 className="ex-title">{exercise.name}</h2>
-          <div className="ex-chips">
-            {catNames.map((name) => (
-              <span key={name} className="chip">
-                <Icon name="tag" size={12} /> {name}
-              </span>
-            ))}
-            {inDays.length > 0 && (
-              <span className="chip">
-                <Icon name="calendar-event" size={12} />{' '}
-                {inDays.length === 1 ? inDays[0].name : `${inDays.length} dias`}
-              </span>
-            )}
+        {/* No title here: the name already sits in the top bar, and the training
+            day the user just came from is context they do not need repeated. */}
+        {catNames.length > 0 && (
+          <div className="ex-head">
+            <div className="ex-chips">
+              {catNames.map((name) => (
+                <span key={name} className="chip">
+                  <Icon name="tag" size={12} /> {name}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <Tabs<DetailTab>
           tabs={[
