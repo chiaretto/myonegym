@@ -54,12 +54,14 @@ describe('Exercise detail opened from a day', () => {
 
     expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Próximo exercício' }))
+    // The stepper comes from its own live query, so it can land after the
+    // heading — wait for each control instead of grabbing it synchronously.
+    await user.click(await screen.findByRole('button', { name: 'Próximo exercício' }))
     expect(await screen.findByRole('heading', { name: 'Rosca Direta', level: 2 })).toBeInTheDocument()
     expect(url()).toContain(`day=${d1}`) // context preserved across the step
 
-    await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
-    await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
+    await user.click(await screen.findByRole('button', { name: 'Exercício anterior' }))
+    await user.click(await screen.findByRole('button', { name: 'Exercício anterior' }))
     expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
   })
 
