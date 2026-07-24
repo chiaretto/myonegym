@@ -96,24 +96,25 @@ export function SessionEntryPage() {
           <Media url={exercise?.mediaUrl} alt={entry.exerciseName} className="hero-media" />
         </div>
 
-        <div className="ex-head">
-          <h2 className="ex-title">{entry.exerciseName}</h2>
-          <div className="ex-chips">
-            {entry.done && (
-              <span className="chip accent">
-                <Icon name="check" size={12} /> Concluído
-              </span>
-            )}
-            {catNames.map((name) => (
-              <span key={name} className="chip">
-                <Icon name="tag" size={12} /> {name}
-              </span>
-            ))}
-            <span className="chip">
-              <Icon name="calendar-event" size={12} /> {session.dayName}
-            </span>
+        {/* No title here: the name already sits in the top bar. The session's day
+            is not repeated either — it was chosen moments ago in the runner.
+            "Concluído" stays: it is status, not navigation context. */}
+        {(entry.done || catNames.length > 0) && (
+          <div className="ex-head">
+            <div className="ex-chips">
+              {entry.done && (
+                <span className="chip accent">
+                  <Icon name="check" size={12} /> Concluído
+                </span>
+              )}
+              {catNames.map((name) => (
+                <span key={name} className="chip">
+                  <Icon name="tag" size={12} /> {name}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <Tabs<EntryTab>
           tabs={[

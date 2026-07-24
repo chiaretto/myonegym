@@ -68,9 +68,9 @@ describe('The stepper is fixed chrome, not tab content', () => {
     await user.click(await screen.findByRole('tab', { name: 'Foto' }))
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
 
-    // Marked done and advanced to the next exercise. ("Crucifixo" is both the app
-    // bar's h1 and the page's h2, so pin the level.)
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    // Marked done and advanced to the next exercise. (The name lives only in the
+    // app bar's h1 — the detail body no longer repeats it.)
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     expect((await listSessionEntries(sessionId, db))[0].done).toBe(true)
   })
 

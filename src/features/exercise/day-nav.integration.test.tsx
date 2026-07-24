@@ -52,17 +52,17 @@ describe('Exercise detail opened from a day', () => {
     const user = userEvent.setup()
     renderAt(`/exercise/${crucifixo}?day=${d1}`)
 
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
 
     // The stepper comes from its own live query, so it can land after the
     // heading — wait for each control instead of grabbing it synchronously.
     await user.click(await screen.findByRole('button', { name: 'Próximo exercício' }))
-    expect(await screen.findByRole('heading', { name: 'Rosca Direta', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rosca Direta', level: 1 })).toBeInTheDocument()
     expect(url()).toContain(`day=${d1}`) // context preserved across the step
 
     await user.click(await screen.findByRole('button', { name: 'Exercício anterior' }))
     await user.click(await screen.findByRole('button', { name: 'Exercício anterior' }))
-    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 1 })).toBeInTheDocument()
   })
 
   it('disables the ends of the day', async () => {
@@ -89,7 +89,7 @@ describe('Exercise detail opened from a day', () => {
     cleanup()
     renderAt(`/exercise/${rosca}?day=${d4}`)
     await user.click(await screen.findByRole('button', { name: 'Próximo exercício' }))
-    expect(await screen.findByRole('heading', { name: 'Agachamento', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Agachamento', level: 1 })).toBeInTheDocument()
   })
 
   it('sends Back to Home with that day still expanded', async () => {
@@ -113,7 +113,7 @@ describe('The reported bug: Back from an exercise collapsed the day', () => {
     // Expand "Dia 1" the way a user does, then open one of its exercises.
     await user.click(await screen.findByText('Dia 1'))
     await user.click(await screen.findByText('Crucifixo'))
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
 
     // Back must land on Home with "Dia 1" STILL open — previously it reset to a
     // collapsed Home, because the open day lived in component state.
@@ -130,7 +130,7 @@ describe('Exercise detail opened without a day', () => {
     const user = userEvent.setup()
     renderAt(`/exercise/${crucifixo}`)
 
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Próximo exercício' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Exercício anterior' })).not.toBeInTheDocument()
     expect(document.querySelector('main.screen')).not.toHaveClass('has-action-bar')
@@ -143,7 +143,7 @@ describe('Exercise detail opened without a day', () => {
     const { crucifixo } = await seed()
     renderAt(`/exercise/${crucifixo}?day=9999`)
 
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Próximo exercício' })).not.toBeInTheDocument()
   })
 })

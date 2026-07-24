@@ -115,14 +115,14 @@ describe('Workout session end-to-end', () => {
     // Pending exercise shows the "Concluir" CTA; tapping it marks Supino done and
     // advances to the next exercise (Crucifixo).
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     await waitFor(async () =>
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
     )
 
     // Voltar back to Supino → it now shows the distinct "Concluído" done state + chip.
     await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
-    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 1 })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Concluído' })).toBeInTheDocument()
     expect(screen.getAllByText('Concluído').length).toBeGreaterThan(1) // button + chip
   })
@@ -146,12 +146,12 @@ describe('Workout session end-to-end', () => {
     // Open the first exercise, Avançar without marking → Crucifixo, nothing done.
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
     await user.click(screen.getByRole('button', { name: 'Próximo exercício' }))
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     expect((await db.sessionEntries.toArray()).every((e) => !e.done)).toBe(true)
 
     // Voltar back to Supino, then Concluir (marks + advances).
     await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
-    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
     await waitFor(async () =>
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
@@ -210,9 +210,9 @@ describe('Finish-workout prompt at the end of the stepper', () => {
     await startAndOpenFirst(user)
     // Concluir through all three exercises in order.
     await user.click(await screen.findByRole('button', { name: 'Concluir' })) // Supino → Crucifixo
-    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // Crucifixo → Tríceps Corda
-    expect(await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Tríceps Corda', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // last → prompt
 
     // The finish prompt appears; confirming completes the session → history.
@@ -233,9 +233,9 @@ describe('Finish-workout prompt at the end of the stepper', () => {
 
     await startAndOpenFirst(user)
     await user.click(await screen.findByRole('button', { name: 'Concluir' }))
-    await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })
+    await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
-    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })
+    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 1 })
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
 
     // Decline → back on the runner, session still in progress.
@@ -257,9 +257,9 @@ describe('Finish-workout prompt at the end of the stepper', () => {
     await startAndOpenFirst(user)
     // Skip Supino (Avançar without marking), then Concluir the remaining two.
     await user.click(await screen.findByRole('button', { name: 'Próximo exercício' }))
-    await screen.findByRole('heading', { name: 'Crucifixo', level: 2 })
+    await screen.findByRole('heading', { name: 'Crucifixo', level: 1 })
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // → Tríceps Corda
-    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 2 })
+    await screen.findByRole('heading', { name: 'Tríceps Corda', level: 1 })
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // last, but Supino skipped
 
     // No prompt; runner shown, session still active.

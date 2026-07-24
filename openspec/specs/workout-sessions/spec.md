@@ -172,13 +172,18 @@ per-session weight.
 
 Each session entry MUST have a **detail screen** (reached by tapping its row in
 the runner or the completed-session recap). The detail MUST render the exercise's
-**media** (static image or animated GIF, played animated), the exercise name and
-its category/day context, and — for the weight — the **same "Peso alvo" editor
-used on the catalog exercise detail** (see the `weights` capability), scoped to
-the **session's gym**: the per-gym **target weight** (edit → save, value + unit
-KG/LB/#) together with the per-gym **weight-history timeline** (with per-entry
-delete). Saving the weight MUST update the exercise's **per-gym target weight**
-and append a **history** entry — the session stores no independent weight.
+**media** (static image or animated GIF, played animated), the exercise **name —
+once, in the screen's top bar** — its **category** context, and — for the weight
+— the **same "Peso alvo" editor used on the catalog exercise detail** (see the
+`weights` capability), scoped to the **session's gym**: the per-gym **target
+weight** (edit → save, value + unit KG/LB/#) together with the per-gym
+**weight-history timeline** (with per-entry delete). Saving the weight MUST
+update the exercise's **per-gym target weight** and append a **history** entry —
+the session stores no independent weight.
+
+The detail MUST NOT repeat the exercise name in the body, and MUST NOT show the
+session's **training-day** name — see the `exercises` capability's *Single
+Exercise Title on Detail Views*, which governs the header of both detail views.
 
 While the session is **in progress** the Peso alvo editor and its history delete
 MUST be **editable**. When the parent session is **completed**, the weight card
@@ -228,8 +233,9 @@ The detail MUST act as a **guided stepper** over the session's exercises:
     check and a calmer/confirmed styling), clearly different from the pending
     call-to-action; activating it still advances (and, on the last exercise, runs
     the same finish check).
-  - The detail SHOULD also show a **"Concluído" indicator** (e.g., a chip near
-    the title) when the entry is done, reinforcing the status at a glance.
+  - The detail SHOULD also show a **"Concluído" indicator** (e.g., a chip in the
+    header's label row, above the tabs) when the entry is done, reinforcing the
+    status at a glance.
 - **Voltar** and **Avançar** controls MUST navigate to the **previous / next**
   exercise **without changing the done state**, and MUST be disabled at the
   first / last exercise respectively.
@@ -249,6 +255,17 @@ editing, no history delete, no marking) and MUST show the static done state;
 Voltar/Avançar MAY still be used to browse. The detail MUST render from the
 entry's name snapshot where the source exercise was deleted (media falls back to
 a placeholder and the live target/history are empty).
+
+#### Scenario: The exercise name is shown once
+- GIVEN an in-progress session on an entry's detail
+- WHEN the detail renders
+- THEN the exercise name appears exactly once, in the top bar
+- AND no heading below the media repeats it
+
+#### Scenario: The session's training day is not shown
+- GIVEN an in-progress session of "Dia 2"
+- WHEN the user opens an entry's detail
+- THEN "Dia 2" is not shown anywhere on the screen
 
 #### Scenario: The stepper is fixed to the bottom on every tab
 - GIVEN an in-progress session on an exercise's detail
@@ -279,7 +296,7 @@ a placeholder and the live target/history are empty).
 - GIVEN an in-progress session on the detail of an exercise that **is** done
 - WHEN the user views the detail
 - THEN the done control shows a distinct "Concluído" completed state
-- AND a "Concluído" indicator is shown near the title
+- AND a "Concluído" indicator is shown in the header's label row
 
 #### Scenario: Concluir marks done and advances; returning shows it done
 - GIVEN the detail of exercise 1 of 3, not done
@@ -374,7 +391,7 @@ a placeholder and the live target/history are empty).
 #### Scenario: Detail survives source exercise deletion
 - GIVEN a session entry whose source exercise "Rosca Direta" was later deleted
 - WHEN the user opens that entry's detail
-- THEN the entry's snapshot name still renders
+- THEN the entry's snapshot name still renders in the top bar
 - AND the media falls back to a placeholder and the target/history are empty
 
 ### Requirement: Delete a Session

@@ -8,9 +8,9 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
 .media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
   color: var(--text-accent); font-size: var(--fs-7xl); }
 
+/* No title inside the detail body — the exercise name lives in the top bar, so
+   .ex-head is only the label row (categories, and "Concluído" in a session). */
 .ex-head { margin-bottom: 16px; }
-.ex-title { font-family: var(--font-title); font-size: var(--fs-3xl); font-weight: 800; letter-spacing: -0.02em;
-  margin-bottom: 10px; }
 .ex-chips { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .weight-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
