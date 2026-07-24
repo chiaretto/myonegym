@@ -1,12 +1,5 @@
-/* Media box sizes to the image's natural proportions (no fixed aspect ratio),
-   so portrait/square exercise media shows at full height instead of being
-   shrunk into a short landscape box. Very tall media is capped to the viewport. */
-.hero { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
-  overflow: hidden; display: grid; place-items: center; margin-bottom: 16px; }
-img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contain; display: block; }
-/* Placeholder has no intrinsic size — keep it a tidy landscape box. */
-.media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
-  color: var(--text-accent); font-size: var(--fs-7xl); }
+/* .hero / .hero-media now live in styles/global.css — the exercise form shares
+   them with this screen. */
 
 /* No title inside the detail body — the exercise name lives in the top bar, so
    .ex-head is only the label row (categories, and "Concluído" in a session). */
