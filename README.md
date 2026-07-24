@@ -109,7 +109,9 @@ npm run typecheck  # tsc --noEmit
   also shows which training days it belongs to; the list has a name search plus
   category and training-day filters, combinable, to narrow a growing catalog), and
   training days (name + ordered exercise selection — exercises may repeat;
-  days can be reordered). A day's categories are **derived from its exercises**
+  days can be reordered; the day form's **"Adicionar exercício"** picker has its
+  own name search and category filter, so a long catalog stays manageable, while
+  the day's own list is never filtered). A day's categories are **derived from its exercises**
   (e.g. "Peito · Tríceps"), not set by hand. **Creating and editing each of these
   is a dedicated page** (`/settings/<kind>/new`, `/settings/<kind>/:id/edit`), not
   a modal — so the browser Back button returns to the list, the URL is

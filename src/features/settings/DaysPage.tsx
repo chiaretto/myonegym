@@ -4,8 +4,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createDay, deleteDay, reorderDays, updateDay, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
-import { useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
+import { useCategories, useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
 import { daySubtitle, exerciseCategoryNames } from '../../lib/days'
+import { filterExercises, type CategoryFilter } from '../../lib/exerciseFilters'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
@@ -142,6 +143,7 @@ export function DayFormPage() {
 function DayForm({ day }: { day: Day | null }) {
   const exs = useExercises()
   const exMap = useExerciseMap()
+  const cats = useCategories()
   const catMap = useCategoryMap()
   const toast = useToast()
   const nav = useNavigate()
@@ -149,6 +151,8 @@ function DayForm({ day }: { day: Day | null }) {
   const [selected, setSelected] = useState<number[]>(day?.exerciseIds ?? [])
   const [preview, setPreview] = useState<Exercise | null>(null)
   const [err, setErr] = useState('')
+  const [search, setSearch] = useState('')
+  const [categorySel, setCategorySel] = useState('all')
 
   const back = () => nav('/settings/days')
 
@@ -168,7 +172,19 @@ function DayForm({ day }: { day: Day | null }) {
       return next
     })
 
+  // Candidates to add = catalog minus what's already in the day, then narrowed by
+  // the picker filters. Filtering after the exclusion means an added exercise
+  // leaves the list no matter which filters are active.
   const available = (exs ?? []).filter((e) => !selected.includes(e.id!))
+  const categoryFilter: CategoryFilter =
+    categorySel === 'all' || categorySel === 'none' ? categorySel : Number(categorySel)
+  // No day filter here: this form is already scoped to a single day, so `days` is unused.
+  const candidates = filterExercises(available, { search, category: categoryFilter }, [])
+  const filtersActive = search.trim() !== '' || categorySel !== 'all'
+  const clearFilters = () => {
+    setSearch('')
+    setCategorySel('all')
+  }
 
   const submit = async () => {
     try {
@@ -234,8 +250,44 @@ function DayForm({ day }: { day: Day | null }) {
         {available.length > 0 && (
           <div className="field">
             <label>Adicionar exercício</label>
+
+            {/* View-only filters over the candidates — never over the day's own list. */}
+            <div className="filters">
+              <div className="field">
+                <label htmlFor="day-ex-search">Buscar por nome</label>
+                <input
+                  id="day-ex-search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar por nome"
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="day-ex-cat">Categoria</label>
+                <select id="day-ex-cat" value={categorySel} onChange={(e) => setCategorySel(e.target.value)}>
+                  <option value="all">Todas as categorias</option>
+                  <option value="none">Sem categoria</option>
+                  {cats?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {candidates.length === 0 ? (
+              <div style={{ display: 'grid', gap: 10, justifyItems: 'start', padding: '4px 0 10px' }}>
+                <p className="note-empty">Nenhum exercício encontrado</p>
+                {filtersActive && (
+                  <button className="btn subtle" onClick={clearFilters}>
+                    Limpar filtros
+                  </button>
+                )}
+              </div>
+            ) : (
             <div className="group">
-              {available.map((e) => {
+              {candidates.map((e) => {
                 const cat = catNameOf(e)
                 return (
                   <div key={e.id} className="row">
@@ -274,6 +326,7 @@ function DayForm({ day }: { day: Day | null }) {
                 )
               })}
             </div>
+            )}
           </div>
         )}
 
