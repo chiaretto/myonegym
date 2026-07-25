@@ -25,15 +25,21 @@ export type MuscleAvatarClass =
   | 'pi-dumbbell'
 
 /** Ordered: the first group whose keyword appears in the day's categories wins,
- *  so a "Peito · Tríceps" day reads as chest rather than as arms. */
+ *  so a "Peito · Tríceps" day reads as chest rather than as arms.
+ *
+ *  Shoulders sits BEFORE back on purpose. "Trapézio" is anatomically upper back,
+ *  but it is trained with shoulders and shows up in days like "Ombros e
+ *  Trapézio" — with back first, that day drew the back illustration. Days that
+ *  are genuinely back still match on "costas"/"dorsal", which shoulders has no
+ *  keyword for, so nothing regresses. */
 const GROUPS: ReadonlyArray<{ cls: MuscleAvatarClass; keywords: readonly string[] }> = [
   { cls: 'pi-chest', keywords: ['peito', 'peitoral', 'supino'] },
+  { cls: 'pi-shoulders', keywords: ['ombro', 'deltoid'] },
   { cls: 'pi-back', keywords: ['costas', 'dorsal', 'lombar', 'trapezio'] },
   {
     cls: 'pi-legs',
     keywords: ['perna', 'quadriceps', 'posterior', 'gluteo', 'panturrilha', 'coxa', 'adutor'],
   },
-  { cls: 'pi-shoulders', keywords: ['ombro', 'deltoid'] },
   { cls: 'pi-core', keywords: ['core', 'abdomen', 'abdominal', 'abdome', 'obliquo'] },
 ]
 

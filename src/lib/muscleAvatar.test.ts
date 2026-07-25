@@ -22,6 +22,15 @@ describe('muscleAvatarClass', () => {
     expect(muscleAvatarClass(['Peitoral maior'])).toBe('pi-chest')
   })
 
+  it('reads "Ombros e Trapézio" as shoulders, not back', () => {
+    // Caught by running the seeded sample: "trapezio" is a back keyword, so with
+    // back ranked first this day drew the back illustration.
+    expect(muscleAvatarClass(['Ombros', 'Trapézio'])).toBe('pi-shoulders')
+    // A genuinely-back day is unaffected — shoulders has no keyword for it.
+    expect(muscleAvatarClass(['Costas', 'Trapézio'])).toBe('pi-back')
+    expect(muscleAvatarClass(['Trapézio'])).toBe('pi-back')
+  })
+
   it('is order-driven, not first-listed-wins', () => {
     // "Peito · Tríceps" must read as chest — chest outranks the arm categories,
     // which have no illustration of their own.
