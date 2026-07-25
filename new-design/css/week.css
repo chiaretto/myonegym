@@ -1,0 +1,78 @@
+/* Weekly summary — PROPOSAL-PAGE ONLY sheet.
+   Nothing here ships. It exists so week-proposals.html can still show the OLD
+   ring card and the rejected variants side by side, now that proposal A has been
+   chosen and moved into css/home.css as the real .week-card.
+
+   Load order matters: week-proposals.html pulls home.css first (which supplies
+   .week-card, .week-track and the day states) and this file second, so the
+   variant-only classes below can add to or override it. */
+
+/* ------------------------------------------- the superseded ring card (v1) --
+   Kept verbatim from the previous home.css so the "what exists today" stage is
+   an honest before-picture rather than a redrawing of it. */
+.week-card-v1 {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 18px; margin-bottom: 16px;
+  background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); padding: 20px;
+}
+.week-card-v1::after, .week-card-v3::after {
+  content: ''; position: absolute; right: -6%; top: 50%; transform: translateY(-50%);
+  width: 46%; height: 150%;
+  background: url('../assets/logo-mark.png') right center / contain no-repeat;
+  opacity: 0.07; pointer-events: none;
+}
+.week-ring { position: relative; width: 76px; height: 76px; flex-shrink: 0; }
+.week-ring svg { display: block; }
+.ring-track { fill: none; stroke: var(--surface-3); stroke-width: 6; }
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset 0.4s ease; }
+.week-pct { position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--font-title); font-size: var(--fs-md); font-weight: 700;
+  font-variant-numeric: tabular-nums; }
+
+/* --------------------------------------------- variant A2: the X states -----
+   Only truthful because the goal is a fixed 7 — i.e. every day is expected, so a
+   past day with no session really is a miss. That was NOT true while the total
+   was days.length, since a 4-day plan has no scheduled weekdays to violate.
+
+   Deliberately NOT --danger: alert-amber would turn a rest day into a system
+   error and punish the user for resting. */
+.wd.missed .wd-dot { background: transparent; border: 1.5px solid var(--border-strong);
+  color: var(--text-muted); }
+
+/* off — a declared rest day. Needs a per-day weekday field that does not exist
+   (Day is { name, exerciseIds, order } — types.ts:27), so this state is only
+   reachable if that feature is built. A short dash, never an X. */
+.wd.off .wd-dot { background: transparent; border: 0; position: relative; }
+.wd.off .wd-dot::before {
+  content: ''; width: 44%; height: 1.5px; border-radius: 2px;
+  background: var(--surface-3);
+}
+
+/* ------------------------------------------- variant B: segmented bar -------
+   One segment per configured training day rather than per weekday. This variant
+   was the answer to a days.length denominator; with the goal fixed at 7 it
+   collapses into "seven segments without labels", which is strictly worse than
+   the track. Kept only to document why it lost. */
+.week-bars { position: relative; display: grid; gap: 5px;
+  grid-auto-flow: column; grid-auto-columns: 1fr; }
+.week-bars.n3 { grid-template-columns: repeat(3, 1fr); }
+.week-bars.n4 { grid-template-columns: repeat(4, 1fr); }
+.week-bars.n5 { grid-template-columns: repeat(5, 1fr); }
+.week-bars.n6 { grid-template-columns: repeat(6, 1fr); }
+.week-bars.n7 { grid-template-columns: repeat(7, 1fr); }
+.wb { height: 8px; border-radius: 999px; background: var(--surface-3); }
+.wb.done { background: var(--accent); }
+.wb.todo { background: var(--surface-3); }
+
+/* ------------------------------- variant C: ring beside a compact track ----- */
+.week-card-v3 {
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 18px; margin-bottom: 16px;
+  background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); padding: 20px;
+}
+/* No labels fit beside the ring — which is exactly the point C fails on. */
+.week-track.compact { gap: 5px; margin-top: 10px; }
+.week-track.compact .wd-dot { font-size: var(--fs-2xs); width: 1.75em; height: 1.75em; }

@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050607" />
+  <title>MyOneGym — Guia de estilo (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/exercise.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Guia de estilo</b></p>
+
+<div class="sg">
+  <div class="gal-head">
+    <img src="assets/logo-mark.png" alt="" />
+    <div>
+      <h1 class="wordmark">My<em>One</em>Gym</h1>
+      <p class="gal-tagline" style="margin:4px 0 0">Guia de estilo · identidade vermelha</p>
+    </div>
+  </div>
+
+  <!-- ------------------------------------------------------------- cores -- -->
+  <section>
+    <h2>Paleta</h2>
+    <div class="sg-panel">
+      <div class="sw-grid">
+        <div class="sw">
+          <div class="chipbox" style="background:#EC2C2E"></div>
+          <code>#EC2C2E</code><span>--accent · --fill-accent</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#BA2324"></div>
+          <code>#BA2324</code><span>--accent-2 (fim do gradiente)</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#EC2C2E"></div>
+          <code>#EC2C2E</code><span>--text-accent (texto em vermelho)</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#050607"></div>
+          <code>#050607</code><span>--surface-0 · fundo do app</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#0C0F14"></div>
+          <code>#0C0F14</code><span>--surface-1 · cards</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#14171D"></div>
+          <code>#14171D</code><span>--surface-2 · chips, inputs</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#1E2329"></div>
+          <code>#1E2329</code><span>--surface-3 · trilhas</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#8A8F98"></div>
+          <code>#8A8F98</code><span>--text-secondary</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#FFFFFF"></div>
+          <code>#FFFFFF</code><span>--text-primary · --on-accent</span>
+        </div>
+        <div class="sw">
+          <div class="chipbox" style="background:#FFA94D"></div>
+          <code>#FFA94D</code><span>--danger · erro e destrutivo</span>
+        </div>
+      </div>
+      <p class=”mock-note”>
+        <strong>#8A8F98 e #FFFFFF</strong> vêm do painel PALETA DE CORES da referência. Os outros foram
+        ajustados: <strong>#050607, #0C0F14 e #EC2C2E</strong> são as novas cores base.<br />
+        <code>--surface-2</code>, <code>--surface-3</code>, <code>--text-muted</code> e
+        <code>--accent-2</code> são derivados — o app precisa deles para chips, trilhas de progresso e o
+        gradiente do botão. O gradiente usa <code>180deg</code> (escurece para baixo): 0,79 ×
+        <code>#EC2C2E</code> = <code>#BA2324</code>.<br />
+        <code>--text-accent</code> agora é <strong>o mesmo que --accent</strong> (<code>#EC2C2E</code>),
+        porque o novo vermelho é bem mais claro e legível como texto sobre <code>#050607</code>.<br />
+        <code>--danger</code> (<code>#FFA94D</code>) é <strong>âmbar, não vermelho</strong>, de propósito,
+        para separar alerta de marca. Veja a comparação em “Erro e destrutivo”, abaixo.
+      </p>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------- tipografia -- -->
+  <section>
+    <h2>Tipografia — Poppins</h2>
+    <div class="sg-panel">
+      <div style="display:flex;gap:44px;flex-wrap:wrap;margin-bottom:22px">
+        <div>
+          <div style="font-size:64px;font-weight:700;letter-spacing:-0.03em">Aa</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">Poppins Bold · 700</div>
+        </div>
+        <div>
+          <div style="font-size:64px;font-weight:400">Aa</div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">Poppins Regular · 400</div>
+        </div>
+      </div>
+      <div class="type-row">
+        <code>--fs-4xl / 700</code>
+        <span style="font-family:var(--font-title);font-size:var(--fs-4xl);font-weight:700;letter-spacing:-0.02em">3 / 7 treinos</span>
+      </div>
+      <div class="type-row">
+        <code>--fs-2xl / 700</code>
+        <span style="font-family:var(--font-title);font-size:var(--fs-2xl);font-weight:700">Título de tela</span>
+      </div>
+      <div class="type-row">
+        <code>--fs-lg / 700</code>
+        <span style="font-family:var(--font-title);font-size:var(--fs-lg);font-weight:700">Dia 1 – Peito e Tríceps</span>
+      </div>
+      <div class="type-row">
+        <code>--fs-md / 400</code>
+        <span style="font-size:var(--fs-md)">Texto corrido da interface</span>
+      </div>
+      <div class="type-row">
+        <code>--fs-xs / 400</code>
+        <span style="font-size:var(--fs-xs);color:var(--text-secondary)">Peito · Tríceps · Ombros</span>
+      </div>
+      <div class="type-row">
+        <code>.eyebrow (--fs-2xs)</code>
+        <span class="eyebrow">Esta semana</span>
+      </div>
+      <p class="mock-note">
+        Uma família só, dois pesos — como a folha define. Isso <strong>remove três fontes</strong> do
+        bundle (Sora, Manrope, JetBrains Mono). O token <code>--font-mono</code> continua existindo com
+        esse nome, mas agora aponta para Poppins: o papel dele é “micro-label em caixa alta com
+        <em>tracking</em> largo”, não “monoespaçada”. Todos os tamanhos (<code>--fs-*</code>) e a escala
+        de 150% ficam <strong>iguais</strong> — este redesign não mexe em dimensão de texto.
+      </p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ ícones -- -->
+  <section>
+    <h2>Ícones PNG — recortados da referência</h2>
+    <div class="sg-panel">
+      <div class="ic-grid">
+        <div class="ic-cell"><i class="png-ic pi-dumbbell" style="color:var(--accent)"></i><code>pi-dumbbell</code></div>
+        <div class="ic-cell"><i class="png-ic pi-muscle"></i><code>pi-muscle</code></div>
+        <div class="ic-cell"><i class="png-ic pi-flame" style="color:var(--accent)"></i><code>pi-flame</code></div>
+        <div class="ic-cell"><i class="png-ic pi-timer" style="color:var(--accent)"></i><code>pi-timer</code></div>
+        <div class="ic-cell"><i class="png-ic pi-target"></i><code>pi-target</code></div>
+        <div class="ic-cell"><i class="png-ic pi-home" style="color:var(--accent)"></i><code>pi-home</code></div>
+        <div class="ic-cell"><i class="png-ic pi-history" style="color:var(--text-secondary)"></i><code>pi-history</code></div>
+        <div class="ic-cell"><i class="png-ic pi-settings" style="color:var(--text-secondary)"></i><code>pi-settings</code></div>
+        <div class="ic-cell"><i class="png-ic pi-building" style="color:var(--accent)"></i><code>pi-building</code></div>
+        <div class="ic-cell on-red"><i class="png-ic pi-play"></i><code style="color:rgba(255,255,255,.85)">pi-play</code></div>
+        <div class="ic-cell"><i class="png-ic pi-chevron-down" style="color:var(--text-secondary)"></i><code>pi-chevron-down</code></div>
+        <div class="ic-cell"><i class="png-ic pi-chevron-right" style="color:var(--text-secondary)"></i><code>pi-chevron-right</code></div>
+      </div>
+
+      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.18em;color:var(--text-secondary);margin:26px 0 12px">
+        Grupos musculares — avatar dos dias
+      </h3>
+      <div class="ic-grid">
+        <div class="ic-cell"><i class="png-ic pi-chest" style="color:var(--accent)"></i><code>pi-chest</code></div>
+        <div class="ic-cell"><i class="png-ic pi-core" style="color:var(--accent)"></i><code>pi-core</code></div>
+        <div class="ic-cell"><i class="png-ic pi-back" style="color:var(--accent)"></i><code>pi-back</code></div>
+        <div class="ic-cell"><i class="png-ic pi-legs" style="color:var(--accent)"></i><code>pi-legs</code></div>
+        <div class="ic-cell"><i class="png-ic pi-shoulders" style="color:var(--accent)"></i><code>pi-shoulders</code></div>
+      </div>
+
+      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:.18em;color:var(--text-secondary);margin:26px 0 12px">
+        Glifos utilitários — seguem no @tabler/icons-webfont
+      </h3>
+      <div class="ic-grid">
+        <div class="ic-cell"><i class="ti ti-check"></i><code>ti-check</code></div>
+        <div class="ic-cell"><i class="ti ti-plus"></i><code>ti-plus</code></div>
+        <div class="ic-cell"><i class="ti ti-minus"></i><code>ti-minus</code></div>
+        <div class="ic-cell"><i class="ti ti-pencil"></i><code>ti-pencil</code></div>
+        <div class="ic-cell"><i class="ti ti-trash"></i><code>ti-trash</code></div>
+        <div class="ic-cell"><i class="ti ti-share"></i><code>ti-share</code></div>
+        <div class="ic-cell"><i class="ti ti-arrow-left"></i><code>ti-arrow-left</code></div>
+        <div class="ic-cell"><i class="ti ti-tags"></i><code>ti-tags</code></div>
+        <div class="ic-cell"><i class="ti ti-calendar-event"></i><code>ti-calendar-event</code></div>
+        <div class="ic-cell"><i class="ti ti-database"></i><code>ti-database</code></div>
+        <div class="ic-cell"><i class="ti ti-text-size"></i><code>ti-text-size</code></div>
+        <div class="ic-cell"><i class="ti ti-device-floppy"></i><code>ti-device-floppy</code></div>
+      </div>
+
+      <p class="mock-note">
+        Os 18 PNGs acima são <strong>recortes reais da arte de referência</strong> — nenhum foi redesenhado
+        em SVG. Cada um é line art com transparência, aplicado como <code>mask-image</code>, então
+        <strong>um arquivo serve todos os estados de cor</strong>: o mesmo <code>ic-tab-home.png</code> fica
+        vermelho quando a aba está ativa e cinza quando não está.<br />
+        Os glifos utilitários (embaixo) <strong>não existem em nenhuma das imagens de referência</strong>,
+        logo não há PNG para recortar. Eles continuam na webfont que o app já empacota e herdam a paleta
+        nova via <code>currentColor</code>. Detalhes e limites de resolução no <code>README.md</code>.
+      </p>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------- botões -- -->
+  <section>
+    <h2>Botões e controles</h2>
+    <div class="sg-panel">
+      <div class="demo-col" style="margin-bottom:22px">
+        <button class="btn primary">Iniciar treino</button>
+        <button class="btn outline">Ver detalhes <i class="png-ic pi-chevron-right"></i></button>
+        <button class="btn">Botão neutro</button>
+        <button class="btn subtle">Botão discreto</button>
+        <button class="btn danger"><i class="ti ti-trash"></i> Excluir</button>
+        <button class="btn primary" disabled>Desabilitado</button>
+      </div>
+      <div class="demo-row" style="margin-bottom:22px">
+        <button class="fab" aria-label="Adicionar"><i class="ti ti-plus"></i></button>
+        <button class="ctl-btn" aria-label="Filtros"><i class="ti ti-adjustments-horizontal"></i></button>
+        <button class="icon-btn"><i class="ti ti-arrow-left"></i></button>
+        <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+      </div>
+      <div style="max-width:340px;margin-bottom:18px">
+        <div class="tabs"><button class="on">Detalhe</button><button>Observações</button><button>Foto</button></div>
+        <div class="unit-seg"><button class="on">kg</button><button>lb</button><button>placas</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------------ chips -- -->
+  <section>
+    <h2>Chips, badges e indicadores</h2>
+    <div class="sg-panel">
+      <div class="demo-row" style="margin-bottom:18px">
+        <span class="chip accent"><i class="png-ic pi-building"></i> Fit Park <i class="png-ic pi-chevron-down"></i></span>
+        <span class="chip">Peito</span>
+        <span class="chip">Costas</span>
+        <span class="chip sm">Novo</span>
+        <span class="done-badge full"><i class="ti ti-check" style="font-size:.85em"></i> 4/4</span>
+        <span class="done-badge">3/5</span>
+        <span class="weight-badge">70 kg</span>
+        <span class="weight-badge empty">definir</span>
+      </div>
+      <div class="demo-row" style="margin-bottom:18px">
+        <span class="chip-toggle on"><i class="ti ti-check" style="font-size:.85em"></i> Peito</span>
+        <span class="chip-toggle">Ombros</span>
+        <span class="tl-delta up"><i class="ti ti-arrow-up" style="font-size:.85em"></i> 2,5 kg</span>
+        <span class="tl-delta first">primeiro</span>
+      </div>
+      <div style="max-width:340px">
+        <div class="progress-row">
+          <div class="progress-head"><span><span class="num">2</span> de 4 concluídos</span><span>50%</span></div>
+          <div class="progress-bar"><div class="progress-bar-fill" style="width:50%"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------- erro e destrutivo -- -->
+  <section>
+    <h2>Erro e destrutivo</h2>
+    <div class="sg-panel">
+      <div class="demo-row" style="margin-bottom:20px">
+        <span style="color:var(--text-accent);font-weight:600;font-size:var(--fs-sm)">
+          Marca — texto em destaque
+        </span>
+        <span style="color:var(--danger);font-weight:600;font-size:var(--fs-sm)">
+          Danger — erro e destrutivo
+        </span>
+      </div>
+
+      <div style="max-width:400px;display:grid;gap:14px">
+        <!-- a linha destrutiva real da tela de Backup -->
+        <div class="group">
+          <div class="row">
+            <span class="row-ic danger"><i class="ti ti-trash"></i></span>
+            <span class="row-body">
+              <span class="row-title">Apagar todos os dados</span>
+              <span class="row-sub danger">Apaga todos os dados deste dispositivo. Não pode ser desfeito</span>
+            </span>
+            <i class="png-ic pi-chevron-right chev"></i>
+          </div>
+          <div class="row">
+            <span class="row-ic"><i class="png-ic pi-building"></i></span>
+            <span class="row-body">
+              <span class="row-title">Fit Park</span>
+              <span class="row-sub warn">Ativa</span>
+            </span>
+            <i class="ti ti-check chev"></i>
+          </div>
+        </div>
+
+        <!-- erro de formulário -->
+        <div class="field" style="margin:0">
+          <label for="dg">Nome da academia</label>
+          <input id="dg" value="" placeholder="Ex.: Fit Park" />
+          <span class="err">Informe um nome com no mínimo 2 caracteres.</span>
+        </div>
+
+        <div class="demo-row">
+          <button class="btn primary" style="width:auto">Salvar</button>
+          <button class="btn danger" style="width:auto"><i class="ti ti-trash"></i> Excluir foto</button>
+        </div>
+      </div>
+
+      <p class="mock-note">
+        As duas linhas acima mostram por que o <code>--danger</code> saiu do vermelho: <strong>“Ativa”
+        usa <code>--text-accent</code></strong> (é destaque de marca, não aviso) e <strong>“Não pode ser
+        desfeito” usa <code>--danger</code></strong>. Com os dois em vermelho, eram a mesma cor para
+        quem passa o olho — e “Excluir” lia como uma ação comum ao lado de “Salvar”.<br />
+        O par que importa é <strong>danger vs <code>--text-accent</code></strong> (não vs
+        <code>--accent</code>), porque são esses dois que aparecem juntos. Eles estão separados em
+        <strong>dois eixos</strong>: matiz 358,5° → 31° (~32° de diferença) e luminância 0,223 → 0,502
+        (<strong>2,0:1</strong>). O eixo de luminância é o que sustenta a distinção em protanopia e
+        deuteranopia — lá o matiz colapsa, o claro/escuro não. Cor também não é o único sinal: toda ação
+        destrutiva carrega o glifo de lixeira e uma confirmação.<br />
+        <strong>O que isso custa:</strong> abre mão da convenção “vermelho = destrutivo”. Se você
+        preferir manter vermelho e separar só por profundidade, é trocar
+        <code>--danger</code>/<code>--bg-danger</code>/<code>--border-danger</code> em
+        <code>tokens.css</code> — nada mais no CSS precisa mudar.
+      </p>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------- superfícies -- -->
+  <section>
+    <h2>Superfícies</h2>
+    <div class="sg-panel">
+      <div style="max-width:400px;display:grid;gap:16px">
+        <section class="week-card" aria-label="Exemplo">
+          <div class="week-ring">
+            <svg viewBox="0 0 76 76" width="76" height="76">
+              <circle cx="38" cy="38" r="32" class="ring-track"></circle>
+              <circle cx="38" cy="38" r="32" class="ring-fill" stroke-dasharray="201.06"
+                      stroke-dashoffset="114.6" transform="rotate(-90 38 38)"></circle>
+            </svg>
+            <span class="week-pct">43%</span>
+          </div>
+          <div class="week-body">
+            <span class="eyebrow">Esta semana</span>
+            <strong class="week-count">3 <span class="week-of">/ 7 treinos</span></strong>
+          </div>
+        </section>
+
+        <ul class="accordion">
+          <li class="day featured">
+            <span class="eyebrow day-eyebrow">Próximo treino</span>
+            <div class="day-head">
+              <button class="day-head-main">
+                <span class="day-title">Dia 1 – Peito e Tríceps</span>
+              </button>
+              <div class="day-meta">
+                <span class="day-ic"><i class="png-ic pi-chest"></i></span>
+                <span class="day-sub">Peito · Tríceps · Ombros</span>
+                <span class="day-actions">
+                  <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+                  <button class="chev-btn"><i class="png-ic pi-chevron-down chev day-chev"></i></button>
+                </span>
+              </div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="group">
+          <div class="row">
+            <span class="row-ic"><i class="png-ic pi-dumbbell"></i></span>
+            <span class="row-body">
+              <span class="row-title">Exercícios</span>
+              <span class="row-sub">Nome, imagem/GIF e categoria</span>
+            </span>
+            <span class="row-meta">48</span>
+            <i class="png-ic pi-chevron-right chev"></i>
+          </div>
+          <div class="row">
+            <span class="row-ic solid"><i class="ti ti-check"></i></span>
+            <span class="row-body"><span class="row-title">Linha com ícone sólido</span></span>
+            <i class="png-ic pi-chevron-right chev"></i>
+          </div>
+        </div>
+
+        <div class="toast" style="position:static;transform:none;left:auto;bottom:auto;max-width:none">
+          Peso atualizado para 72,5 kg.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- textura -- -->
+  <section>
+    <h2>Textura</h2>
+    <div class="sg-panel">
+      <div style="height:120px;border-radius:var(--r-ctl);border:0.5px solid var(--border);
+                  background:#0F1115 url('assets/pattern-dots.png') left top / 150px auto repeat"></div>
+      <p class="mock-note">
+        <code>assets/pattern-dots.png</code> — o halftone vermelho do painel PATTERN / TEXTURAS.
+        Uso: fundo da splash e, se quiser, do card da semana. Deve ficar sempre discreto
+        (<code>opacity</code> ≤ 0.5); ele não é elemento de leitura.
+      </p>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

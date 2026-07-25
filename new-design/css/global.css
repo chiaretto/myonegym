@@ -1,0 +1,287 @@
+@import './tokens.css';
+@import './icons.css';
+
+/* MyOneGym global styles — "MyOneGym Red" identity.
+   Drop-in replacement for src/styles/global.css. Class names are identical to
+   the shipped app; only colour, radius, weight and the brand chrome change.
+   Deltas vs the previous (orange "Momentum") sheet are marked NEW / CHANGED. */
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: var(--fs-md);
+  font-weight: 400; /* CHANGED: Poppins Regular is the body weight (was 500) */
+  background: var(--surface-0);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font-family: inherit; cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+input, select, textarea { font-family: inherit; font-size: var(--fs-xl); }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -0.015em; }
+
+/* Uppercase micro-label — "ESTA SEMANA" on the reference home screen.
+   CHANGED: Poppins with wide tracking instead of JetBrains Mono. */
+.eyebrow {
+  font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.18em;
+  font-size: var(--fs-2xs); font-weight: 600; color: var(--text-secondary);
+}
+
+/* App shell — mobile-first, soft max-width for larger screens */
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100%;
+  background: var(--surface-0);
+  display: flex;
+  flex-direction: column;
+}
+.screen { flex: 1; padding: 16px 18px 104px; overflow-y: auto; }
+
+/* Top bar */
+.appbar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 16px 18px 12px; position: sticky; top: 0; z-index: 5;
+  background: var(--surface-0); border-bottom: 0.5px solid var(--border);
+}
+.appbar h1 { font-family: var(--font-title); font-size: var(--fs-2xl); font-weight: 700;
+  display: flex; align-items: center; gap: 12px; letter-spacing: -0.02em; }
+.appbar .spacer { flex: 1; }
+
+/* CHANGED: the brand mark is now the logo-mark PNG on bare background, not a
+   gradient tile with an icon-font glyph inside it. It sits wider than tall
+   because the dumbbell bar extends past the M. */
+.brand-mark { display: block; height: 1.75em; width: auto; }
+
+/* NEW: the wordmark is live text, not an image — Poppins Bold with "One" in red,
+   exactly as the sheet draws it. Deliberate: the raster wordmark in the
+   reference art is misspelled ("MyOneGyn"), and text also stays crisp at every
+   --font-scale. */
+.wordmark { font-family: var(--font-title); font-weight: 700; letter-spacing: -0.02em; }
+.wordmark em { font-style: normal; color: var(--accent); }
+
+/* NEW guard: the active-gym pill sits next to the brand in the same row, and a
+   long gym name ("Academia do Centro") would otherwise push the pill off the
+   edge on a 360px phone. The pill keeps its size; the wordmark is what gives. */
+.appbar h1 { min-width: 0; }
+.appbar .wordmark { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.appbar .chip { flex-shrink: 0; }
+
+.icon-btn {
+  width: 2.2em; height: 2.2em; border-radius: var(--r-btn); border: 0.5px solid var(--border);
+  background: var(--surface-1); color: var(--text-primary); display: grid; place-items: center;
+  font-size: var(--fs-2xl); flex-shrink: 0;
+}
+.icon-btn:active { background: var(--surface-2); }
+.icon-btn.ghost { border-color: transparent; background: transparent; color: var(--text-secondary); }
+
+/* Tab bar. CHANGED: the active tab is red and carries a short red indicator
+   bar along the top edge (visible on the reference screenshot). */
+.tabbar {
+  position: sticky; bottom: 0; display: flex; border-top: 0.5px solid var(--border);
+  background: var(--surface-0); padding-bottom: env(safe-area-inset-bottom);
+}
+.tabbar a {
+  flex: 1; text-align: center; padding: 12px 0 15px; font-size: var(--fs-2xs); color: var(--text-secondary);
+  display: grid; gap: 5px; justify-items: center; font-weight: 500; position: relative;
+}
+.tabbar a.active { color: var(--text-accent); font-weight: 600; }
+.tabbar a.active::before {
+  content: ''; position: absolute; top: -0.5px; left: 50%; transform: translateX(-50%);
+  width: 44%; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent);
+}
+.tabbar .ti, .tabbar .png-ic { font-size: var(--fs-3xl); }
+
+/* Buttons. CHANGED: pill radius, white label on red, vertical gradient. */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 18px; border-radius: var(--r-btn); font-size: var(--fs-md); font-weight: 600;
+  border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-primary);
+  width: 100%; transition: filter 0.12s ease, background 0.12s ease;
+}
+.btn.primary { background: var(--accent-grad); color: var(--on-accent); border-color: transparent;
+  font-weight: 700; box-shadow: 0 10px 26px -12px var(--accent); }
+.btn.primary:active { filter: brightness(0.92); }
+/* NEW: "Ver detalhes" — outlined red secondary, straight off the sheet. */
+.btn.outline { background: transparent; color: var(--text-primary); border: 1px solid var(--accent);
+  font-weight: 600; }
+.btn.outline:active { background: var(--bg-accent); }
+.btn.subtle { background: var(--surface-1); }
+.btn.subtle:active { background: var(--surface-2); }
+/* CHANGED: was borrowing --border-accent, i.e. a BRAND-red outline on a
+   destructive button. It now carries its own danger outline. */
+.btn.danger { color: var(--danger); border-color: var(--border-danger); background: transparent; }
+.btn.danger:active { background: var(--bg-danger); }
+.btn:disabled { opacity: 0.4; box-shadow: none; filter: none; }
+
+/* NEW: circular accent FAB + small square control button from the sheet's
+   BOTÕES panel. Unused by the current screens; kept so the vocabulary is
+   documented in one place. */
+.fab { width: 3.1em; height: 3.1em; border-radius: 50%; border: 0; display: grid; place-items: center;
+  background: var(--accent-grad); color: var(--on-accent); font-size: var(--fs-2xl);
+  box-shadow: 0 12px 28px -12px var(--accent); }
+.ctl-btn { width: 3.1em; height: 3.1em; border-radius: var(--r-ctl); border: 0.5px solid var(--border);
+  background: var(--surface-1); color: var(--text-secondary); display: grid; place-items: center;
+  font-size: var(--fs-2xl); }
+
+/* Cards / list groups */
+.group-label { font-family: var(--font-mono); font-size: var(--fs-2xs); color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.18em; font-weight: 600; padding: 18px 6px 8px; }
+.group { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  overflow: hidden; }
+.row { display: flex; align-items: center; gap: 14px; padding: 15px 16px; width: 100%;
+  background: none; border: 0; text-align: left; color: var(--text-primary); }
+.row:active { background: var(--surface-2); }
+.row + .row { border-top: 0.5px solid var(--border); }
+/* CHANGED: row icon holders are circles (the identity is pill-first). */
+.row-ic { width: 2.2em; height: 2.2em; border-radius: 50%; background: var(--bg-accent);
+  color: var(--text-accent); display: grid; place-items: center; font-size: var(--fs-2xl); flex-shrink: 0; }
+.row-ic.solid { background: var(--accent-grad); color: var(--on-accent); }
+.row-ic.danger { background: var(--danger); color: var(--surface-0); }
+.row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row-title { font-size: var(--fs-md); font-weight: 600; }
+.row-sub { font-size: var(--fs-2xs); color: var(--text-secondary); margin-top: 3px; }
+/* Caveat under a group of rows (e.g. photos aren't in the backup) */
+.group-note { font-size: var(--fs-2xs); color: var(--text-secondary); line-height: 1.5;
+  padding: 10px 14px 2px; display: flex; align-items: baseline; gap: 6px; }
+.group-note strong { color: var(--text-primary); font-weight: 700; }
+.row-sub.warn { color: var(--text-accent); }
+.row-sub.danger { color: var(--danger); }
+.row-meta { font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; }
+.chev { color: var(--text-muted); font-size: var(--fs-xl); flex-shrink: 0; }
+
+/* Forms */
+.field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.field label { font-size: var(--fs-xs); color: var(--text-secondary); font-weight: 500; }
+.field input, .field select {
+  padding: 13px 15px; border-radius: var(--r-ctl); border: 0.5px solid var(--border-strong);
+  background: var(--surface-2); color: var(--text-primary);
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.field .err { font-size: var(--fs-2xs); color: var(--danger); }
+
+/* Filter bars (e.g. exercises list search + category/day selects) */
+.filters { margin-bottom: 4px; }
+.filters-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.filters-row .field { margin-bottom: 14px; min-width: 0; }
+.filters-row .field select { width: 100%; min-width: 0; }
+
+/* Exercise media, large (detail screen, and the preview in the exercise form).
+   Media box sizes to the image's natural proportions (no fixed aspect ratio),
+   so portrait/square exercise media shows at full height instead of being
+   shrunk into a short landscape box. Very tall media is capped to the viewport. */
+.hero { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  overflow: hidden; display: grid; place-items: center; margin-bottom: 16px; }
+img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contain; display: block; }
+/* Placeholder has no intrinsic size — keep it a tidy landscape box. */
+.media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
+  color: var(--text-accent); font-size: var(--fs-7xl); }
+
+/* Chips. CHANGED: the accent chip is an outlined red pill (the "Fit Park" gym
+   selector on the reference screenshot) rather than a filled tint. */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: var(--r-pill);
+  border: 0.5px solid var(--border); background: var(--surface-2); color: var(--text-secondary);
+  font-size: var(--fs-2xs); font-weight: 500; }
+.chip.accent { background: rgba(190, 33, 37, 0.12); color: var(--text-accent);
+  border: 1px solid var(--accent); font-weight: 600; }
+.chip.sm { padding: 4px 10px; gap: 4px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* Toggle-chip multi-select (e.g. an exercise's categories). Tap to add/remove. */
+.chip-select { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 10px 15px;
+  border-radius: var(--r-pill); border: 0.5px solid var(--border-strong);
+  background: var(--surface-2); color: var(--text-secondary); font-size: var(--fs-sm); font-weight: 500; }
+.chip-toggle.on { background: var(--bg-accent); color: var(--text-accent); border-color: var(--accent);
+  font-weight: 600; }
+.chip-toggle:active { filter: brightness(0.94); }
+
+/* Empty states. CHANGED: the placeholder emoji is replaced by the brand's own
+   dumbbell glyph in accent red. */
+.empty { text-align: center; color: var(--text-secondary); padding: 48px 24px; display: grid;
+  gap: 14px; justify-items: center; }
+.empty .big { font-size: var(--fs-6xl); color: var(--accent); }
+.empty h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
+.empty p { font-size: var(--fs-sm); max-width: 260px; line-height: 1.55; }
+
+/* Modal / sheet */
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex;
+  align-items: flex-end; justify-content: center; z-index: 20; }
+.sheet { background: var(--surface-1); width: 100%; max-width: 480px; border-radius: 24px 24px 0 0;
+  border-top: 0.5px solid var(--border); padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  max-height: 88vh; overflow-y: auto; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.sheet-head h2 { margin-bottom: 0; }
+.sheet-close { flex-shrink: 0; }
+.sheet h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; margin-bottom: 14px; }
+.sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
+/* A MODAL footer (direct child of the sheet, which scrolls) sticks to the bottom
+   of the sheet so Cancelar/Salvar stay visible while tall content (e.g. the "Novo
+   dia" exercise picker) scrolls. Scoped to `.sheet >` so it does NOT touch the
+   inline `.sheet-actions` in the weight/note editors, which live in a tab panel,
+   not a sheet. */
+.sheet > .sheet-actions {
+  position: sticky; bottom: 0; z-index: 1;
+  margin: 8px -18px calc(-20px - env(safe-area-inset-bottom));
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface-1); border-top: 0.5px solid var(--border);
+}
+
+/* Floating action bar — fixed bottom chrome (ui/ActionBar; the exercise stepper
+   composes it via ui/StepperBar). Sits above content but below the sheet backdrop
+   (20) and the toast (30), so a confirmation still covers it. Width matches the
+   .app shell rather than the viewport, so it doesn't span a wide desktop window. */
+.action-bar {
+  /* --kb-inset lifts the bar above the on-screen keyboard (see lib/keyboardInset);
+     0 when closed or unsupported, so this reduces to bottom: 0. */
+  position: fixed; bottom: var(--kb-inset, 0px); left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px; z-index: 10;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  background: var(--surface-0); border-top: 0.5px solid var(--border);
+  box-shadow: 0 -14px 34px -14px rgba(0, 0, 0, 0.9);
+}
+.action-bar .form-actions { display: flex; gap: 10px; }
+/* Reserve the bar's MEASURED height (--action-bar-h, published by ActionBar) plus
+   breathing room. A fixed value would hide content at large font scales. */
+.screen.has-action-bar { padding-bottom: calc(24px + var(--action-bar-h, 0px)); }
+
+/* 76px default keeps the historical 92px offset where there is no bar (Home,
+   above the tab bar); with one, the toast rides above the bar instead of under it. */
+.toast { position: fixed; bottom: calc(16px + var(--action-bar-h, 76px) + var(--kb-inset, 0px)); left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2); color: var(--text-primary); padding: 12px 20px; border-radius: var(--r-pill);
+  border: 0.5px solid var(--border-strong); font-size: var(--fs-sm); z-index: 30; max-width: 90%;
+  text-align: center; box-shadow: 0 12px 32px -12px rgba(0,0,0,0.8); }
+
+/* Segmented tabs (ui/Tabs). CHANGED: pill container with pill segments. */
+.tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 16px;
+  background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--r-pill); }
+.tabs button { flex: 1; background: transparent; border: 0; padding: 11px 0; font-size: var(--fs-sm);
+  font-weight: 600; color: var(--text-secondary); border-radius: var(--r-pill); }
+.tabs button.on { background: var(--accent-grad); color: var(--on-accent); font-weight: 700; }
+
+/* Exercise note editor (Observações tab) */
+.note-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 16px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+.note-input { width: 100%; min-height: 8.5em; resize: vertical; padding: 13px; border-radius: var(--r-ctl);
+  border: 0.5px solid var(--border-strong); background: var(--surface-2); color: var(--text-primary);
+  font: inherit; font-size: var(--fs-sm); line-height: 1.55; }
+.note-input:focus { outline: none; border-color: var(--accent); }
+.note-empty { font-size: var(--fs-sm); color: var(--text-secondary); }
+
+/* Exercise photos (Foto tab) — reuses .note-card as the panel shell */
+.photo-grid { list-style: none; padding: 0; margin: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.photo-thumb { width: 100%; aspect-ratio: 1; padding: 0; border-radius: var(--r-ctl);
+  border: 0.5px solid var(--border); background: var(--surface-2); overflow: hidden; display: block; }
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-thumb:active { border-color: var(--accent); }
+.photo-actions { display: flex; flex-direction: column; gap: 8px; }
+/* Cap the viewer so a portrait photo can't push the sheet actions off-screen. */
+.photo-viewer { display: grid; place-items: center; background: var(--surface-0);
+  border-radius: var(--r-ctl); overflow: hidden; margin-bottom: 12px; }
+.photo-viewer img { max-width: 100%; max-height: 60vh; object-fit: contain; display: block; }

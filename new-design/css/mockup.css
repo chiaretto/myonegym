@@ -1,0 +1,111 @@
+/* MOCKUP-ONLY chrome. Nothing in this file ships with the app — it exists so the
+   static HTML reads like a phone (fake status bar, screen label, gallery grid).
+   Everything else on these pages comes from the drop-in stylesheets next to it. */
+
+body.mock { background: #07080a; }
+
+/* Fake device status bar, so a mockup frames like reference/home-screen.png. */
+.mock-statusbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px 2px; font-size: var(--fs-xs); font-weight: 600;
+  color: var(--text-primary); background: var(--surface-0);
+  position: sticky; top: 0; z-index: 6;
+}
+.mock-statusbar .right { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); }
+
+/* Floating "which screen is this" label + link back to the gallery. */
+.mock-tag {
+  position: fixed; top: 12px; left: 12px; z-index: 40;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 14px; border-radius: var(--r-pill);
+  background: rgba(28, 31, 38, 0.92); border: 0.5px solid var(--border-strong);
+  color: var(--text-secondary); font-size: 12px; font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+.mock-tag a { color: var(--text-accent); }
+.mock-tag b { color: var(--text-primary); font-weight: 700; }
+@media (max-width: 900px) { .mock-tag { display: none; } }
+
+/* Note callouts used on the style guide and the gallery. */
+.mock-note {
+  border-left: 3px solid var(--accent); background: var(--surface-1);
+  border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
+  padding: 14px 16px; margin: 14px 0; font-size: 13px; line-height: 1.6;
+  color: var(--text-secondary);
+}
+.mock-note strong { color: var(--text-primary); }
+.mock-note code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+  background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--text-accent); }
+
+/* ---------------------------------------------------------------- gallery -- */
+.gal { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+.gal-head { display: flex; align-items: center; gap: 18px; margin-bottom: 6px; }
+.gal-head img { height: 62px; width: auto; }
+.gal-head h1 { font-size: 34px; letter-spacing: -0.03em; }
+.gal-head h1 em { font-style: normal; color: var(--accent); }
+.gal-tagline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.3em;
+  font-size: 11px; color: var(--text-secondary); font-weight: 500; margin-bottom: 34px; }
+
+.gal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; }
+.gal-card {
+  display: block; background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); padding: 20px; transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.gal-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.gal-card .png-ic, .gal-card .ti { font-size: 26px; color: var(--accent); display: block; margin-bottom: 12px; }
+.gal-card h3 { font-size: 16px; margin-bottom: 6px; }
+.gal-card p { font-size: 12.5px; color: var(--text-secondary); line-height: 1.55; }
+.gal-card .route { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  color: var(--text-muted); margin-top: 10px; display: block; }
+
+.gal h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-secondary);
+  font-weight: 600; margin: 40px 0 16px; }
+
+/* --------------------------------------------------------- style guide ----- */
+.sg { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+.sg section { margin-bottom: 48px; }
+.sg h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em; color: var(--text-secondary);
+  font-weight: 600; margin-bottom: 18px; padding-bottom: 10px; border-bottom: 0.5px solid var(--border); }
+.sg-panel { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 24px; }
+
+.sw-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.sw { width: 132px; }
+.sw .chipbox { height: 84px; border-radius: var(--r-ctl); border: 0.5px solid var(--border); }
+.sw code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px;
+  color: var(--text-primary); margin-top: 9px; }
+.sw span { display: block; font-size: 11px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45; }
+
+.ic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 10px; }
+.ic-cell { background: var(--surface-2); border: 0.5px solid var(--border); border-radius: var(--r-ctl);
+  padding: 16px 8px; text-align: center; }
+.ic-cell .png-ic, .ic-cell .ti { font-size: 30px; }
+.ic-cell code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px; color: var(--text-secondary); margin-top: 10px; word-break: break-all; }
+.ic-cell.on-red { background: var(--accent-grad); border-color: transparent; }
+
+.type-row { display: flex; align-items: baseline; gap: 18px; padding: 12px 0;
+  border-bottom: 0.5px solid var(--border); }
+.type-row:last-child { border-bottom: 0; }
+.type-row code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  color: var(--text-muted); width: 190px; flex-shrink: 0; }
+
+.demo-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.demo-row .btn { width: auto; }
+.demo-col { display: grid; gap: 12px; max-width: 340px; }
+
+/* The gallery / style guide / brand pages are documents, not app screens — on a
+   phone-width window their two-column rows have to collapse, otherwise the fixed
+   190px label column pushes the page into horizontal scroll. */
+@media (max-width: 640px) {
+  .gal, .sg, .brand-wrap { padding-left: 12px; padding-right: 12px; }
+  /* The "Superfícies" panel shows real app cards, whose min-content is wider than
+     a phone window minus two levels of panel padding. Let the PANEL scroll
+     sideways rather than the page. */
+  .sg-panel { padding: 12px; overflow-x: auto; }
+  .type-row { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .type-row code { width: auto; }
+  .gal-head { gap: 12px; }
+  .gal-head img { height: 46px; }
+  .gal-head h1 { font-size: 26px; }
+}

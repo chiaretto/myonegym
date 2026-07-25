@@ -5,3 +5,8 @@ dist-ssr
 .DS_Store
 dev-dist
 coverage
+
+# Design reference rasters (4.4 MB of screenshots/identity sheets). The mockups
+# and their stylesheets ARE versioned; these source images are not, matching
+# design_handoff_myonegym/ and mockups/, which version markdown only.
+new-design/reference/

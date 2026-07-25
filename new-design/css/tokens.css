@@ -1,0 +1,113 @@
+/* MyOneGym design tokens — "MyOneGym Red" identity.
+   Source of truth: new-design/reference/identity-sheet.png (PALETA DE CORES +
+   TIPOGRAFIA panels) and reference/home-screen.png.
+
+   Drop-in replacement for src/styles/tokens.css: every token name is unchanged,
+   only its value moves. Nothing in the TSX has to change.
+
+   Palette: dark bg #050607 · layered surfaces · #EC2C2E red accent
+   (a brighter red — see the accent block). */
+:root {
+  /* Surfaces (dark-only — no light theme).
+     surface-0/1 are the two values published on the identity sheet; 2/3 are
+     derived one and two steps up for chips, inputs and progress tracks. */
+  --surface-0: #050607; /* app background          — spec change */
+  --surface-1: #0c0f14; /* cards                   — spec change */
+  --surface-2: #141820; /* chips / inputs / raised — derived */
+  --surface-3: #1e2329; /* tracks / empty fills    — derived */
+
+  /* Text */
+  --text-primary: #ffffff;   /* sheet #FFFFFF */
+  --text-secondary: #8a8f98; /* sheet #8A8F98 — subtitles, muted labels */
+  --text-muted: #5c6069;     /* derived — hints, icon-off */
+
+  /* Lines */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  /* Accent (red).
+     #EC2C2E is the new brand red, brighter than the previous #BE2125.
+     Everything below is derived from it:
+     · --accent-2 is the gradient's bottom stop (0.79 × #EC2C2E).
+     · --text-accent: #EC2C2E as TEXT on --surface-0 reaches 4.5:1 (AA);
+       it's used for the same purposes (tab labels, deltas, badges).
+     · tint/border alphas adjusted down slightly: the new red is brighter,
+       so less opacity is needed for the same visual weight. */
+  --accent: #ec2c2e;
+  --accent-2: #ba2324; /* gradient partner (darker, bottom stop) */
+  --bg-accent: rgba(236, 44, 46, 0.16);  /* soft tint fill */
+  --border-accent: rgba(236, 44, 46, 0.42);
+  --text-accent: #ec2c2e; /* accent text on dark */
+  --fill-accent: #ec2c2e; /* solid accent fill (buttons, rings, checkboxes) */
+  --on-accent: #ffffff;   /* text/icon on red — the reference CTA is WHITE on red */
+  --accent-grad: linear-gradient(180deg, var(--accent), var(--accent-2));
+
+  /* Danger — amber, deliberately NOT red.
+     The brand now owns red, so a red danger colour was indistinguishable from
+     --text-accent: "Excluir" read like an ordinary accent action, and a form
+     error read like a highlight.
+
+     The pair that matters is danger vs --text-accent (#E8484C), NOT vs --accent:
+     those two are the ones that co-occur, on Settings → Backup, where a
+     .row-sub.warn sits a few rows above the destructive row. So this value is
+     tuned against #E8484C on two axes at once:
+       hue       358.5° → 31°   (~32° apart)
+       luminance 0.223  → 0.502 (2.0:1)
+     The luminance step is what carries the separation under protanopia and
+     deuteranopia — hue collapses there, lightness does not. A first pass at
+     #F59042 had the same ~32° of hue but only 1.6:1 of luminance, which is
+     effectively hue-only separation; hence the lighter amber.
+     Colour is not the only signal either: every destructive action also carries
+     a trash glyph and a confirmation.
+
+     Trade-off, stated plainly: this gives up the red = destructive convention.
+
+     Used by: .field .err · .btn.danger · .row-ic.danger · .row-sub.danger ·
+     .tl-delete:active. NOT used by .row-sub.warn, which marks the ACTIVE gym —
+     that is a brand highlight, not a warning, and stays on --text-accent.
+     Contrast: 9.9:1 as text on --surface-0, and 9.9:1 for --surface-0 text on
+     the solid fill, so both directions pass AA comfortably. */
+  --danger: #ffa94d;
+  --bg-danger: rgba(255, 169, 77, 0.15);
+  --border-danger: rgba(255, 169, 77, 0.42);
+
+  /* Type families — one family, two weights, per the sheet's TIPOGRAFIA panel:
+     Poppins Bold (titles, numbers, buttons) and Poppins Regular (body/UI).
+     --font-mono keeps its name so no consumer has to change: it is the
+     "micro-label" role (uppercase + wide letter-spacing), which this identity
+     renders in Poppins rather than a monospace face. */
+  --font-title: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* Radii — the reference is pill-first: every button and chip is fully rounded,
+     cards are 20px. Inputs/steppers stay rectangular-rounded so a numeric field
+     still reads as a field. */
+  --r-card: 20px;
+  --r-btn: 999px;
+  --r-ctl: 14px;
+  --r-row: 16px;
+  --r-pill: 999px;
+
+  /* Typography scale — one knob rescales every text size in the app.
+     Base values are the original px (as rem at a 16px root), so the OS/browser
+     text-size preference composes; --font-scale then enlarges on top.
+     This is the shipped default (150%); it is user-adjustable at runtime via
+     Settings → Aparência, which overrides this value on <html> (see
+     src/state/settings.ts). Keep this equal to FONT_SCALE_DEFAULT so there is
+     no first-paint flash. Sizing is identity-independent — this redesign
+     changes families, weights and colour, not the scale. */
+  --font-scale: 1.5;
+  --fs-2xs: calc(0.6875rem * var(--font-scale)); /* 11px base */
+  --fs-xs:  calc(0.75rem   * var(--font-scale)); /* 12px base */
+  --fs-sm:  calc(0.8125rem * var(--font-scale)); /* 13px base */
+  --fs-md:  calc(0.875rem  * var(--font-scale)); /* 14px base — body */
+  --fs-lg:  calc(0.9375rem * var(--font-scale)); /* 15px base */
+  --fs-xl:  calc(1rem      * var(--font-scale)); /* 16px base — inputs (≥16px effective) */
+  --fs-2xl: calc(1.0625rem * var(--font-scale)); /* 17px base */
+  --fs-3xl: calc(1.25rem   * var(--font-scale)); /* 20px base */
+  --fs-4xl: calc(1.5rem    * var(--font-scale)); /* 24px base */
+  --fs-5xl: calc(2.125rem  * var(--font-scale)); /* 34px base */
+  --fs-6xl: calc(2.5rem    * var(--font-scale)); /* 40px base */
+  --fs-7xl: calc(3.5rem    * var(--font-scale)); /* 56px base */
+}
