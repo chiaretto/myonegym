@@ -1,19 +1,14 @@
-/* Self-hosted Momentum fonts (latin subset only) via @fontsource.
+/* Self-hosted "OneGym Red" font (latin subset only) via @fontsource.
    Bundled woff2 → no runtime network request, so the PWA stays fully offline.
-   Weights limited to those the design uses to keep the bundle small. */
 
-/* Sora — screen/card titles */
-@import '@fontsource/sora/latin-600.css';
-@import '@fontsource/sora/latin-700.css';
-@import '@fontsource/sora/latin-800.css';
+   CHANGED: three families (Sora + Manrope + JetBrains Mono, 10 weight files)
+   collapsed into ONE — Poppins — per the identity sheet's TIPOGRAFIA panel.
+   Four weights, not two: the stylesheets ask for 400/500/600/700, and shipping
+   only 400+700 would leave the browser to synthesise 500 and 600, which smears
+   the mid-weight labels the design leans on. */
 
-/* Manrope — body / UI / controls */
-@import '@fontsource/manrope/latin-400.css';
-@import '@fontsource/manrope/latin-500.css';
-@import '@fontsource/manrope/latin-600.css';
-@import '@fontsource/manrope/latin-700.css';
-@import '@fontsource/manrope/latin-800.css';
-
-/* JetBrains Mono — uppercase micro-labels */
-@import '@fontsource/jetbrains-mono/latin-600.css';
-@import '@fontsource/jetbrains-mono/latin-700.css';
+/* Poppins — titles, body, controls and micro-labels */
+@import '@fontsource/poppins/latin-400.css';
+@import '@fontsource/poppins/latin-500.css';
+@import '@fontsource/poppins/latin-600.css';
+@import '@fontsource/poppins/latin-700.css';

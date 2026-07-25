@@ -18,8 +18,11 @@ export default defineConfig(({ command }) => ({
         short_name: 'MyOneGym',
         description: 'Offline workout tracker — gyms, days, exercises and per-gym target weights.',
         lang: 'pt-BR',
-        theme_color: '#0b0b0e',
-        background_color: '#0b0b0e',
+        // Mirrors --surface-0 in src/styles/tokens.css. There is no shared source
+        // of truth between CSS and the manifest, so this is a hand-kept copy —
+        // as is the theme-color meta in index.html.
+        theme_color: '#050607',
+        background_color: '#050607',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '.',

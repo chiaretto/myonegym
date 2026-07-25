@@ -1,0 +1,95 @@
+/* MyOneGym PNG icon system.
+
+   Every glyph below is a real PNG cropped out of the reference artwork in
+   new-design/reference/ — nothing here is redrawn as SVG. The crops are
+   transparent line art (the artwork's baked-in near-black background was turned
+   into alpha), which lets each one be used as a CSS mask: the PNG supplies the
+   SHAPE, `currentColor` supplies the colour. One file therefore serves the
+   red/white/grey states the reference shows for the same glyph — the tab bar's
+   home icon is red when active and grey when not, from a single asset.
+
+   Usage:  <i class="png-ic pi-dumbbell"></i>
+   Size:   inherits `font-size` (1em box, art letterboxed inside it via
+           `mask-size: contain`, so the original proportions survive).
+   Colour: inherits `color`.
+
+   Two assets are NOT masked because they are intentionally two-tone and must
+   keep their own colours — use them as plain <img>:
+     assets/logo-mark.png     the M1 + dumbbell brand mark (white M, red 1)
+     assets/pattern-dots.png  the red halftone texture
+
+   The remaining utility glyphs the screens need (check, plus, minus, pencil,
+   trash, share, tag, calendar, database, arrow-left, …) do not appear anywhere
+   in the reference artwork, so there is no PNG to crop for them; they stay on
+   the @tabler/icons-webfont the app already bundles and inherit the new palette
+   through `currentColor`. See new-design/README.md § "Ícones". */
+
+/* The mask is declared FOUR times and composited additively. This is not a typo
+   and it is not for looks — without it several glyphs render as blank.
+
+   Why: a mask paints through the PNG's alpha channel, so a crop that never
+   reaches full opacity can never paint a solid glyph. Measured peak alpha in the
+   source files:
+     ic-tab-settings.png  137/255  (only 14 fully-opaque pixels in 58x57)
+     ic-tab-history.png   146/255
+     ic-chevron-down.png  192/255
+   The rest do peak at 255, but they are 2-3px line art shown at 0.4-0.65x, so
+   downscaling spreads each stroke across ~1px of PARTIAL alpha. Either way the
+   result is a washed-out hairline that reads as "the icon is missing".
+
+   Additive compositing of a layer over itself gives a' = a + a(1-a), so four
+   layers take 0.54 -> 0.79 -> 0.90 -> 0.96. Crucially a=1 stays 1 and a=0 stays
+   0, so this only lifts the partial pixels: already-clean crops such as
+   ic-tab-home.png are untouched, and no asset had to be edited.
+
+   Verified: the reference art itself uses 3px strokes in a 104px circle, which
+   at the screenshot's ~2x density is ~1.5 CSS px in a ~52px circle — the same
+   proportion the mockup renders. The proportions were never the problem; the
+   alpha was. */
+.png-ic {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+  background-color: currentColor;
+  -webkit-mask-image: var(--png-ic), var(--png-ic), var(--png-ic), var(--png-ic);
+          mask-image: var(--png-ic), var(--png-ic), var(--png-ic), var(--png-ic);
+  -webkit-mask-composite: source-over, source-over, source-over, source-over;
+          mask-composite: add, add, add, add;
+  /* one value per property applies to every layer */
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
+
+/* --- ELEMENTOS VISUAIS (identity sheet) ------------------------------------ */
+.pi-dumbbell { --png-ic: url('../assets/ic-dumbbell.png'); }
+.pi-muscle   { --png-ic: url('../assets/ic-muscle.png'); }
+.pi-flame    { --png-ic: url('../assets/ic-flame.png'); }
+.pi-timer    { --png-ic: url('../assets/ic-timer.png'); }
+.pi-target   { --png-ic: url('../assets/ic-target.png'); }
+
+/* --- navigation + row chrome (phone screenshot) --------------------------- */
+.pi-home     { --png-ic: url('../assets/ic-tab-home.png'); }
+.pi-history  { --png-ic: url('../assets/ic-tab-history.png'); }
+.pi-settings { --png-ic: url('../assets/ic-tab-settings.png'); }
+.pi-building { --png-ic: url('../assets/ic-building.png'); }
+.pi-play     { --png-ic: url('../assets/ic-play.png'); }
+
+/* One chevron asset, four directions. */
+.pi-chevron-down  { --png-ic: url('../assets/ic-chevron-down.png'); }
+.pi-chevron-up    { --png-ic: url('../assets/ic-chevron-down.png'); transform: rotate(180deg); }
+.pi-chevron-right { --png-ic: url('../assets/ic-chevron-down.png'); transform: rotate(-90deg); }
+.pi-chevron-left  { --png-ic: url('../assets/ic-chevron-down.png'); transform: rotate(90deg); }
+
+/* --- muscle-group art, used as the day-card avatar ----------------------- */
+.pi-chest     { --png-ic: url('../assets/muscle-chest.png'); }
+.pi-core      { --png-ic: url('../assets/muscle-core.png'); }
+.pi-back      { --png-ic: url('../assets/muscle-back.png'); }
+.pi-legs      { --png-ic: url('../assets/muscle-legs.png'); }
+.pi-shoulders { --png-ic: url('../assets/muscle-shoulders.png'); }
+

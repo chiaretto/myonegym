@@ -29,7 +29,9 @@ export function SettingsPage() {
   return (
     <>
       <header className="appbar">
-        <h1 style={{ fontSize: 16 }}>Configurações</h1>
+        {/* CHANGED: was a hardcoded 16px, which bypassed --fs-* entirely and so
+            never followed the user's Aparência setting. */}
+        <h1>Configurações</h1>
         <span className="spacer" />
         <GymSelector />
       </header>

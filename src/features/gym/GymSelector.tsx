@@ -16,15 +16,14 @@ export function GymSelector() {
 
   return (
     <>
-      <button
-        className="chip accent"
-        style={{ padding: '6px 10px', fontSize: 12 }}
-        onClick={() => setOpen(true)}
-        aria-label="Trocar academia ativa"
-      >
-        <Icon name="building" size={13} />
+      {/* CHANGED: dropped inline padding/font-size and the per-Icon size props.
+          They overrode .chip/.chip.accent and, being px, did not follow
+          --font-scale — so this pill stayed put while the rest of the app
+          rescaled. The PNG glyphs size from the chip's own font-size. */}
+      <button className="chip accent" onClick={() => setOpen(true)} aria-label="Trocar academia ativa">
+        <i className="png-ic pi-building" aria-hidden />
         {active ? active.name : 'Sem academia'}
-        <Icon name="chevron-down" size={13} />
+        <i className="png-ic pi-chevron-down" aria-hidden />
       </button>
 
       {open && (

@@ -27,9 +27,12 @@ describe('clampFontScale', () => {
 })
 
 describe('useSettings store', () => {
-  it('defaults to 150%', () => {
+  it('defaults to 125%', () => {
     expect(useSettings.getState().fontScale).toBe(FONT_SCALE_DEFAULT)
-    expect(FONT_SCALE_DEFAULT).toBe(1.5)
+    // Pinned on purpose: this value is duplicated as --font-scale in
+    // src/styles/tokens.css, and if the two drift the app flashes at one size
+    // and then jumps to the other. Changing it here means changing it there.
+    expect(FONT_SCALE_DEFAULT).toBe(1.25)
   })
 
   it('setFontScale clamps below min and above max', () => {

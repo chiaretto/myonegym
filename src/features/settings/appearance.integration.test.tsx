@@ -33,7 +33,7 @@ describe('Appearance font-size setting', () => {
         String(FONT_SCALE_DEFAULT),
       ),
     )
-    expect(screen.getByText('150%')).toBeInTheDocument()
+    expect(screen.getByText(pctLabel(FONT_SCALE_DEFAULT))).toBeInTheDocument()
 
     // Move the slider to 180% → live-applies to the root and persists.
     const slider = screen.getByLabelText('Tamanho da fonte')
@@ -52,9 +52,15 @@ describe('Appearance font-size setting', () => {
         String(FONT_SCALE_DEFAULT),
       ),
     )
-    expect(screen.getByText('150%')).toBeInTheDocument()
+    expect(screen.getByText(pctLabel(FONT_SCALE_DEFAULT))).toBeInTheDocument()
   })
 })
+
+/** The label the page shows for a scale. Derived rather than hardcoded so that
+ *  changing FONT_SCALE_DEFAULT does not silently strand this assertion. */
+function pctLabel(scale: number) {
+  return `${Math.round(scale * 100)}%`
+}
 
 /** Fire a controlled range-input change (userEvent doesn't drag sliders). */
 function fireChange(el: HTMLElement, value: string) {
