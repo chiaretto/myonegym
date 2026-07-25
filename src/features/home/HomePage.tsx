@@ -201,18 +201,29 @@ export function HomePage() {
                 className={`day${isOpen ? ' open' : ''}${isFeatured ? ' featured' : ''}`}
               >
                 {isFeatured && !isOpen && <span className="eyebrow day-eyebrow">Próximo treino</span>}
-                {/* CHANGED: two lines. The name gets the first one to itself —
-                    it used to compete with the Iniciar pill for width — and the
-                    avatar, categories and controls share the second.
-                    .day-title stays INSIDE .day-head-main: day-url tests click
-                    the day name to toggle the accordion. */}
-                <div className="day-head">
-                  <button
-                    className="day-head-main"
-                    aria-expanded={isOpen}
-                    onClick={() => toggleDay(day.id!)}
-                  >
+                {/* CHANGED: two lines. Line 1 is the day name plus the chevron;
+                    line 2 is the avatar, categories and the Iniciar pill.
+                    The chevron sits with the NAME because what expands is the
+                    day, and because beside Iniciar it read as a second action of
+                    equal weight — it is a disclosure indicator, not a command.
+
+                    The WHOLE head toggles, so the avatar, the categories and the
+                    padding are live too — they looked tappable and were not. The
+                    handler is on this container because the head already holds
+                    another control (the Iniciar pill) and a <button> cannot
+                    contain a <button>.
+
+                    .day-head-main stays a real button so the accessibility tree
+                    keeps one properly named, aria-expanded control per day — but
+                    it deliberately has NO onClick of its own: pointer and
+                    keyboard activation both produce a click that bubbles here,
+                    and a second handler would toggle twice and cancel itself.
+                    The div takes no role and no tabindex, so it adds nothing to
+                    the accessibility tree; it is a hit area, not a control. */}
+                <div className="day-head" onClick={() => toggleDay(day.id!)}>
+                  <button className="day-head-main" aria-expanded={isOpen}>
                     <span className="day-title">{day.name}</span>
+                    <i className="png-ic pi-chevron-down chev day-chev" aria-hidden />
                   </button>
                   <div className="day-meta">
                     <span className="day-ic">
@@ -231,20 +242,19 @@ export function HomePage() {
                           the plain verb (not "Iniciar treino") so the visible
                           text and the accessible name still match where the
                           label IS shown. */}
+                      {/* stopPropagation: this button sits inside the head, and
+                          the head toggles the day. Without it, starting a
+                          workout would also expand the card on the way out. */}
                       <button
                         className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
                         aria-label={isResume ? 'Continuar' : 'Iniciar'}
-                        onClick={() => onStart(day.id!)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onStart(day.id!)
+                        }}
                       >
                         <i className="png-ic pi-play" aria-hidden />
                         <span className="day-start-lab">{isResume ? 'Continuar' : 'Iniciar'}</span>
-                      </button>
-                      <button
-                        className="chev-btn"
-                        aria-label={isOpen ? 'Recolher' : 'Expandir'}
-                        onClick={() => toggleDay(day.id!)}
-                      >
-                        <i className="png-ic pi-chevron-down chev day-chev" aria-hidden />
                       </button>
                     </span>
                   </div>

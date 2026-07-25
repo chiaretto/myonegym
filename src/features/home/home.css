@@ -143,7 +143,12 @@
      line 2 — avatar + categories + Iniciar pill + chevron
    Previously all four sat on one row, which left the title competing with the
    pill for horizontal space. */
-.day-head { display: flex; flex-direction: column; gap: 10px; padding: 14px 12px 14px 20px; }
+/* NEW: the whole head is the expand target (the click handler is here, in
+   HomePage.tsx), so it takes the pointer cursor the day name used to carry
+   alone. It is deliberately the HEAD and not .day: the card also contains the
+   expanded exercise list, and toggling from there would collapse the day on a
+   stray tap among its own links. */
+.day-head { cursor: pointer; display: flex; flex-direction: column; gap: 10px; padding: 14px 12px 14px 20px; }
 .day.featured .day-head { padding-top: 6px; }
 
 /* The four items only fit on one row when the categories still get a readable
@@ -160,6 +165,8 @@
    13ch = 147px does not. Below 430px the floor loses and the actions wrap, which
    is the intended degradation. */
 .day-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* CHANGED: the chevron moved to line 1, so this holds the Iniciar pill alone.
+   The gap stays for when a second action is added back. */
 .day-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
 
 /* NEW: circular muscle-group avatar. The art inside is a PNG mask
@@ -181,11 +188,25 @@
    reference (61px of art in a 104px circle = 0.587). */
 .day-ic .png-ic { font-size: 1.24em; }
 
-/* CHANGED: no longer flex:1 in a row — it is now the full-width first line. */
-.day-head-main { width: 100%; min-width: 0; display: block; background: none; border: 0;
-  text-align: left; color: var(--text-primary); padding: 0; }
+/* CHANGED: block -> flex. The first line now carries the name AND the chevron,
+   the name taking the slack and the chevron pinned to the right edge.
+   align-items: baseline (not center) so that on a two-line name the chevron
+   stays with the FIRST line instead of floating at the middle of the block. */
+.day-head-main { width: 100%; min-width: 0; display: flex; align-items: baseline; gap: 10px;
+  background: none; border: 0; text-align: left; color: var(--text-primary); padding: 0;
+  cursor: inherit; }
+
+/* The button is only the first line, but activating it toggles the whole card,
+   so an outline drawn around the button alone would describe less than half of
+   what responds. Draw it on the head instead. `outline` rather than `border`
+   keeps it out of layout: the card does not shift by a pixel when focused.
+   `:has` is used rather than :focus-within so that focus landing on the Iniciar
+   pill — the head's other control — does not light up the whole card. */
+.day-head-main:focus-visible { outline: none; }
+.day-head:has(.day-head-main:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
 .day-title { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 700;
-  display: block; letter-spacing: -0.015em; line-height: 1.25; }
+  flex: 1; min-width: 0; letter-spacing: -0.015em; line-height: 1.25; }
 /* CHANGED: moved out of the title button into .day-meta, so it takes the slack
    between the avatar and the Iniciar pill. Clamped to two lines because the real
    data runs long ("Posterior de coxa · Glúteo · Costas · Quadríceps · …") and an
@@ -193,18 +214,23 @@
 .day-sub { flex: 1 1 11ch; min-width: 11ch; font-size: var(--fs-xs); color: var(--text-secondary);
   line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; overflow: hidden; }
-.chev-btn { background: none; border: 0; color: var(--text-secondary); display: grid; place-items: center;
-  padding: 2px; flex-shrink: 0; font-size: var(--fs-2xs); }
-/* CHANGED: fs-xl -> 0.85em of fs-2xs (24px -> 14px at the shipped scale). The
-   generic .chev (global.css) is sized for list rows where it is the only trailing
-   affordance; here it sits beside the Iniciar pill and was competing with it.
-   Note the art is 27x18, and `mask-size: contain` in a 1em box fits the WIDER
-   side — so "font-size" is the chevron's WIDTH and the height comes out at 2/3 of
-   it (14px wide, ~9px tall). That is why sizing it by the usual text tokens read
-   as oversized: a 24px token meant a 24px-wide glyph.
-   home.css loads after global.css, so this wins — setting font-size on .chev-btn
-   alone would NOT, because .chev pins the glyph size directly. */
-.day-chev { transition: transform 0.2s; font-size: 0.85em; }
+/* CHANGED: the chevron is no longer wrapped in a .chev-btn. It stopped being a
+   button when the whole head became the expand target — two adjacent controls
+   doing the same thing cost every day a redundant tab stop — so it is now a bare
+   indicator sitting on line 1, after the day name.
+
+   The size is unchanged: 0.85 of --fs-2xs, which was 0.85em when the (now gone)
+   .chev-btn supplied that em. Written out in full so it no longer depends on a
+   parent that does not exist — inheriting from .day-head-main would have
+   resolved the em against the body size and blown the glyph up.
+
+   Why so small: the generic .chev (global.css) is sized for list rows where it
+   is the only trailing affordance. Note the art is 27x18 and `mask-size: contain`
+   in a 1em box fits the WIDER side — so "font-size" is the chevron's WIDTH and
+   the height comes out at 2/3 of it (14px wide, ~9px tall at the shipped scale).
+   That is why sizing it by the usual text tokens read as oversized: a 24px token
+   meant a 24px-wide glyph. home.css loads after global.css, so this wins. */
+.day-chev { transition: transform 0.2s; font-size: calc(var(--fs-2xs) * 0.85); }
 .day.open .day-chev { transform: rotate(180deg); color: var(--text-accent); }
 
 .exercises { list-style: none; padding: 0 12px 14px 20px; margin: 0; display: flex;
