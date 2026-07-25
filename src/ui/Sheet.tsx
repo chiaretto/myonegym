@@ -5,10 +5,14 @@ interface SheetProps {
   title: string
   onClose: () => void
   children: ReactNode
+  /** Float the panel in the middle of the screen instead of rising from the
+   *  bottom edge. For short modals that ask something rather than offering a
+   *  drawer of actions. */
+  centred?: boolean
 }
 
-/** Bottom sheet modal. Closes on backdrop click or Escape. */
-export function Sheet({ title, onClose, children }: SheetProps) {
+/** Bottom sheet modal (see `centred`). Closes on backdrop click or Escape. */
+export function Sheet({ title, onClose, children, centred = false }: SheetProps) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -16,7 +20,11 @@ export function Sheet({ title, onClose, children }: SheetProps) {
   }, [onClose])
 
   return (
-    <div className="sheet-backdrop" onClick={onClose} role="presentation">
+    <div
+      className={`sheet-backdrop${centred ? ' centred' : ''}`}
+      onClick={onClose}
+      role="presentation"
+    >
       <div
         className="sheet"
         role="dialog"

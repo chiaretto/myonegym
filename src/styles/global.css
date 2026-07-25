@@ -81,7 +81,7 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -
 /* Tab bar. CHANGED: the active tab is red and carries a short red indicator
    bar along the top edge (visible on the reference screenshot). */
 .tabbar {
-  position: sticky; bottom: 0; display: flex; border-top: 0.5px solid var(--border);
+  position: sticky; bottom: 0; z-index: 999; display: flex; border-top: 0.5px solid var(--border);
   background: var(--surface-0); padding-bottom: env(safe-area-inset-bottom);
 }
 .tabbar a {
@@ -207,12 +207,24 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
 .empty h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; color: var(--text-primary); }
 .empty p { font-size: var(--fs-sm); max-width: 260px; line-height: 1.55; }
 
-/* Modal / sheet */
+/* Modal / sheet.
+   z-index sits above .tabbar (999): a modal that the tab bar paints over is not
+   modal. Everything else in the app stays on the low scale (5/10/20/30). */
 .sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex;
-  align-items: flex-end; justify-content: center; z-index: 20; }
+  align-items: flex-end; justify-content: center; z-index: 1000; }
 .sheet { background: var(--surface-1); width: 100%; max-width: 480px; border-radius: 24px 24px 0 0;
   border-top: 0.5px solid var(--border); padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
   max-height: 88vh; overflow-y: auto; }
+
+/* Centred variant (ui/Sheet `centred`). For short, decision-shaped modals — the
+   gym switcher — where a bottom sheet reads as a drawer of options rather than
+   as a question. Opt-in per call site; the default stays a bottom sheet.
+   The safe-area padding goes away with it: floating clear of the bottom edge,
+   there is no home indicator to clear. */
+.sheet-backdrop.centred { align-items: center; padding: 20px; }
+.sheet-backdrop.centred > .sheet { border-radius: 24px; border: 0.5px solid var(--border);
+  padding: 20px 18px; max-height: min(88vh, 640px); }
+.sheet-backdrop.centred > .sheet > .sheet-actions { margin: 8px -18px -20px; padding: 12px 18px; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
 .sheet-head h2 { margin-bottom: 0; }
 .sheet-close { flex-shrink: 0; }
