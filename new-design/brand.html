@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050607" />
+  <title>MyOneGym — Marca, splash e ícone (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+  <style>
+    /* ---- splash screen (a shipped screen, so these rules are production CSS) -- */
+    .splash {
+      position: relative; overflow: hidden;
+      min-height: 100%; display: grid; grid-template-rows: 1fr auto;
+      justify-items: center; background-color: var(--surface-0);
+      background-image: url('reference/splash-reference.png');
+      background-size: cover; background-position: center;
+    }
+    .splash-lockup { align-self: center; display: grid; justify-items: center; gap: 14px;
+                     position: relative; padding: 0 24px; }
+    .splash-lockup img { width: 168px; height: auto; }
+    .splash-lockup .wordmark { font-size: 40px; letter-spacing: -0.03em; }
+    .splash-tagline { font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.34em;
+                      font-size: 10px; font-weight: 500; color: var(--text-secondary); }
+    .splash-values { position: relative; display: grid; justify-items: center; gap: 4px;
+                     padding-bottom: 52px; font-family: var(--font-mono); text-transform: uppercase;
+                     letter-spacing: 0.3em; font-size: 12px; font-weight: 500; }
+    .splash-values span:nth-child(1), .splash-values span:nth-child(3) { color: var(--text-secondary); }
+    .splash-values span:nth-child(2) { color: var(--accent); font-weight: 700; }
+    .splash-rule { width: 62px; height: 3px; border-radius: 3px; background: var(--accent); margin-top: 18px; }
+
+    /* ---- page scaffolding (mockup-only) ---------------------------------- */
+    .brand-wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+    .brand-wrap section { margin-bottom: 48px; }
+    .brand-wrap h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em;
+      color: var(--text-secondary); font-weight: 600; margin-bottom: 18px; padding-bottom: 10px;
+      border-bottom: 0.5px solid var(--border); }
+    .pair { display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; }
+    .phone { width: 320px; height: 660px; border-radius: 32px; overflow: hidden;
+             border: 0.5px solid var(--border-strong); }
+    .cap { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-secondary);
+           font-weight: 600; margin-top: 12px; text-align: center; }
+    .icon-tile { width: 148px; height: 148px; border-radius: 34px; display: grid; place-items: center;
+                 border: 0.5px solid var(--border); }
+    .icon-tile img { width: 74%; height: auto; }
+    .icon-tile.black { background: #14171D; }
+    .lockups { display: flex; flex-wrap: wrap; gap: 20px; }
+    .lockup-box { background: var(--surface-1); border: 0.5px solid var(--border);
+                  border-radius: var(--r-card); padding: 30px 34px; display: grid; place-items: center;
+                  gap: 14px; max-width: 100%; }
+    .lk-row { display: flex; align-items: center; gap: 14px; }
+    .lk-mark-lg { width: 150px } .lk-mark-md { width: 86px } .lk-mark-sm { width: 92px }
+    .lk-word-lg { font-size: 34px } .lk-word-md { font-size: 30px }
+
+    @media (max-width: 640px) {
+      .brand-wrap { padding-left: 12px; padding-right: 12px; }
+      .lockup-box { padding: 20px 16px; }
+      .lk-mark-lg { width: 110px } .lk-mark-md { width: 62px }
+      .lk-word-lg { font-size: 26px } .lk-word-md { font-size: 22px }
+      .phone { width: 100%; max-width: 320px; }
+    }
+  </style>
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Marca, splash e ícone</b></p>
+
+<div class="brand-wrap">
+
+  <section>
+    <h2>Assinaturas</h2>
+    <div class="lockups">
+      <div class="lockup-box">
+        <img class="lk-mark-lg" src="assets/logo-mark.png" alt="" />
+        <span class="wordmark lk-word-lg">My<em>One</em>Gym</span>
+        <span class="splash-tagline">Seu melhor. Todo dia.</span>
+        <span class="cap">Vertical (splash, sobre)</span>
+      </div>
+      <div class="lockup-box">
+        <span class="lk-row">
+          <img class="lk-mark-md" src="assets/logo-mark.png" alt="" />
+          <span class="wordmark lk-word-md">My<em>One</em>Gym</span>
+        </span>
+        <span class="cap">Horizontal (appbar da Home)</span>
+      </div>
+      <div class="lockup-box">
+        <img class="lk-mark-sm" src="assets/logo-mark.png" alt="" />
+        <span class="cap">Símbolo isolado (favicon, watermark)</span>
+      </div>
+    </div>
+    <p class="mock-note">
+      <strong>O símbolo é PNG</strong> (<code>assets/logo-mark.png</code>, 916×512, recortado de
+      <code>reference/app-icon.png</code> com fundo transparente). <strong>O logotipo “MyOneGym” é
+      texto</strong> em Poppins Bold com “One” em <code>#EC2C2E</code> — e não imagem — por dois motivos:
+      a arte de referência está <strong>escrita errado</strong> (“MyOneG<b>y</b>n”, com N no final), e
+      texto continua nítido em qualquer <code>--font-scale</code>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Splash screen</h2>
+    <div class="pair">
+      <div>
+        <div class="phone">
+          <div class="splash"></div>
+        </div>
+        <p class="cap">Splash (imagem de referência)</p>
+      </div>
+      <div>
+        <img src="reference/splash-reference.png" alt="Splash da referência"
+             style="width:272px;border-radius:22px;border:0.5px solid var(--border)" />
+        <p class="cap">Referência (identity-sheet.png)</p>
+      </div>
+    </div>
+    <p class="mock-note">
+      A splash da referência usa <strong>uma fotografia</strong> de fundo. Não existe essa foto no
+      repositório e não é possível recortá-la da arte de referência com qualidade utilizável, então a
+      proposta reconstrói a mesma atmosfera com elementos próprios da marca: brilho radial vermelho,
+      a textura <code>assets/pattern-dots.png</code> e o lockup vertical. Se você licenciar/produzir a
+      foto, ela entra como <code>background-image</code> no <code>.splash</code> e o resto continua igual.
+    </p>
+  </section>
+
+  <section>
+    <h2>Ícone do app</h2>
+    <div class="pair" style="align-items:flex-end">
+      <div>
+        <div class="icon-tile black"><img src="assets/logo-mark.png" alt="" /></div>
+        <p class="cap">Ícone principal — #14171D</p>
+      </div>
+    </div>
+    <p class="mock-note">
+      O ícone do app é o <strong>símbolo PNG sobre fundo #14171D</strong>. Para o PWA é preciso exportar
+      <code>icon-192.png</code>, <code>icon-512.png</code> e uma versão <em>maskable</em> (símbolo a
+      ~70% do quadro); ver <code>README.md</code> § "Ícone do PWA".
+    </p>
+  </section>
+
+</div>
+
+</body>
+</html>

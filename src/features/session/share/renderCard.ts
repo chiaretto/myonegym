@@ -8,31 +8,41 @@ import type { ShareCard, ShareRow } from './shareModel'
  * spec). A shared image is a fixed design, not a responsive screen, so it looks
  * the same no matter how the user set up Aparência.
  *
- * The tokens below are copied from `tokens.css` (Momentum, dark-only). They are
- * kept in one block so the drift from `session.css` stays cheap to fix — the
- * card is deliberately *similar to* the session detail, not a mirror of it.
+ * The tokens below are copied from `tokens.css` ("OneGym Red", dark-only).
+ * Canvas cannot read CSS custom properties, so this block is an unavoidable
+ * MIRROR: every palette change has to be applied here by hand or the shared PNG
+ * silently keeps the old identity. Keeping it in one block is what makes that
+ * cheap — the card is deliberately *similar to* the session detail, not a copy.
+ *
+ * `borderStrong` was added because a literal `rgba(255,255,255,0.14)` had escaped
+ * this block and was sitting inline in `drawCheck`, which meant one colour could
+ * drift independently of the other eleven.
  */
 const C = {
-  bg: '#0b0b0e', // --surface-0
-  row: '#151519', // --surface-1
-  chip: '#1d1d23', // --surface-2
-  text: '#f4f4f6', // --text-primary
-  dim: '#8b8b95', // --text-secondary
-  muted: '#5f5f68', // --text-muted
-  accent: '#ff5a36', // --accent
-  accent2: '#ff7a52', // --accent-2 / --text-accent
-  accentTint: 'rgba(255, 90, 54, 0.15)', // --bg-accent
-  onAccent: '#160a06', // --on-accent
+  bg: '#050607', // --surface-0
+  row: '#0c0f14', // --surface-1
+  chip: '#14171d', // --surface-2
+  text: '#ffffff', // --text-primary
+  dim: '#8a8f98', // --text-secondary
+  muted: '#5c6069', // --text-muted
+  accent: '#ec2c2e', // --accent
+  accent2: '#ba2324', // --accent-2 (bottom stop of the vertical gradient)
+  accentTint: 'rgba(236, 44, 46, 0.16)', // --bg-accent
+  onAccent: '#ffffff', // --on-accent — white on red, per the reference
   border: 'rgba(255, 255, 255, 0.07)', // --border
+  borderStrong: 'rgba(255, 255, 255, 0.15)', // --border-strong
 } as const
 
-const TITLE = "700 30px 'Sora', sans-serif"
-const NAME = "600 16px 'Manrope', sans-serif"
-const META = "500 13px 'Manrope', sans-serif"
-const CAT = "500 12px 'Manrope', sans-serif"
-const BADGE = "700 14px 'Manrope', sans-serif"
-const UNIT = "600 11px 'Manrope', sans-serif"
-const MARK = "700 12px 'JetBrains Mono', monospace"
+// One family now (Poppins), matching the identity sheet. Sizes stay literal and
+// independent of --font-scale: a shared PNG is a fixed-size design piece.
+const TITLE = "700 30px 'Poppins', sans-serif"
+const NAME = "600 16px 'Poppins', sans-serif"
+const META = "500 13px 'Poppins', sans-serif"
+const CAT = "500 12px 'Poppins', sans-serif"
+const BADGE = "700 14px 'Poppins', sans-serif"
+const UNIT = "600 11px 'Poppins', sans-serif"
+// The micro-label role: Poppins, not a monospace face, mirroring --font-mono.
+const MARK = "700 12px 'Poppins', sans-serif"
 
 const SCALE = 2 // 540 design units → 1080px PNG
 const W = 540
@@ -155,7 +165,7 @@ function drawCheck(ctx: CanvasRenderingContext2D, x: number, y: number, size: nu
     ctx.stroke()
   } else {
     rrect(ctx, x + 0.75, y + 0.75, size - 1.5, size - 1.5, 8)
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)' // --border-strong
+    ctx.strokeStyle = C.borderStrong
     ctx.lineWidth = 1.5
     ctx.stroke()
   }

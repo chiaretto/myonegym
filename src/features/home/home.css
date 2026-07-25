@@ -1,54 +1,203 @@
-/* Weekly training summary — progress ring over "done / total treinos" */
+/* Home — "MyOneGym Red" identity.
+   Drop-in replacement for src/features/home/home.css.
+   Deltas vs the shipped sheet are marked NEW / CHANGED. */
+
+/* Weekly training summary.
+   CHANGED — this replaces the progress ring with a seven-day track (proposal A in
+   new-design/week-proposals.html). The ring answered "how much" but never
+   "when", and "when" is what makes someone notice they have been away for three
+   days. The count stays the headline; the track explains it.
+
+   The old .week-ring / .ring-track / .ring-fill / .week-pct rules are gone from
+   this sheet — they now live in css/week.css, which only the proposal page uses.
+   Removing them here is deliberate: HomePage.tsx must stop rendering the ring
+   markup when this lands, otherwise it paints an unstyled SVG.
+
+   Goal is a fixed 7, per the product decision. Today HomePage.tsx:132 passes
+   days.length as the total, so implementing this means changing that to 7 — a
+   real behaviour change, not just CSS. See README.md § "Resumo da semana".
+
+   The card stacks instead of sitting in a row: seven cells need the full width
+   to keep their weekday labels, which are the whole point of the track. */
 .week-card {
-  display: flex; align-items: center; gap: 16px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+  display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;
   background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
-  padding: 16px 18px;
+  padding: 18px 20px 20px;
 }
-.week-ring { position: relative; width: 64px; height: 64px; flex-shrink: 0; }
-.week-ring svg { display: block; }
-.ring-track { fill: none; stroke: var(--surface-3); stroke-width: 6; }
-.ring-fill { fill: none; stroke: var(--accent); stroke-width: 6; stroke-linecap: round;
-  transition: stroke-dashoffset 0.4s ease; }
-.week-pct { position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: var(--fs-sm); font-weight: 700; font-variant-numeric: tabular-nums; }
-.week-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.week-count { font-family: var(--font-title); font-size: var(--fs-3xl); font-weight: 800;
-  line-height: 1; font-variant-numeric: tabular-nums; }
-.week-of { font-family: var(--font-sans); font-size: var(--fs-sm); font-weight: 600; color: var(--text-secondary); }
+/* NEW: watermark. Sits behind the content, clipped by the card's radius. */
+.week-card::after {
+  content: ''; position: absolute; right: -8%; top: 50%; transform: translateY(-50%);
+  width: 42%; height: 150%;
+  background: url('../../assets/logo-mark.png') right center / contain no-repeat;
+  opacity: 0.07; pointer-events: none;
+}
+.week-head { position: relative; display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 12px; }
+.week-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; position: relative; }
+.week-count { font-family: var(--font-title); font-size: var(--fs-4xl); font-weight: 700;
+  line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.week-of { font-family: var(--font-sans); font-size: var(--fs-lg); font-weight: 400;
+  color: var(--text-secondary); letter-spacing: 0; }
+
+/* NEW: streak badge — consecutive days trained. Reuses the flame from the
+   identity sheet's ELEMENTOS VISUAIS panel. Derivable from completedAt, but it
+   is a metric the app does not compute yet, so it needs a helper. Drop the
+   element to drop the feature; nothing else depends on it. */
+.week-streak {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  padding: 5px 11px; border-radius: var(--r-pill);
+  background: var(--bg-accent); border: 0.5px solid var(--border-accent);
+  color: var(--text-accent); font-size: var(--fs-xs); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.week-streak .png-ic { font-size: 1.1em; }
+
+/* NEW: the seven-day track. Monday-first, matching lib/week.ts's startOfWeek. */
+.week-track {
+  position: relative; list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+}
+.wd { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+
+/* One box per day. 2.05em of --fs-xs lands ~37px at the shipped 150% scale and
+   scales with the user's font-size preference, like every other control. */
+.wd-dot {
+  font-size: var(--fs-xs);
+  width: 2.05em; height: 2.05em; border-radius: 50%;
+  display: grid; place-items: center; box-sizing: border-box;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.wd-dot .ti { font-size: 1.15em; }
+.wd-lab {
+  font-size: var(--fs-2xs); font-weight: 600; color: var(--text-muted);
+  text-transform: lowercase; letter-spacing: 0.02em; line-height: 1;
+}
+
+/* done — the only filled state, so a perfect week reads as a solid red row. */
+.wd.done .wd-dot { background: var(--accent-grad); color: var(--on-accent); border: 0; }
+
+/* blank — a past day with no session. A filled dark disc, not an outline: a 1px
+   --border outline is 7% white and effectively invisible, and this has to read as
+   "an empty day" rather than as nothing at all. Filled-dark also separates it
+   from .future, which is a dashed outline — past-and-empty vs not-yet. */
+.wd.blank .wd-dot { background: var(--surface-3); border: 0; }
+
+/* today — an open red ring: still available, not yet a gap. */
+.wd.today .wd-dot { background: var(--bg-accent); border: 2px solid var(--accent); }
+.wd.today .wd-lab { color: var(--text-accent); }
+
+/* future — empty and dashed, so it reads as "not yet" rather than "missed". */
+.wd.future .wd-dot { background: transparent; border: 1.5px dashed var(--border-strong); }
+
+/* multi — more than one session on the same day. The count sums SESSIONS, so two
+   on Tuesday count twice; without this the number and the track disagree and it
+   looks like a bug. Open question in README.md: sessions or days? */
+.wd.multi .wd-dot { position: relative; }
+.wd.multi .wd-dot::after {
+  content: ''; position: absolute; right: -1px; bottom: -1px;
+  width: 0.62em; height: 0.62em; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--surface-1);
+}
+
+/* Narrow phones: the cells are em-based and the grid fractional, so seven fit at
+   360px, but the gap gets tight — pull it in. */
+@media (max-width: 380px) {
+  .week-track { gap: 4px; }
+  .wd { gap: 5px; }
+}
 
 /* Day accordion */
-.accordion { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-.day { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
-  overflow: hidden; }
+.accordion { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.day { position: relative; background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); overflow: hidden; }
+/* NEW: the red spine down the left edge of every day card — the single strongest
+   signature of the reference home screen. */
+.day::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: var(--accent); z-index: 1;
+}
 .day.open { border-color: var(--border-accent); }
 .day.featured { border-color: var(--border-accent); background:
-  linear-gradient(var(--bg-accent), transparent 64px), var(--surface-1); }
-.day-eyebrow { display: block; color: var(--text-accent); padding: 12px 16px 0; }
-.day-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; }
-.day.featured .day-head { padding-top: 4px; }
-.day-head-main { flex: 1; min-width: 0; display: block; background: none; border: 0;
-  text-align: left; color: var(--text-primary); padding: 4px 0; }
-.day-title { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 700; display: block; }
-.day-sub { font-size: var(--fs-xs); color: var(--text-secondary); margin-top: 3px; display: block; }
+  linear-gradient(var(--bg-accent), transparent 88px), var(--surface-1); }
+.day-eyebrow { display: block; color: var(--text-accent); padding: 14px 16px 0 20px; }
+
+/* CHANGED: the head is now TWO stacked lines.
+     line 1 — the day name on its own, so a long title gets the full card width
+     line 2 — avatar + categories + Iniciar pill + chevron
+   Previously all four sat on one row, which left the title competing with the
+   pill for horizontal space. */
+.day-head { display: flex; flex-direction: column; gap: 10px; padding: 14px 12px 14px 20px; }
+.day.featured .day-head { padding-top: 6px; }
+
+/* The four items only fit on one row when the categories still get a readable
+   share. Measured at 430px: the avatar + pill + chevron take 161px at the 100%
+   font scale but 215px at the shipped 150% one, which squeezed the categories to
+   108px (and to 53px at 375px) — every row truncated, including the short ones.
+   So the actions are grouped and the row is allowed to wrap: .day-sub keeps an
+   11ch floor, and when even that does not fit the actions drop to their own line
+   rather than crushing the text.
+
+   11ch is measured, not guessed. At 430px/150% the row must satisfy
+   45 (avatar) + 12 + floor + 12 + 163 (actions) <= 360, so the floor ceiling is
+   128px. One "ch" of Poppins at this size is 11.3px, so 11ch = 124px fits and
+   13ch = 147px does not. Below 430px the floor loses and the actions wrap, which
+   is the intended degradation. */
+.day-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.day-actions { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
+
+/* NEW: circular muscle-group avatar. The art inside is a PNG mask
+   (.png-ic .pi-chest / .pi-core / .pi-back / .pi-legs / .pi-shoulders). */
+.day-ic {
+  /* CHANGED: 2.5em -> 2em (56px -> 45px at the shipped 150% scale). In the
+     reference the avatar shares the row with the day name and anchors the card;
+     here the name has its own line above, so the avatar is metadata and the
+     extra 11px are worth more to the categories beside it. Still scales with the
+     user's font-size preference. */
+  font-size: var(--fs-lg);
+  width: 2em; height: 2em; border-radius: 50%; flex-shrink: 0;
+  background: radial-gradient(circle at 34% 26%, #2c303a, #14161b 78%);
+  border: 0.5px solid var(--border);
+  display: grid; place-items: center;
+  color: var(--accent);
+}
+/* 1.24em of 2em keeps the art at ~62% of the circle — the ratio measured in the
+   reference (61px of art in a 104px circle = 0.587). */
+.day-ic .png-ic { font-size: 1.24em; }
+
+/* CHANGED: no longer flex:1 in a row — it is now the full-width first line. */
+.day-head-main { width: 100%; min-width: 0; display: block; background: none; border: 0;
+  text-align: left; color: var(--text-primary); padding: 0; }
+.day-title { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 700;
+  display: block; letter-spacing: -0.015em; line-height: 1.25; }
+/* CHANGED: moved out of the title button into .day-meta, so it takes the slack
+   between the avatar and the Iniciar pill. Clamped to two lines because the real
+   data runs long ("Posterior de coxa · Glúteo · Costas · Quadríceps · …") and an
+   unbounded wrap would push the pill down and make the rows uneven. */
+.day-sub { flex: 1 1 11ch; min-width: 11ch; font-size: var(--fs-xs); color: var(--text-secondary);
+  line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2; overflow: hidden; }
 .chev-btn { background: none; border: 0; color: var(--text-secondary); display: grid; place-items: center;
-  padding: 4px; flex-shrink: 0; }
+  padding: 4px; flex-shrink: 0; font-size: var(--fs-xl); }
 .day-chev { transition: transform 0.2s; }
 .day.open .day-chev { transform: rotate(180deg); color: var(--text-accent); }
 
-.exercises { list-style: none; padding: 0 10px 12px; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.exercises { list-style: none; padding: 0 12px 14px 20px; margin: 0; display: flex;
+  flex-direction: column; gap: 8px; }
 .ex-empty { font-size: var(--fs-xs); color: var(--text-muted); padding: 8px; }
-.exercise { display: flex; align-items: center; gap: 12px; padding: 9px 10px; border-radius: var(--r-row);
+.exercise { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-row);
   background: var(--surface-2); }
-.exercise:active { filter: brightness(1.25); }
-.thumb { width: 46px; height: 46px; border-radius: 12px; object-fit: cover; flex-shrink: 0;
+.exercise:active { filter: brightness(1.2); }
+.thumb { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; flex-shrink: 0;
   background: var(--surface-3); border: 0.5px solid var(--border); }
 .media-fallback.thumb { display: grid; place-items: center; color: var(--text-muted); font-size: var(--fs-3xl); }
 .ex-body { flex: 1; min-width: 0; }
-.ex-name { font-size: var(--fs-sm); font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ex-cat { font-size: var(--fs-2xs); color: var(--text-secondary); display: block; margin-top: 2px; }
+.ex-name { font-size: var(--fs-sm); font-weight: 600; display: block; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.ex-cat { font-size: var(--fs-2xs); color: var(--text-secondary); display: block; margin-top: 3px; }
 
-.weight-badge { flex-shrink: 0; padding: 6px 10px; background: var(--surface-1); border: 0.5px solid var(--border);
-  border-radius: 10px; color: var(--text-primary); font-weight: 700; font-size: var(--fs-sm); line-height: 1;
-  white-space: nowrap; font-variant-numeric: tabular-nums; }
+.weight-badge { flex-shrink: 0; padding: 7px 12px; background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-pill); color: var(--text-primary); font-weight: 700; font-size: var(--fs-sm);
+  line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .weight-badge.empty { color: var(--text-accent); border-color: var(--border-accent); border-style: dashed;
   font-weight: 600; font-size: var(--fs-2xs); }

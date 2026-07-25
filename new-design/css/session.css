@@ -1,0 +1,133 @@
+/* Workout session runner + read-only detail + history — "MyOneGym Red" identity.
+   Drop-in replacement for src/features/session/session.css. */
+
+/* Session hero / status card */
+.session-hero {
+  background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 18px; display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px;
+  position: relative; overflow: hidden;
+}
+/* NEW: same brand watermark as the week card, so the two "status" cards rhyme. */
+.session-hero::after {
+  content: ''; position: absolute; right: -8%; top: 50%; transform: translateY(-50%);
+  width: 42%; height: 150%;
+  background: url('../assets/logo-mark.png') right center / contain no-repeat;
+  opacity: 0.055; pointer-events: none;
+}
+.session-day { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700;
+  line-height: 1.25; letter-spacing: -0.015em; position: relative; }
+.session-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px;
+  position: relative; }
+.start-time { font-size: var(--fs-2xs); color: var(--text-secondary); display: inline-flex;
+  align-items: center; gap: 5px; }
+
+/* Progress */
+.progress-row { padding: 12px 2px 16px; display: flex; flex-direction: column; gap: 8px; }
+.progress-head { display: flex; justify-content: space-between; align-items: center;
+  font-size: var(--fs-2xs); color: var(--text-secondary); font-weight: 500; }
+.progress-head .num { color: var(--text-accent); font-weight: 700; }
+.progress-bar { height: 8px; background: var(--surface-3); border-radius: var(--r-pill); overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--accent-grad); border-radius: var(--r-pill);
+  transition: width 0.2s ease-out; }
+
+/* Entries (runner + read-only) — rows that tap through to a detail */
+.entries { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.entry { display: flex; align-items: center; gap: 12px; padding: 9px 13px 9px 11px;
+  border-radius: var(--r-row); background: var(--surface-1); border: 0.5px solid var(--border); }
+.entry.done { opacity: 0.5; }
+.entry.done .entry-name { text-decoration: line-through; }
+.entry-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; color: inherit; }
+.checkbox {
+  font-size: var(--fs-xs); width: 2.1em; height: 2.1em; border-radius: 50%;
+  border: 1.5px solid var(--border-strong); background: transparent;
+  display: grid; place-items: center; color: transparent; flex-shrink: 0; padding: 0;
+}
+.checkbox.checked { background: var(--accent-grad); border-color: transparent; color: var(--on-accent); }
+.checkbox.readonly { cursor: default; }
+.thumb { width: 48px; height: 48px; border-radius: 14px; object-fit: cover; flex-shrink: 0;
+  background: var(--surface-3); border: 0.5px solid var(--border); }
+.media-fallback.thumb { display: grid; place-items: center; color: var(--text-muted); font-size: var(--fs-3xl); }
+.entry-body { flex: 1; min-width: 0; }
+.entry-name { font-size: var(--fs-sm); font-weight: 600; display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.entry-cat { font-size: var(--fs-2xs); color: var(--text-secondary); margin-top: 3px; }
+.used-weight {
+  display: inline-flex; align-items: center; gap: 4px; padding: 6px 11px; background: var(--surface-2);
+  border: 0.5px solid var(--border); border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 700;
+  color: var(--text-primary); white-space: nowrap; font-variant-numeric: tabular-nums; flex-shrink: 0;
+}
+.used-weight .unit { font-size: var(--fs-2xs); color: var(--text-secondary); font-weight: 500; }
+.used-weight .pencil { color: var(--text-muted); margin-left: 2px; }
+.used-weight.empty { border-style: dashed; border-color: var(--border-accent); color: var(--text-accent);
+  font-weight: 600; font-size: var(--fs-2xs); }
+
+/* Guided stepper on the exercise detail: Concluído on top, Voltar/Avançar below
+   (stacks so all three labels fit at any font scale). */
+.entry-stepper { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.entry-nav-row { display: flex; gap: 8px; }
+.entry-nav-row .btn { flex: 1; }
+.entry-done-state { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px; font-size: var(--fs-sm); color: var(--text-secondary); }
+.entry-done-state.done { color: var(--text-accent); font-weight: 600; }
+
+/* Done-state variant of the primary action: a calm, confirmed look (accent-tinted,
+   not the bold solid CTA) so a completed exercise is visibly different. */
+.btn.done { background: var(--bg-accent); color: var(--text-accent); border-color: var(--border-accent);
+  box-shadow: none; }
+
+/* "Marque ao menos um exercício" hint under a disabled Concluir treino */
+.complete-hint { text-align: center; font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 8px; }
+
+/* Completion footer (read-only detail) */
+.session-done-ts { text-align: center; font-size: var(--fs-2xs); color: var(--text-secondary);
+  padding: 14px 0 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+
+/* Share actions (read-only detail): stacked so the longer "sem pesos" label
+   never truncates at 390px. */
+.share-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+/* History */
+.context-strip { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
+.count-hint { font-size: var(--fs-2xs); color: var(--text-muted); }
+.month-label { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--text-muted); font-weight: 600; padding: 16px 4px 8px; }
+.session-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+/* CHANGED: history cards carry the same red spine as the day cards on Home, so
+   "a training day" reads the same across screens. */
+.session-card {
+  position: relative; overflow: hidden;
+  background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
+  padding: 16px 16px 16px 20px; display: flex; align-items: center; gap: 12px; width: 100%;
+  text-align: left; color: var(--text-primary);
+}
+.session-card::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--accent);
+}
+.session-card:active { background: var(--surface-2); }
+.session-info { flex: 1; min-width: 0; }
+.session-name { font-family: var(--font-title); font-size: var(--fs-md); font-weight: 700; line-height: 1.25;
+  letter-spacing: -0.015em; }
+.session-sub { font-size: var(--fs-2xs); color: var(--text-secondary); margin-top: 5px; }
+.done-badge {
+  display: inline-flex; align-items: center; gap: 4px; padding: 7px 13px; border-radius: var(--r-pill);
+  font-size: var(--fs-2xs); font-weight: 700; background: var(--bg-accent); color: var(--text-accent);
+  white-space: nowrap; flex-shrink: 0; border: 0.5px solid var(--border-accent);
+}
+.done-badge.full { background: var(--accent-grad); color: var(--on-accent); border-color: transparent; }
+
+/* Home day-header start/resume affordance.
+   CHANGED: every card's Iniciar is the solid red pill (the reference draws it
+   that way on all five day cards), with the PNG play glyph in white. */
+.day-start {
+  display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: var(--r-pill);
+  border: 0; background: var(--accent-grad); color: var(--on-accent);
+  font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  box-shadow: 0 8px 20px -10px var(--accent);
+}
+/* ic-play.png is an OUTLINE triangle (hollow), matching the reference — measured
+   there at 14x17 screenshot px, i.e. ~13 CSS px at this font scale. 1.05em lands
+   at ~20px, which is close to the asset's native 21px height so it is not
+   resampled. It reading as "missing" was never the size: it was the mask alpha,
+   fixed in icons.css. */
+.day-start .png-ic { font-size: 1.05em; }
+.day-start:active { filter: brightness(0.92); }

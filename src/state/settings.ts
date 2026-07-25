@@ -5,7 +5,9 @@ import { persist } from 'zustand/middleware'
  *  Floor is 1.0 so inputs stay >=16px effective (no iOS zoom-on-focus). */
 export const FONT_SCALE_MIN = 1.0
 export const FONT_SCALE_MAX = 2.0
-export const FONT_SCALE_DEFAULT = 1.5
+/** Keep in sync with --font-scale in src/styles/tokens.css, or the app paints at
+ *  one size and then jumps to the other on hydration. */
+export const FONT_SCALE_DEFAULT = 1.25
 export const FONT_SCALE_STEP = 0.05
 
 export function clampFontScale(v: number): number {

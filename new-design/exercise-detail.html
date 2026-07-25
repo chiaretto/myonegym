@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <title>MyOneGym — Detalhe do exercício (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/exercise.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Detalhe do exercício</b> · rota <code>/exercise/:id</code></p>
+
+<div class="app">
+  <div class="mock-statusbar">
+    <span>21:41</span>
+    <span class="right"><i class="ti ti-bluetooth"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i> 65%</span>
+  </div>
+
+  <header class="appbar">
+    <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <h1>Supino reto com barra</h1>
+  </header>
+
+  <main class="screen has-action-bar" style="--action-bar-h: 152px">
+    <div class="hero">
+      <div class="media-fallback hero-media"><i class="png-ic pi-dumbbell"></i></div>
+    </div>
+
+    <div class="ex-head">
+      <div class="ex-chips">
+        <span class="chip"><i class="ti ti-tag" style="font-size:.85em"></i> Peito</span>
+        <span class="chip"><i class="ti ti-tag" style="font-size:.85em"></i> Tríceps</span>
+        <span class="chip"><i class="ti ti-tag" style="font-size:.85em"></i> Ombros</span>
+      </div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Seções do exercício">
+      <button class="on">Detalhe</button>
+      <button>Observações</button>
+      <button>Foto</button>
+    </div>
+
+    <!-- Peso alvo, estado de leitura -->
+    <section class="weight-card">
+      <div class="wc-head">
+        <span class="wc-label">Peso alvo</span>
+        <span class="chip accent"><i class="png-ic pi-building"></i> Fit Park</span>
+      </div>
+      <div class="wc-view">
+        <span class="wc-value">70 kg</span>
+        <button class="btn subtle" style="width:auto"><i class="ti ti-pencil"></i> Editar</button>
+      </div>
+    </section>
+
+    <!-- Peso alvo, estado de edição (stepper + unidade) -->
+    <section class="weight-card">
+      <div class="wc-head">
+        <span class="wc-label">Peso alvo · editando</span>
+      </div>
+      <div class="wc-edit">
+        <div class="wc-stepper">
+          <button class="step-btn" aria-label="Diminuir"><i class="ti ti-minus"></i></button>
+          <input class="wc-input" value="72,5" inputmode="decimal" aria-label="Peso" />
+          <button class="step-btn accent" aria-label="Aumentar"><i class="ti ti-plus"></i></button>
+        </div>
+        <div class="unit-seg" role="group" aria-label="Unidade">
+          <button class="on">kg</button>
+          <button>lb</button>
+          <button>placas</button>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn subtle">Cancelar</button>
+          <button class="btn primary"><i class="ti ti-device-floppy"></i> Salvar</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="history">
+      <div class="section-head">
+        <h3>
+          <i class="png-ic pi-history"></i> Histórico
+          <span class="count"> · nesta academia</span>
+        </h3>
+      </div>
+
+      <div class="spark">
+        <svg viewBox="0 0 300 44" preserveAspectRatio="none" aria-hidden="true">
+          <!-- cor pelo token, não literal: o sparkline acompanha --accent -->
+          <polyline points="4,36 54,33 104,26 154,22 204,14 254,10 296,6"
+                    fill="none" style="stroke:var(--accent)" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round" />
+          <circle cx="296" cy="6" r="3.5" style="fill:var(--accent)" />
+        </svg>
+      </div>
+
+      <ul class="timeline">
+        <li class="tl-item current">
+          <span class="tl-dot"></span>
+          <div class="tl-content">
+            <div class="tl-left">
+              <span class="tl-value">70 <span class="u">kg</span></span>
+              <span class="tl-date">hoje</span>
+            </div>
+            <span class="tl-delta up"><i class="ti ti-arrow-up" style="font-size:.85em"></i> 2,5 kg</span>
+            <button class="tl-delete" aria-label="Excluir registro"><i class="ti ti-trash"></i></button>
+          </div>
+        </li>
+        <li class="tl-item">
+          <span class="tl-dot"></span>
+          <div class="tl-content">
+            <div class="tl-left">
+              <span class="tl-value">67,5 <span class="u">kg</span></span>
+              <span class="tl-date">há 6 dias</span>
+            </div>
+            <span class="tl-delta up"><i class="ti ti-arrow-up" style="font-size:.85em"></i> 2,5 kg</span>
+            <button class="tl-delete" aria-label="Excluir registro"><i class="ti ti-trash"></i></button>
+          </div>
+        </li>
+        <li class="tl-item">
+          <span class="tl-dot"></span>
+          <div class="tl-content">
+            <div class="tl-left">
+              <span class="tl-value">65 <span class="u">kg</span></span>
+              <span class="tl-date">há 13 dias</span>
+            </div>
+            <span class="tl-delta first">primeiro</span>
+            <button class="tl-delete" aria-label="Excluir registro"><i class="ti ti-trash"></i></button>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- StepperBar: guided navigation inside a training day -->
+  <div class="action-bar">
+    <div class="entry-nav-row">
+      <button class="btn subtle"><i class="png-ic pi-chevron-left"></i> Voltar</button>
+      <button class="btn subtle">Avançar <i class="png-ic pi-chevron-right"></i></button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

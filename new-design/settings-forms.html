@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <title>MyOneGym — Listas, formulários e estados (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/appearance.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+  <style>
+    /* mockup-only: stack four phone screens side by side on a wide window */
+    .strip { display: flex; flex-wrap: wrap; gap: 28px; justify-content: center;
+             padding: 56px 20px 60px; }
+    /* each column is a fixed phone width, but may shrink on a narrow window
+       (min-width:0 — otherwise the flex item refuses to go below its content) */
+    .strip > div { width: 360px; max-width: 100%; min-width: 0; }
+    .strip > div > .app { width: 100%; border: 0.5px solid var(--border); border-radius: 28px;
+                    overflow: hidden; min-height: 0; height: 900px; position: relative; }
+    .strip .screen { overflow-y: auto; }
+    .strip-cap { text-align: center; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+                 color: var(--text-secondary); font-weight: 600; padding: 12px 0 0; }
+  </style>
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Listas, formulários e estados</b></p>
+
+<div class="strip">
+
+  <!-- ------------------------------------------------ 1. lista + filtros -- -->
+  <div>
+  <div class="app">
+    <header class="appbar">
+      <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+      <h1>Exercícios</h1>
+    </header>
+    <main class="screen has-action-bar" style="--action-bar-h:92px">
+      <div class="filters">
+        <div class="field">
+          <label for="q">Buscar</label>
+          <input id="q" value="supino" />
+        </div>
+        <div class="filters-row">
+          <div class="field">
+            <label for="c">Categoria</label>
+            <select id="c"><option>Peito</option></select>
+          </div>
+          <div class="field">
+            <label for="d">Dia</label>
+            <select id="d"><option>Todos</option></select>
+          </div>
+        </div>
+      </div>
+      <div class="group">
+        <a class="row" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="row-body">
+            <span class="row-title">Supino reto com barra</span>
+            <span class="row-sub">Peito · Tríceps · Ombros</span>
+          </span>
+          <i class="png-ic pi-chevron-right chev"></i>
+        </a>
+        <a class="row" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="row-body">
+            <span class="row-title">Supino inclinado com barra</span>
+            <span class="row-sub">Peito · Ombros</span>
+          </span>
+          <i class="png-ic pi-chevron-right chev"></i>
+        </a>
+        <a class="row" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="row-body">
+            <span class="row-title">Supino máquina</span>
+            <span class="row-sub">Peito</span>
+          </span>
+          <i class="png-ic pi-chevron-right chev"></i>
+        </a>
+      </div>
+    </main>
+    <div class="action-bar">
+      <button class="btn primary"><i class="ti ti-plus"></i> Novo exercício</button>
+    </div>
+  </div>
+  <p class="strip-cap">Lista com filtros · /settings/exercises</p>
+  </div>
+
+  <!-- ------------------------------------------------------ 2. formulário -- -->
+  <div>
+  <div class="app">
+    <header class="appbar">
+      <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+      <h1>Novo dia de treino</h1>
+    </header>
+    <main class="screen has-action-bar" style="--action-bar-h:96px">
+      <div class="field">
+        <label for="n">Nome do dia</label>
+        <input id="n" value="Dia 1 – Peito e Tríceps" />
+      </div>
+      <div class="field">
+        <label>Categorias</label>
+        <div class="chip-select">
+          <button class="chip-toggle on"><i class="ti ti-check" style="font-size:.85em"></i> Peito</button>
+          <button class="chip-toggle on"><i class="ti ti-check" style="font-size:.85em"></i> Tríceps</button>
+          <button class="chip-toggle">Ombros</button>
+          <button class="chip-toggle">Costas</button>
+          <button class="chip-toggle">Bíceps</button>
+          <button class="chip-toggle">Core</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="e">Nome curto</label>
+        <input id="e" value="" placeholder="opcional" />
+        <span class="err">Informe um nome com no mínimo 2 caracteres.</span>
+      </div>
+      <div class="group-label">Exercícios do dia</div>
+      <div class="group">
+        <div class="row">
+          <span class="row-ic solid"><i class="ti ti-check"></i></span>
+          <span class="row-body"><span class="row-title">Supino reto com barra</span></span>
+          <span class="row-meta">1</span>
+        </div>
+        <div class="row">
+          <span class="row-ic solid"><i class="ti ti-check"></i></span>
+          <span class="row-body"><span class="row-title">Crucifixo reto</span></span>
+          <span class="row-meta">2</span>
+        </div>
+        <div class="row">
+          <span class="row-ic"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="row-body"><span class="row-title">Tríceps testa</span></span>
+        </div>
+      </div>
+    </main>
+    <div class="action-bar">
+      <div class="form-actions">
+        <button class="btn subtle">Cancelar</button>
+        <button class="btn primary"><i class="ti ti-device-floppy"></i> Salvar</button>
+      </div>
+    </div>
+  </div>
+  <p class="strip-cap">Formulário · /settings/days/new</p>
+  </div>
+
+  <!-- ------------------------------------------------------- 3. aparência -- -->
+  <div id="aparencia">
+  <div class="app">
+    <header class="appbar">
+      <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+      <h1>Aparência</h1>
+    </header>
+    <main class="screen">
+      <div class="group-label">Tamanho da fonte</div>
+      <div class="group fs-card">
+        <div class="fs-value">150%</div>
+        <input class="fs-slider" type="range" min="100" max="200" value="150" aria-label="Tamanho da fonte" />
+        <div class="fs-ends"><span>100%</span><span>200%</span></div>
+      </div>
+
+      <div class="group-label">Prévia</div>
+      <div class="group fs-preview">
+        <span class="p-title">Supino reto com barra</span>
+        <span class="p-body">4 séries · 8–12 repetições · descanso de 90 segundos.</span>
+        <span class="p-badge">70 kg</span>
+      </div>
+
+      <div class="group-label">Elementos visuais</div>
+      <div class="group" style="padding:20px;display:flex;gap:22px;justify-content:center;font-size:var(--fs-4xl)">
+        <i class="png-ic pi-dumbbell" style="color:var(--accent)"></i>
+        <i class="png-ic pi-muscle"></i>
+        <i class="png-ic pi-flame" style="color:var(--accent)"></i>
+        <i class="png-ic pi-timer" style="color:var(--accent)"></i>
+        <i class="png-ic pi-target"></i>
+      </div>
+    </main>
+  </div>
+  <p class="strip-cap">Aparência · /settings/appearance</p>
+  </div>
+
+  <!-- ---------------------------------------- 4. estado vazio + bottom sheet -- -->
+  <div>
+  <div class="app">
+    <header class="appbar">
+      <h1>
+        <img class="brand-mark" src="assets/logo-mark.png" alt="MyOneGym" />
+        <span class="wordmark">My<em>One</em>Gym</span>
+      </h1>
+      <span class="spacer"></span>
+      <button class="chip accent"><i class="png-ic pi-building"></i> Sem academia <i class="png-ic pi-chevron-down"></i></button>
+    </header>
+    <main class="screen">
+      <div class="empty">
+        <span class="big"><i class="png-ic pi-dumbbell"></i></span>
+        <h2>Nenhum dia de treino ainda</h2>
+        <p>Crie academias, exercícios e dias de treino em Configurações para começar.</p>
+        <a href="settings.html" class="btn primary" style="width:auto">Ir para Configurações</a>
+      </div>
+    </main>
+
+    <!-- Bottom sheet (Sheet.tsx) sobre a tela -->
+    <div class="sheet-backdrop" style="position:absolute">
+      <div class="sheet">
+        <div class="sheet-head">
+          <h2>Bem-vindo ao MyOneGym</h2>
+          <button class="icon-btn ghost sheet-close" aria-label="Fechar"><i class="ti ti-x"></i></button>
+        </div>
+        <p style="font-size:var(--fs-sm);color:var(--text-secondary);margin-bottom:16px;line-height:1.6">
+          Quer começar com um exemplo pronto — categorias, exercícios e dias de treino — para conhecer
+          o app? Você pode gerar isso depois em Configurações → Backup.
+        </p>
+        <div class="sheet-actions">
+          <button class="btn subtle">Começar do zero</button>
+          <button class="btn primary">Carregar exemplo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="strip-cap">Estado vazio + bottom sheet</p>
+  </div>
+
+</div>
+
+</body>
+</html>

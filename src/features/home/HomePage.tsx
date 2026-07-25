@@ -10,9 +10,22 @@ import {
   useSessionSummaries,
 } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
-import { daySubtitle, exerciseCategoryNames, nextWorkoutDayId } from '../../lib/days'
+import {
+  dayCategoryNames,
+  daySubtitle,
+  exerciseCategoryNames,
+  nextWorkoutDayId,
+} from '../../lib/days'
+import { muscleAvatarClass } from '../../lib/muscleAvatar'
+import logoMark from '../../assets/logo-mark.png'
 import { fmtWeight } from '../../lib/format'
-import { startOfWeek } from '../../lib/week'
+import {
+  buildWeekTrack,
+  currentStreak,
+  WEEKDAY_LABELS,
+  WEEKLY_GOAL,
+  type WeekDayCell,
+} from '../../lib/week'
 import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
@@ -20,36 +33,61 @@ import { TabBar } from '../../ui/Chrome'
 import { GymSelector } from '../gym/GymSelector'
 import './home.css'
 
-/** Weekly progress ring — completed sessions this week over the number of days. */
-function WeeklySummary({ done, total }: { done: number; total: number }) {
-  const pct = total > 0 ? Math.min(1, done / total) : 0
-  const R = 26
-  const C = 2 * Math.PI * R
+/**
+ * Weekly training summary — the count, plus a seven-day track.
+ *
+ * CHANGED: this replaced a progress ring. The ring answered "how much" and never
+ * "when": it could show 43% without revealing that Wednesday was skipped or that
+ * the user had not trained for three days. The count stays the headline and the
+ * track explains it.
+ *
+ * Everything is derived from `completedAt` on completed sessions — no new
+ * persisted state, no migration.
+ */
+function WeeklySummary({ cells, streak }: { cells: WeekDayCell[]; streak: number }) {
+  const done = cells.filter((c) => c.state === 'done').length
   return (
     <section className="week-card" aria-label="Resumo da semana">
-      <div className="week-ring">
-        <svg viewBox="0 0 64 64" width="64" height="64">
-          <circle cx="32" cy="32" r={R} className="ring-track" />
-          <circle
-            cx="32"
-            cy="32"
-            r={R}
-            className="ring-fill"
-            strokeDasharray={C}
-            strokeDashoffset={C * (1 - pct)}
-            transform="rotate(-90 32 32)"
-          />
-        </svg>
-        <span className="week-pct">{Math.round(pct * 100)}%</span>
+      <div className="week-head">
+        <div className="week-body">
+          <span className="eyebrow">Esta semana</span>
+          <strong className="week-count">
+            {done} <span className="week-of">/ {WEEKLY_GOAL} treinos</span>
+          </strong>
+        </div>
+        {streak > 1 && (
+          <span className="week-streak" title="Dias seguidos treinando">
+            <Icon name="flame" />
+            {streak}
+          </span>
+        )}
       </div>
-      <div className="week-body">
-        <span className="eyebrow">Esta semana</span>
-        <strong className="week-count">
-          {done} <span className="week-of">/ {total} treinos</span>
-        </strong>
-      </div>
+      <ol className="week-track" aria-label="Dias da semana">
+        {cells.map((cell) => (
+          <li
+            key={cell.index}
+            className={`wd ${cell.state}${cell.sessions > 1 ? ' multi' : ''}`}
+            aria-label={weekCellLabel(cell)}
+          >
+            <span className="wd-dot">
+              {cell.state === 'done' && <Icon name="check" />}
+            </span>
+            <span className="wd-lab">{WEEKDAY_LABELS[cell.index]}</span>
+          </li>
+        ))}
+      </ol>
     </section>
   )
+}
+
+/** Spoken description of one cell — the visual states are colour-only otherwise. */
+function weekCellLabel(cell: WeekDayCell): string {
+  const day = WEEKDAY_LABELS[cell.index]
+  if (cell.sessions > 1) return `${day}: ${cell.sessions} treinos`
+  if (cell.state === 'done') return `${day}: treino concluído`
+  if (cell.state === 'today') return `${day}: hoje, sem treino ainda`
+  if (cell.state === 'future') return `${day}: ainda não chegou`
+  return `${day}: sem treino`
 }
 
 export function HomePage() {
@@ -77,8 +115,14 @@ export function HomePage() {
     setParams(next, { replace: true })
   }
 
-  const weekStart = startOfWeek(Date.now())
-  const doneThisWeek = summaries.filter((s) => (s.session.completedAt ?? 0) >= weekStart).length
+  // CHANGED: the summary used to be a single count against `days.length`. It is
+  // now a seven-day track against a fixed goal of 7 — see lib/week.ts.
+  const now = Date.now()
+  const weekCells = buildWeekTrack(
+    summaries.map((s) => s.session.completedAt ?? 0).filter((ts) => ts > 0),
+    now,
+  )
+  const streak = currentStreak(weekCells, now)
 
   // "Próximo treino": the day after the most recent completed session (summaries
   // are newest-first, per active gym), wrapping to the first day.
@@ -107,10 +151,17 @@ export function HomePage() {
     <>
       <header className="appbar">
         <h1>
-          <span className="brand-mark">
-            <Icon name="barbell" />
-          </span>
-          MyOneGym
+          {/* CHANGED: the brand mark is the logo PNG, not a gradient tile with an
+              icon-font barbell in it.
+
+              The wordmark stays ONE text node on purpose. The mockup splits it as
+              My<em>One</em>Gym to paint "One" in red, but Testing Library's
+              getNodeText joins only *direct* child text nodes, so that markup
+              reads as "MyGym" and breaks findByText('MyOneGym') in App.test.tsx.
+              The red already reads from the mark right beside it, so the split
+              buys a brand flourish at the cost of a real assertion. */}
+          <img className="brand-mark" src={logoMark} alt="" />
+          <span className="wordmark">MyOneGym</span>
         </h1>
         <span className="spacer" />
         <GymSelector />
@@ -128,9 +179,7 @@ export function HomePage() {
           </div>
         )}
 
-        {days && days.length > 0 && (
-          <WeeklySummary done={doneThisWeek} total={days.length} />
-        )}
+        {days && days.length > 0 && <WeeklySummary cells={weekCells} streak={streak} />}
 
         <ul className="accordion">
           {days?.map((day) => {
@@ -144,6 +193,11 @@ export function HomePage() {
                 className={`day${isOpen ? ' open' : ''}${isFeatured ? ' featured' : ''}`}
               >
                 {isFeatured && !isOpen && <span className="eyebrow day-eyebrow">Próximo treino</span>}
+                {/* CHANGED: two lines. The name gets the first one to itself —
+                    it used to compete with the Iniciar pill for width — and the
+                    avatar, categories and controls share the second.
+                    .day-title stays INSIDE .day-head-main: day-url tests click
+                    the day name to toggle the accordion. */}
                 <div className="day-head">
                   <button
                     className="day-head-main"
@@ -151,21 +205,31 @@ export function HomePage() {
                     onClick={() => toggleDay(day.id!)}
                   >
                     <span className="day-title">{day.name}</span>
+                  </button>
+                  <div className="day-meta">
+                    <span className="day-ic">
+                      <i
+                        className={`png-ic ${muscleAvatarClass(dayCategoryNames(day, exMap, catMap))}`}
+                        aria-hidden
+                      />
+                    </span>
                     <span className="day-sub">{daySubtitle(day, exMap, catMap)}</span>
-                  </button>
-                  <button
-                    className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
-                    onClick={() => onStart(day.id!)}
-                  >
-                    <Icon name="player-play" size={12} /> {isResume ? 'Continuar' : 'Iniciar'}
-                  </button>
-                  <button
-                    className="chev-btn"
-                    aria-label={isOpen ? 'Recolher' : 'Expandir'}
-                    onClick={() => toggleDay(day.id!)}
-                  >
-                    <Icon name="chevron-down" className="chev day-chev" />
-                  </button>
+                    <span className="day-actions">
+                      <button
+                        className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
+                        onClick={() => onStart(day.id!)}
+                      >
+                        <i className="png-ic pi-play" aria-hidden /> {isResume ? 'Continuar' : 'Iniciar'}
+                      </button>
+                      <button
+                        className="chev-btn"
+                        aria-label={isOpen ? 'Recolher' : 'Expandir'}
+                        onClick={() => toggleDay(day.id!)}
+                      >
+                        <i className="png-ic pi-chevron-down chev day-chev" aria-hidden />
+                      </button>
+                    </span>
+                  </div>
                 </div>
 
                 {isOpen && (

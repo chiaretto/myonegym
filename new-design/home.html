@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <title>MyOneGym — Treinos (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Treinos</b> · rota <code>/</code></p>
+
+<div class="app">
+  <div class="mock-statusbar">
+    <span>21:39</span>
+    <span class="right"><i class="ti ti-bluetooth"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i> 65%</span>
+  </div>
+
+  <!-- appbar: PNG brand mark + live Poppins wordmark + active-gym pill -->
+  <header class="appbar">
+    <h1>
+      <img class="brand-mark" src="assets/logo-mark.png" alt="MyOneGym" />
+      <span class="wordmark">My<em>One</em>Gym</span>
+    </h1>
+    <span class="spacer"></span>
+    <button class="chip accent" aria-label="Trocar academia ativa">
+      <i class="png-ic pi-building"></i> Fit Park <i class="png-ic pi-chevron-down"></i>
+    </button>
+  </header>
+
+  <main class="screen">
+    <!-- weekly summary: count + seven-day track (proposal A) + brand watermark.
+         Goal is a fixed 7. Sexta-feira here, so seg..qui are past, sex is today
+         and sáb/dom are still ahead. -->
+    <section class="week-card" aria-label="Resumo da semana">
+      <div class="week-head">
+        <div class="week-body">
+          <span class="eyebrow">Esta semana</span>
+          <strong class="week-count">3 <span class="week-of">/ 7 treinos</span></strong>
+        </div>
+        <span class="week-streak" title="Dias seguidos treinando">
+          <i class="png-ic pi-flame"></i> 2
+        </span>
+      </div>
+      <ol class="week-track" aria-label="Dias da semana">
+        <li class="wd done">  <span class="wd-dot"><i class="ti ti-check" aria-hidden="true"></i></span><span class="wd-lab">seg</span></li>
+        <li class="wd done">  <span class="wd-dot"><i class="ti ti-check" aria-hidden="true"></i></span><span class="wd-lab">ter</span></li>
+        <li class="wd blank"> <span class="wd-dot"></span><span class="wd-lab">qua</span></li>
+        <li class="wd done">  <span class="wd-dot"><i class="ti ti-check" aria-hidden="true"></i></span><span class="wd-lab">qui</span></li>
+        <li class="wd today"> <span class="wd-dot"></span><span class="wd-lab">sex</span></li>
+        <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sáb</span></li>
+        <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">dom</span></li>
+      </ol>
+    </section>
+
+    <ul class="accordion">
+      <!-- Dia 1: featured (próximo treino) AND expanded -->
+      <li class="day open featured">
+        <span class="eyebrow day-eyebrow">Próximo treino</span>
+        <div class="day-head">
+          <button class="day-head-main" aria-expanded="true">
+            <span class="day-title">Dia 1 – Peito e Tríceps</span>
+          </button>
+          <div class="day-meta">
+            <span class="day-ic"><i class="png-ic pi-chest"></i></span>
+            <span class="day-sub">Peito · Tríceps · Ombros</span>
+            <span class="day-actions">
+              <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+              <button class="chev-btn" aria-label="Recolher">
+                <i class="png-ic pi-chevron-down chev day-chev"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+        <ul class="exercises">
+          <li>
+            <a class="exercise" href="exercise-detail.html">
+              <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+              <span class="ex-body">
+                <span class="ex-name">Supino reto com barra</span>
+                <span class="ex-cat">Peito · Tríceps</span>
+              </span>
+              <span class="weight-badge">70 kg</span>
+            </a>
+          </li>
+          <li>
+            <a class="exercise" href="exercise-detail.html">
+              <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+              <span class="ex-body">
+                <span class="ex-name">Supino inclinado com barra</span>
+                <span class="ex-cat">Peito · Ombros</span>
+              </span>
+              <span class="weight-badge">60 kg</span>
+            </a>
+          </li>
+          <li>
+            <a class="exercise" href="exercise-detail.html">
+              <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+              <span class="ex-body">
+                <span class="ex-name">Crucifixo reto</span>
+                <span class="ex-cat">Peito</span>
+              </span>
+              <span class="weight-badge">22 kg</span>
+            </a>
+          </li>
+          <li>
+            <a class="exercise" href="exercise-detail.html">
+              <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+              <span class="ex-body">
+                <span class="ex-name">Tríceps pulley (barra reta)</span>
+                <span class="ex-cat">Tríceps</span>
+              </span>
+              <span class="weight-badge empty">definir</span>
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <li class="day">
+        <div class="day-head">
+          <button class="day-head-main" aria-expanded="false">
+            <span class="day-title">Dia 2 – Core e Panturrilha</span>
+          </button>
+          <div class="day-meta">
+            <span class="day-ic"><i class="png-ic pi-core"></i></span>
+            <span class="day-sub">Core · Ombros · Quadríceps · Costas · Panturrilha</span>
+            <span class="day-actions">
+              <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+              <button class="chev-btn" aria-label="Expandir">
+                <i class="png-ic pi-chevron-down chev day-chev"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+      </li>
+
+      <li class="day">
+        <div class="day-head">
+          <button class="day-head-main" aria-expanded="false">
+            <span class="day-title">Dia 3 – Costas e Bíceps</span>
+          </button>
+          <div class="day-meta">
+            <span class="day-ic"><i class="png-ic pi-back"></i></span>
+            <span class="day-sub">Costas · Bíceps · Core · Trapézio · Tríceps</span>
+            <span class="day-actions">
+              <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+              <button class="chev-btn" aria-label="Expandir">
+                <i class="png-ic pi-chevron-down chev day-chev"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+      </li>
+
+      <li class="day">
+        <div class="day-head">
+          <button class="day-head-main" aria-expanded="false">
+            <span class="day-title">Dia 4 – Pernas (Posterior e Glúteo)</span>
+          </button>
+          <div class="day-meta">
+            <span class="day-ic"><i class="png-ic pi-legs"></i></span>
+            <span class="day-sub">Posterior de coxa · Glúteo · Costas · Quadríceps · Panturrilha · Core</span>
+            <span class="day-actions">
+              <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+              <button class="chev-btn" aria-label="Expandir">
+                <i class="png-ic pi-chevron-down chev day-chev"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+      </li>
+
+      <li class="day">
+        <div class="day-head">
+          <button class="day-head-main" aria-expanded="false">
+            <span class="day-title">Dia 5 – Ombros, Peito e Trapézio</span>
+          </button>
+          <div class="day-meta">
+            <span class="day-ic"><i class="png-ic pi-shoulders"></i></span>
+            <span class="day-sub">Ombros · Peito · Trapézio · Tríceps</span>
+            <span class="day-actions">
+              <button class="day-start"><i class="png-ic pi-play"></i> Iniciar</button>
+              <button class="chev-btn" aria-label="Expandir">
+                <i class="png-ic pi-chevron-down chev day-chev"></i>
+              </button>
+            </span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </main>
+
+  <nav class="tabbar">
+    <a href="home.html" class="active"><i class="png-ic pi-home"></i>Treinos</a>
+    <a href="session-history.html"><i class="png-ic pi-history"></i>Sessões</a>
+    <a href="settings.html"><i class="png-ic pi-settings"></i>Configurações</a>
+  </nav>
+</div>
+
+</body>
+</html>

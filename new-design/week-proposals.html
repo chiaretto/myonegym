@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050607" />
+  <title>MyOneGym — Resumo da semana: propostas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/week.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+  <style>
+    .wp { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+    .wp h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em;
+      color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
+    .wp section { margin-bottom: 46px; padding-bottom: 6px; }
+    .wp .lede { font-size: 13px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 18px;
+      max-width: 74ch; }
+    .stage { background: var(--surface-0); border: 0.5px solid var(--border-strong);
+      border-radius: 26px; padding: 18px; max-width: 430px; }
+    .stage + .stage { margin-top: 14px; }
+    .stage-cap { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-muted); font-weight: 600; margin: 0 0 8px 4px; }
+    .row2 { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+    .verdict { font-size: 13px; line-height: 1.65; color: var(--text-secondary);
+      flex: 1; min-width: 270px; }
+    .verdict b { color: var(--text-primary); }
+    .verdict code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+      background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--text-accent); }
+    .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 999px; margin-left: 8px;
+      vertical-align: 2px; }
+    .tag.rec  { background: var(--bg-accent); color: var(--text-accent); border: 0.5px solid var(--border-accent); }
+    .tag.no   { background: var(--surface-2); color: var(--text-muted); }
+    .tag.gate { background: var(--bg-danger); color: var(--danger); border: 0.5px solid var(--border-danger); }
+    .finding { border-left: 3px solid var(--danger); background: var(--surface-1);
+      border-radius: 0 var(--r-ctl) var(--r-ctl) 0; padding: 15px 17px; margin: 0 0 22px;
+      font-size: 13px; line-height: 1.65; color: var(--text-secondary); max-width: 82ch; }
+    .finding b { color: var(--text-primary); }
+    .finding code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+      background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--danger); }
+    .finding + .finding { margin-top: -6px; }
+  </style>
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Resumo da semana: propostas</b></p>
+
+<div class="wp">
+
+  <section>
+    <h2>Estado: proposta A escolhida, meta fixada em 7</h2>
+    <p class="lede">
+      <b>A proposta A está aplicada na home</b> (<code>home.html</code> + <code>css/home.css</code>).
+      Esta página fica como registro do que foi comparado e por quê — o card do anel abaixo é o
+      <em>anterior</em>, não o atual.
+    </p>
+
+    <div class="finding">
+      <b>A meta virou 7 — e isso é mudança de comportamento, não de CSS.</b> Hoje
+      <code>HomePage.tsx:132</code> passa <code>days.length</code> como total, então a home diz
+      “3 / <b>4</b> treinos” para quem cadastrou 4 dias. Com a meta fixa em 7, essa linha precisa
+      passar <code>7</code>. Enquanto isso não mudar no TSX, o mockup e o app discordam.
+      <br /><br />
+      O lado bom: fixar 7 <b>elimina o conflito de escalas</b> que me fez descartar variantes. Sete
+      células e denominador 7 contam a mesma coisa.
+    </div>
+
+    <div class="finding">
+      <b>A decisão destravou o X que você tinha pedido.</b> Eu havia descartado o X porque o tipo
+      <code>Day</code> (<code>types.ts:27</code>) não tem dia da semana, então o app não sabia que um
+      dia “era esperado”. Com <b>meta = 7, todo dia é esperado</b> — e aí um dia passado sem sessão é
+      genuinamente uma falta, sem precisar de campo novo nenhum.
+      <br /><br />
+      Ou seja: o X ficou viável. Mantive <b>vazio</b> na home porque é o que a proposta A mostrava e
+      é o que você aprovou, mas trocar <code>.wd.blank</code> por <code>.wd.missed</code> agora é
+      honesto. Veja o custo humano disso na variante A2 abaixo: com meta 7, quem treina 4× por semana
+      passa a ver <b>três X toda semana</b>.
+    </div>
+
+    <p class="lede">
+      O que já era derivável e segue igual: <code>Session.completedAt</code> é epoch ms indexado
+      (<code>db.ts:41</code>) e a semana já começa na segunda (<code>lib/week.ts</code>).
+    </p>
+  </section>
+
+  <section>
+    <h2>O que existe hoje</h2>
+    <p class="lede">
+      Anel de progresso com a porcentagem no meio. Responde <em>quanto</em>, nunca <em>quando</em> — e
+      é o “quando” que faz alguém notar que está há três dias parado.
+    </p>
+    <div class="stage">
+      <p class="stage-cap">Anterior — anel, e o denominador que o código usava</p>
+      <section class="week-card-v1" aria-label="Resumo da semana">
+        <div class="week-ring">
+          <svg viewBox="0 0 76 76" width="76" height="76">
+            <circle cx="38" cy="38" r="32" class="ring-track"></circle>
+            <circle cx="38" cy="38" r="32" class="ring-fill"
+                    stroke-dasharray="201.06" stroke-dashoffset="50.3"
+                    transform="rotate(-90 38 38)"></circle>
+          </svg>
+          <span class="week-pct">75%</span>
+        </div>
+        <div class="week-body">
+          <span class="eyebrow">Esta semana</span>
+          <strong class="week-count">3 <span class="week-of">/ 4 treinos</span></strong>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta A -->
+  <section>
+    <h2>Proposta A — trilha da semana <span class="tag rec">recomendada</span></h2>
+    <p class="lede">
+      Sete células, segunda a domingo, na mesma ordem que o <code>startOfWeek</code> do app já usa.
+      Cada dia é <b>feito</b> (preenchido, com check), <b>hoje</b> (anel vermelho aberto),
+      <b>futuro</b> (tracejado) ou <b>sem treino</b> (vazio, sem X). O número segue sendo o título; a
+      trilha passa a ser a explicação dele.
+    </p>
+
+    <div class="row2">
+      <div>
+        <div class="stage">
+          <p class="stage-cap">Sexta-feira · 3 de 4</p>
+          <section class="week-card" aria-label="Resumo da semana">
+            <div class="week-head">
+              <div>
+                <span class="eyebrow">Esta semana</span>
+                <strong class="week-count">3 <span class="week-of">/ 4 treinos</span></strong>
+              </div>
+              <span class="week-streak" title="Dias seguidos treinando">
+                <i class="png-ic pi-flame"></i> 2
+              </span>
+            </div>
+            <ol class="week-track" aria-label="Dias da semana">
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">seg</span></li>
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">ter</span></li>
+              <li class="wd blank"> <span class="wd-dot"></span>                            <span class="wd-lab">qua</span></li>
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qui</span></li>
+              <li class="wd today"> <span class="wd-dot"></span>                            <span class="wd-lab">sex</span></li>
+              <li class="wd future"><span class="wd-dot"></span>                            <span class="wd-lab">sáb</span></li>
+              <li class="wd future"><span class="wd-dot"></span>                            <span class="wd-lab">dom</span></li>
+            </ol>
+          </section>
+        </div>
+
+        <div class="stage">
+          <p class="stage-cap">Meta batida · 4 de 4, e ainda sobra semana</p>
+          <section class="week-card">
+            <div class="week-head">
+              <div>
+                <span class="eyebrow">Esta semana</span>
+                <strong class="week-count">4 <span class="week-of">/ 4 treinos</span></strong>
+              </div>
+              <span class="week-streak"><i class="png-ic pi-flame"></i> 4</span>
+            </div>
+            <ol class="week-track">
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">seg</span></li>
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">ter</span></li>
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qua</span></li>
+              <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qui</span></li>
+              <li class="wd today"> <span class="wd-dot"></span><span class="wd-lab">sex</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sáb</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">dom</span></li>
+            </ol>
+          </section>
+        </div>
+
+        <div class="stage">
+          <p class="stage-cap">Segunda-feira, semana zerada</p>
+          <section class="week-card">
+            <div class="week-head">
+              <div>
+                <span class="eyebrow">Esta semana</span>
+                <strong class="week-count">0 <span class="week-of">/ 4 treinos</span></strong>
+              </div>
+            </div>
+            <ol class="week-track">
+              <li class="wd today"> <span class="wd-dot"></span><span class="wd-lab">seg</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">ter</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">qua</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">qui</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sex</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sáb</span></li>
+              <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">dom</span></li>
+            </ol>
+          </section>
+        </div>
+      </div>
+
+      <p class="verdict">
+        <b>Por que essa.</b> É a única que responde “quando”, e sai inteira de dado que já existe:
+        <code>completedAt</code> agrupado por <code>getDay()</code> dentro da semana corrente.
+        <br /><br />
+        <b>Nenhum X.</b> Quarta está vazia, não reprovada. Sem uma agenda declarada, vazio é a única
+        afirmação que o app pode fazer com honestidade: “não houve treino aqui”. É diferente de “você
+        falhou aqui”.
+        <br /><br />
+        <b>O anel sai.</b> A porcentagem e a trilha diriam a mesma coisa duas vezes, e a porcentagem é
+        a menos legível das duas — “43%” não diz que faltou quarta.
+        <br /><br />
+        <b>O que precisa de código novo</b> (sem migração de banco): um helper para agrupar as sessões
+        da semana por dia, os rótulos em pt-BR, e de preferência uma query por intervalo de datas —
+        hoje <code>listSessionSummaries</code> carrega <em>todo</em> o histórico da academia e filtra
+        em memória.
+      </p>
+    </div>
+  </section>
+
+  <!-- =========================================================== proposta A2 -->
+  <section>
+    <h2>Proposta A2 — a mesma trilha, com X <span class="tag gate">exige feature nova</span></h2>
+    <p class="lede">
+      Você pediu para eu considerar o X, então aqui está ele — e aqui está o que ele cobra. Um X só é
+      verdade se o app souber que aquele dia era de treino. Hoje ele não sabe.
+    </p>
+    <div class="row2">
+      <div class="stage">
+        <p class="stage-cap">Plano seg/ter/qui/sex · faltou quarta? não — quarta é descanso</p>
+        <section class="week-card">
+          <div class="week-head">
+            <div>
+              <span class="eyebrow">Esta semana</span>
+              <strong class="week-count">3 <span class="week-of">/ 4 treinos</span></strong>
+            </div>
+            <span class="week-streak"><i class="png-ic pi-flame"></i> 2</span>
+          </div>
+          <ol class="week-track">
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">seg</span></li>
+            <li class="wd missed"><span class="wd-dot"><i class="ti ti-x"></i></span>    <span class="wd-lab">ter</span></li>
+            <li class="wd off">   <span class="wd-dot"></span>                            <span class="wd-lab">qua</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qui</span></li>
+            <li class="wd today"> <span class="wd-dot"></span>                            <span class="wd-lab">sex</span></li>
+            <li class="wd off">   <span class="wd-dot"></span>                            <span class="wd-lab">sáb</span></li>
+            <li class="wd off">   <span class="wd-dot"></span>                            <span class="wd-lab">dom</span></li>
+          </ol>
+        </section>
+      </div>
+      <p class="verdict">
+        <b>O que o X exige.</b> Um campo de dia da semana em <code>Day</code> (hoje inexistente), UI
+        para preencher isso no formulário de dias, e um bump de versão do Dexie se você quiser
+        indexar. Isso é <b>funcionalidade nova</b> — fora do escopo que você fixou no início.
+        <br /><br />
+        <b>Repare na diferença entre terça e quarta.</b> Terça leva X porque estava na agenda e não
+        aconteceu. Quarta leva um traço porque é descanso previsto. Sem a agenda, o app não consegue
+        distinguir as duas — e é aí que o X passa a mentir.
+        <br /><br />
+        <b>O X não é <code>--danger</code>.</b> Ele usa <code>--text-muted</code> e contorno apagado.
+        Pintar de âmbar de alerta transformaria um dia de descanso em erro de sistema.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta B -->
+  <section>
+    <h2>Proposta B — barra com uma marca por meta</h2>
+    <p class="lede">
+      Em vez de sete células de calendário, <b>N</b> segmentos, onde N é o seu número de dias
+      cadastrados — o mesmo denominador que a home já usa. Resolve o conflito de escalas por
+      construção: a barra e o número contam a mesma coisa.
+    </p>
+    <div class="row2">
+      <div>
+        <div class="stage">
+          <p class="stage-cap">3 de 4</p>
+          <section class="week-card">
+            <div class="week-head">
+              <div>
+                <span class="eyebrow">Esta semana</span>
+                <strong class="week-count">3 <span class="week-of">/ 4 treinos</span></strong>
+              </div>
+              <span class="week-streak"><i class="png-ic pi-flame"></i> 2</span>
+            </div>
+            <div class="week-bars n4" aria-label="3 de 4 treinos">
+              <span class="wb done"></span><span class="wb done"></span>
+              <span class="wb done"></span><span class="wb todo"></span>
+            </div>
+          </section>
+        </div>
+        <div class="stage">
+          <p class="stage-cap">6 de 6 — plano grande</p>
+          <section class="week-card">
+            <div class="week-head">
+              <div>
+                <span class="eyebrow">Esta semana</span>
+                <strong class="week-count">6 <span class="week-of">/ 6 treinos</span></strong>
+              </div>
+              <span class="week-streak"><i class="png-ic pi-flame"></i> 6</span>
+            </div>
+            <div class="week-bars n6">
+              <span class="wb done"></span><span class="wb done"></span><span class="wb done"></span>
+              <span class="wb done"></span><span class="wb done"></span><span class="wb done"></span>
+            </div>
+          </section>
+        </div>
+      </div>
+      <p class="verdict">
+        <b>A favor.</b> Nunca discorda do número, porque é o mesmo número. Não precisa de rótulo de
+        dia, não precisa de agenda, e é a mudança mais barata das três — só troca o anel pela barra.
+        <br /><br />
+        <b>Contra.</b> Continua sem responder “quando”. Você vê que faltou um treino, não que faz três
+        dias que você não aparece. Se o objetivo era ganhar o “quando”, essa proposta não entrega.
+        <br /><br />
+        <b>Quando escolher.</b> Se você quiser resolver hoje, sem tocar em consulta de dados nem
+        inventar agenda. É a opção conservadora, e é honesta a respeito disso.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta C -->
+  <section>
+    <h2>Proposta C — anel + trilha <span class="tag no">descartada</span></h2>
+    <p class="lede">
+      Manter o anel e acrescentar a trilha. Deixei renderizada porque é mais fácil descartar vendo
+      do que lendo.
+    </p>
+    <div class="row2">
+      <div class="stage">
+        <p class="stage-cap">3 de 4</p>
+        <section class="week-card week-card-v3">
+          <div class="week-ring">
+            <svg viewBox="0 0 76 76" width="76" height="76">
+              <circle cx="38" cy="38" r="32" class="ring-track"></circle>
+              <circle cx="38" cy="38" r="32" class="ring-fill"
+                      stroke-dasharray="201.06" stroke-dashoffset="50.3"
+                      transform="rotate(-90 38 38)"></circle>
+            </svg>
+            <span class="week-pct">75%</span>
+          </div>
+          <div class="week-body">
+            <span class="eyebrow">Esta semana</span>
+            <strong class="week-count">3 <span class="week-of">/ 4 treinos</span></strong>
+            <ol class="week-track compact">
+              <li class="wd done"><span class="wd-dot"><i class="ti ti-check"></i></span></li>
+              <li class="wd done"><span class="wd-dot"><i class="ti ti-check"></i></span></li>
+              <li class="wd blank"><span class="wd-dot"></span></li>
+              <li class="wd done"><span class="wd-dot"><i class="ti ti-check"></i></span></li>
+              <li class="wd today"><span class="wd-dot"></span></li>
+              <li class="wd future"><span class="wd-dot"></span></li>
+              <li class="wd future"><span class="wd-dot"></span></li>
+            </ol>
+          </div>
+        </section>
+      </div>
+      <p class="verdict">
+        <b>Por que descartei.</b> Três representações do mesmo dado no mesmo card: 75%, “3 / 4” e sete
+        bolinhas. O anel e a trilha competem pelo olho e nenhum ganha.
+        <br /><br />
+        Pior: espremida ao lado do anel, a trilha perde os rótulos dos dias — que eram a única razão
+        de ela existir. Sobra o custo dela sem o benefício.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Dois casos que quebram se ninguém decidir</h2>
+    <p class="lede">
+      Não são detalhes de estilo, são perguntas de produto que o gráfico expõe. Achei os dois lendo o
+      código, não imaginando.
+    </p>
+    <div class="row2">
+      <div class="stage" style="max-width:none;flex:1;min-width:310px">
+        <p class="stage-cap">Duas sessões no mesmo dia</p>
+        <section class="week-card">
+          <div class="week-head">
+            <div>
+              <span class="eyebrow">Esta semana</span>
+              <strong class="week-count">4 <span class="week-of">/ 4 treinos</span></strong>
+            </div>
+            <span class="week-streak"><i class="png-ic pi-flame"></i> 3</span>
+          </div>
+          <ol class="week-track">
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">seg</span></li>
+            <li class="wd done multi"><span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">ter</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qua</span></li>
+            <li class="wd today"> <span class="wd-dot"></span><span class="wd-lab">qui</span></li>
+            <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sex</span></li>
+            <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">sáb</span></li>
+            <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">dom</span></li>
+          </ol>
+        </section>
+        <p class="verdict" style="margin-top:12px;min-width:0">
+          O contador de hoje soma <b>sessões</b>, não dias: duas na terça contam 2. Então o número diz
+          4 e a trilha mostra 3 células cheias — parece bug. O ponto duplo na borda da terça avisa
+          “aqui teve mais de um” sem inventar uma oitava célula.
+          <br /><br />
+          <b>Sua decisão:</b> a meta conta sessões ou dias treinados?
+        </p>
+      </div>
+
+      <div class="stage" style="max-width:none;flex:1;min-width:310px">
+        <p class="stage-cap">Mais dias cadastrados que dias na semana</p>
+        <section class="week-card">
+          <div class="week-head">
+            <div>
+              <span class="eyebrow">Esta semana</span>
+              <strong class="week-count">5 <span class="week-of">/ 9 treinos</span></strong>
+            </div>
+          </div>
+          <ol class="week-track">
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">seg</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">ter</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qua</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">qui</span></li>
+            <li class="wd done">  <span class="wd-dot"><i class="ti ti-check"></i></span><span class="wd-lab">sex</span></li>
+            <li class="wd today"> <span class="wd-dot"></span><span class="wd-lab">sáb</span></li>
+            <li class="wd future"><span class="wd-dot"></span><span class="wd-lab">dom</span></li>
+          </ol>
+        </section>
+        <p class="verdict" style="margin-top:12px;min-width:0">
+          Quem cadastra 9 dias de treino (um rodízio A/B/C longo) nunca fecha “9 / 9” numa semana de 7
+          dias. A trilha fica cheia e o número segue reprovando — a barra da proposta B fica pior
+          ainda, com 9 segmentos que jamais enchem.
+          <br /><br />
+          <b>Sua decisão:</b> o denominador continua sendo <code>days.length</code>, ou vira uma
+          <b>meta semanal</b> que a pessoa escolhe? Essa é a pergunta de fundo, e ela existe hoje —
+          o anel só a esconde melhor.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>

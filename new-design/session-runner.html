@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1115" />
+  <title>MyOneGym — Treino em andamento (novo design)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Treino em andamento</b> · rota <code>/session/:id</code></p>
+
+<div class="app">
+  <div class="mock-statusbar">
+    <span>21:52</span>
+    <span class="right"><i class="ti ti-bluetooth"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i> 63%</span>
+  </div>
+
+  <header class="appbar">
+    <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+    <h1>Treino</h1>
+    <span class="spacer"></span>
+  </header>
+
+  <main class="screen has-action-bar" style="--action-bar-h: 96px">
+    <div class="session-hero">
+      <span class="session-day">Dia 1 – Peito e Tríceps</span>
+      <div class="session-meta">
+        <span class="chip accent"><i class="png-ic pi-building"></i> Fit Park</span>
+        <span class="start-time"><i class="png-ic pi-timer"></i> iniciado há 18 minutos</span>
+      </div>
+    </div>
+
+    <div class="progress-row" aria-label="Progresso do treino">
+      <div class="progress-head">
+        <span><span class="num">2</span> de 4 concluídos</span>
+        <span>50%</span>
+      </div>
+      <div class="progress-bar" aria-hidden="true">
+        <div class="progress-bar-fill" style="width:50%"></div>
+      </div>
+    </div>
+
+    <ul class="entries">
+      <li class="entry done">
+        <button class="checkbox checked" aria-label="Desmarcar"><i class="ti ti-check"></i></button>
+        <a class="entry-link" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="entry-body">
+            <span class="entry-name">Supino reto com barra</span>
+            <span class="entry-cat">Peito · Tríceps</span>
+          </span>
+        </a>
+        <span class="used-weight">70 <span class="unit">kg</span> <i class="ti ti-pencil pencil"></i></span>
+      </li>
+      <li class="entry done">
+        <button class="checkbox checked" aria-label="Desmarcar"><i class="ti ti-check"></i></button>
+        <a class="entry-link" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="entry-body">
+            <span class="entry-name">Supino inclinado com barra</span>
+            <span class="entry-cat">Peito · Ombros</span>
+          </span>
+        </a>
+        <span class="used-weight">60 <span class="unit">kg</span> <i class="ti ti-pencil pencil"></i></span>
+      </li>
+      <li class="entry">
+        <button class="checkbox" aria-label="Marcar como concluído"></button>
+        <a class="entry-link" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="entry-body">
+            <span class="entry-name">Crucifixo reto</span>
+            <span class="entry-cat">Peito</span>
+          </span>
+        </a>
+        <span class="used-weight">22 <span class="unit">kg</span> <i class="ti ti-pencil pencil"></i></span>
+      </li>
+      <li class="entry">
+        <button class="checkbox" aria-label="Marcar como concluído"></button>
+        <a class="entry-link" href="exercise-detail.html">
+          <span class="thumb media-fallback"><i class="png-ic pi-dumbbell"></i></span>
+          <span class="entry-body">
+            <span class="entry-name">Tríceps pulley (barra reta)</span>
+            <span class="entry-cat">Tríceps</span>
+          </span>
+        </a>
+        <span class="used-weight empty">definir</span>
+      </li>
+    </ul>
+  </main>
+
+  <div class="action-bar">
+    <button class="btn primary"><i class="ti ti-check"></i> Concluir treino</button>
+  </div>
+
+  <!-- Toast, posicionado acima da action bar -->
+  <div class="toast" style="--action-bar-h:96px">Peso atualizado para 22 kg.</div>
+</div>
+
+</body>
+</html>
