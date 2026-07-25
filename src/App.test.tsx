@@ -26,7 +26,7 @@ describe('App smoke', () => {
         <App />
       </MemoryRouter>,
     )
-    expect(await screen.findByText('MyOneGym')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'MyOneGym' })).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByText(/Nenhum dia de treino ainda/i)).toBeInTheDocument(),
     )

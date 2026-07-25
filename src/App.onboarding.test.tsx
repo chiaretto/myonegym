@@ -70,7 +70,7 @@ describe('First-launch sample data prompt', () => {
         <App />
       </MemoryRouter>,
     )
-    await screen.findByText('MyOneGym')
+    await screen.findByRole('heading', { name: 'MyOneGym' })
     expect(screen.queryByText('Bem-vindo ao MyOneGym')).not.toBeInTheDocument()
   })
 
@@ -82,7 +82,7 @@ describe('First-launch sample data prompt', () => {
         <App />
       </MemoryRouter>,
     )
-    await screen.findByText('MyOneGym')
+    await screen.findByRole('heading', { name: 'MyOneGym' })
     expect(screen.queryByText('Bem-vindo ao MyOneGym')).not.toBeInTheDocument()
     await waitFor(() => expect(useOnboarding.getState().hasSeenExamplePrompt).toBe(true))
   })
@@ -95,7 +95,7 @@ describe('First-launch sample data prompt', () => {
         <App />
       </MemoryRouter>,
     )
-    await screen.findByText('MyOneGym')
+    await screen.findByRole('heading', { name: 'MyOneGym' })
     expect(screen.queryByText('Bem-vindo ao MyOneGym')).not.toBeInTheDocument()
   })
 })

@@ -155,3 +155,55 @@ toda semana. A regra `.wd.missed` fica disponível para trocar depois.
 | `logo-mark.png` infla o precache | Média | Médio | 201 KB — 85% do peso dos assets. Otimizar antes de ir para `public/`. |
 | Escala 125% muda o app para quem já usa | Média | Médio | Verificar se `settings.ts` persiste o padrão ou só escolha explícita; se só explícita, é mudança visível no upgrade. |
 | 3 changes OpenSpec não arquivadas | **Alta** | Médio | `openspec-approve-apply.yml:83` espera **exatamente uma**. Já existem duas (`redesign-momentum-dark`, implementada, e `exercise-form-hero-media`). **Arquivar `redesign-momentum-dark` antes do apply.** |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** criada e arquivada em 2026-07-25
+**Outcome:** Implementado, com follow-ups declarados
+
+### Specs Updated
+
+- `openspec/specs/app-foundation/spec.md`
+  - **Adicionados:** `Dark Premium Visual Identity`, `Brand Colour Has a Single
+    Governed Source`, `Typography`, `Icon System`.
+  - **Alterados:** `Legible, Scalable Base Typography` e `User-Adjustable Font
+    Size` — o padrão de escala passou de 150% para 125% em três pontos que
+    contradiziam o delta.
+- `openspec/specs/home-navigation/spec.md`
+  - **Adicionados:** `Weekly Training Summary` (meta fixa em 7 + trilha de sete
+    dias) e `Training Day Card` (nome em linha própria, avatar, e o rótulo do
+    botão reservado ao dia em destaque / em resume).
+
+**Nota sobre o merge.** Os delta specs declaram estas requirements como
+`MODIFIED` sobre a identidade `redesign-momentum-dark`. Aquela change **nunca foi
+arquivada**, então as requirements que ela definia jamais entraram na fonte da
+verdade — não havia o que modificar. Foram portanto **adicionadas**, já na versão
+OneGym Red. Pelo mesmo motivo, a requirement `Weekly progress ring` listada em
+`REMOVED` não existia em `openspec/specs/` e não foi movida para `Deprecated`:
+registrar uma remoção de algo que nunca esteve lá inventaria histórico.
+
+### Follow-ups (não entregues, com motivo)
+
+| # | Item | Motivo |
+|---|---|---|
+| 0.1 / 0.2 | Arquivar `redesign-momentum-dark` e `exercise-form-hero-media` | Ação sobre changes de terceiros. **Segue travando `openspec-approve-apply.yml:83`**, que espera exatamente uma change não arquivada — ainda há duas. |
+| 4.1 | Otimizar `logo-mark.png` (205 KB) | Ambiente sem `pngquant`/`oxipng`/`optipng`/ImageMagick/PIL/sharp. É o asset mais pesado do precache do service worker. |
+| 4.5 | Ícones PNG 192/512/maskable | Mesmo bloqueio. Os dois SVG foram recolorizados; o manifest segue apontando para `icon.svg` em `any` e `maskable`. |
+| 6.6 | Query por intervalo de data em `listSessionSummaries` | Opcional, declarado não-bloqueante. `repos.ts` continua carregando o histórico da academia e filtrando em memória. |
+| 8.4 | Varredura dos px inline restantes | Fora do que o redesign estiliza. |
+| 9.5–9.8 | Passes manuais (device 360/430/1280, PWA instalado, share card, 100–200%) | Não verificáveis neste ambiente. |
+| 10.1 | A meta conta sessões ou dias treinados? | Decisão de produto, em aberto. `.wd.multi` deixa a divergência legível enquanto isso. |
+| — | Comentários citando "the shipped 150% scale" | O app envia 125%; o 1.5 sobrevive só no mockup `new-design/css/tokens.css`. Os px citados nos comentários estão ~20% acima do real. |
+
+### Files Modified
+
+- `src/styles/` — `tokens.css`, `global.css`, `fonts.css`, novo `icons.css`
+- `src/features/` — `home/` (HomePage.tsx, home.css), `session/` (session.css,
+  `share/renderCard.ts`), `exercise/exercise.css`, `settings/appearance.css`
+- `src/state/settings.ts` — `FONT_SCALE_DEFAULT` 1.5 → 1.25
+- `src/App.test.tsx`, `src/App.onboarding.test.tsx` — asserção do wordmark
+- `index.html`, `vite.config.ts`, `public/icon.svg`, `public/favicon.svg`
+- `new-design/` — mockups, folhas drop-in e assets de marca (fonte do redesign)

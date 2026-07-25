@@ -76,3 +76,15 @@
 /* No labels fit beside the ring — which is exactly the point C fails on. */
 .week-track.compact { gap: 5px; margin-top: 10px; }
 .week-track.compact .wd-dot { font-size: var(--fs-2xs); width: 1.75em; height: 1.75em; }
+
+/* home.css turned .week-body into a single-line row (eyebrow beside the count)
+   and stepped the number down to --fs-2xl. That is proposal A's shipped layout;
+   the superseded cards below it must keep the stacked body they were drawn with,
+   or this page stops being an honest before-picture — v3 in particular nests the
+   whole compact track inside .week-body and would wrap into a mess. */
+.week-card-v1 .week-body,
+.week-card-v3 .week-body { flex-direction: column; align-items: flex-start; row-gap: 8px; }
+.week-card-v1 .week-count,
+.week-card-v3 .week-count { font-size: var(--fs-4xl); }
+.week-card-v1 .week-of,
+.week-card-v3 .week-of { font-size: var(--fs-lg); }
