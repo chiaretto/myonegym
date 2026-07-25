@@ -111,3 +111,35 @@ Nada muda no modelo de dados, na validação ou no fluxo de salvamento.
 | Mover CSS de feature para global quebra a tela de detalhe | Low | Med | Mover o bloco sem editar valores; teste visual/integração do detalhe |
 | Seletor `.hero` global colidir com futuros "hero" de outras telas | Low | Low | Nome já é específico de mídia no projeto; manter comentário explicando o uso |
 | Placeholder sempre visível polui o formulário | Low | Low | Usa o mesmo `media-fallback` discreto do detalhe; validar no QA visual |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** implementada e mergeada na `main` pelo PR #20; arquivada em 2026-07-25
+**Outcome:** Implementado, com QA visual manual não executado
+
+### Specs Updated
+
+- `openspec/specs/exercises/spec.md`
+  - **Adicionada:** `Large Media Preview in the Exercise Form` (5 cenários).
+  - **Alterada:** `Register an Exercise` — o texto anterior foi **preservado
+    integralmente**, como o delta manda ("mantém-se tudo o que já é exigido"), e
+    ganhou o parágrafo da pré-visualização em tamanho grande mais o cenário
+    "Conferir a mídia antes de salvar". Miniaturas de listagem seguem inalteradas.
+  - A seção `REMOVED` do delta estava vazia — nada foi depreciado.
+
+### Follow-ups (não entregues, com motivo)
+
+| # | Item | Motivo |
+|---|---|---|
+| 4.3 | QA visual em viewport móvel (mídia retrato, paisagem, quadrada, GIF) | Não há browser neste ambiente. |
+| 4.4 | Ajustar delta spec/anotações se o QA exigir mudança de altura | Depende de 4.3. |
+
+O código já está na `main` desde o PR #20 — o que ficou aberto é verificação
+visual, não implementação.
+
+### Files Modified
+
+Entregues pelo PR #20 (`4330958`), não por este arquivamento.
