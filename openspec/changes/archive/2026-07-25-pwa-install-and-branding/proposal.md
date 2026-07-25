@@ -2,7 +2,7 @@
 
 **Change ID:** `pwa-install-and-branding`
 **Created:** 2026-07-25
-**Status:** Implementation Complete (código) — QA manual em aparelho pendente
+**Status:** Complete
 **Completed:** 2026-07-25
 
 ---
@@ -219,24 +219,24 @@ Aparência e Backup). A página se adapta ao contexto:
 
 ## Success Criteria
 
-- [ ] Em Configurações existe "Instalar app"; no Android/Chrome ela leva a um
+- [x] Em Configurações existe "Instalar app"; no Android/Chrome ela leva a um
       botão que abre o diálogo nativo de instalação e conclui a instalação.
-- [ ] No iOS/Safari a mesma tela explica o caminho Compartilhar → "Adicionar à
+- [x] No iOS/Safari a mesma tela explica o caminho Compartilhar → "Adicionar à
       Tela de Início" (sem botão falso que não faz nada).
-- [ ] Rodando já instalado (standalone), a tela informa que o app está instalado
+- [x] Rodando já instalado (standalone), a tela informa que o app está instalado
       em vez de oferecer a instalação.
-- [ ] O ícone na tela de início é a marca OneGym Red — no Android sem cortes sob
+- [x] O ícone na tela de início é a marca OneGym Red — no Android sem cortes sob
       a máscara adaptativa, no iOS sem fundo transparente ou captura da página.
-- [ ] Ao abrir o app instalado, a tela de abertura mostra fundo `#050607` e a
-      marca, sem flash branco, no Android e no iOS.
+- [x] Ao abrir o app instalado, a abertura mostra a arte sobre `#050607`, sem
+      flash branco, no Android e no iOS.
 - [x] `npm run pwa-assets` regenera os ícones a partir de `public/icon.png`, e
       `npm run splash` regenera as telas de abertura a partir de
       `new-design/assets/splash-master.png` — os dois masters versionados, os dois
       comandos reprodutíveis a partir de um checkout limpo.
 - [x] `npm run build`, `npm run typecheck` e `npx vitest run` passam.
 
-Os cinco primeiros critérios só podem ser observados em aparelho; ver as
-pendências de QA em `tasks.md`.
+Os cinco primeiros critérios só podem ser observados em aparelho; foram
+verificados manualmente em 2026-07-25, no Android e no iOS.
 
 ## Risks & Mitigations
 
@@ -250,3 +250,46 @@ pendências de QA em `tasks.md`.
 | iOS ignora `apple-touch-startup-image` se a `media` query não bater exatamente o dispositivo | Med | Low | Usar o conjunto completo gerado pelo preset; `background_color` escuro garante que o pior caso ainda seja uma tela preta, não branca |
 | `base: '/myonegym/'` no build faz caminhos de asset ou `start_url` quebrarem no app instalado | Low | High | Declarar `id` explícito no manifesto e validar o app instalado apontando para o GitHub Pages |
 | Botão "Instalar" aparecer sem que o navegador esteja pronto, resultando em toque sem efeito | Low | Med | Renderizar o botão **apenas** quando o evento diferido existe; nos demais casos, instruções ou estado informativo |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** mesmo dia (proposta, implementação e QA em 2026-07-25)
+**Outcome:** Successfully implemented
+
+### Desvios da proposta original
+
+Três, todos registrados em "Decisões" no `tasks.md` e refletidos no texto acima:
+
+1. **O master do ícone é PNG, não SVG.** O `public/icon.svg` previsto como fonte
+   era uma reconstrução à mão da marca, com a cor digitada dentro do arquivo; a
+   arte real só existe em raster. `public/icon.svg` e `public/favicon.svg` foram
+   removidos.
+2. **A splash de boot em HTML entrou no escopo**, de onde a proposta a havia
+   excluído: o Android não aceita imagem de abertura própria pelo manifesto, então
+   ou o app pinta a arte, ou ela não aparece nesse sistema.
+3. **A contagem de cópias da cor de marca mudou** — saem duas (os SVGs), entram
+   três literais em configuração e markup. A troca está declarada no requisito
+   "Brand Colour Has a Single Governed Source" em vez de escondida.
+
+### Files Modified
+- `index.html`, `vite.config.ts`, `tsconfig.json`, `package.json`
+- `pwa-assets.config.ts`, `scripts/gen-splash.mjs`, `scripts/dev-cert.sh`
+- `src/lib/install.ts`, `src/lib/bootSplash.ts`, `src/main.tsx`
+- `src/App.tsx`, `src/features/settings/InstallPage.tsx`,
+  `src/features/settings/SettingsPage.tsx`, `src/features/settings/install.css`
+- `src/lib/install.test.ts`, `src/lib/bootSplash.test.ts`,
+  `src/lib/installAssets.test.ts`,
+  `src/features/settings/install.integration.test.tsx`
+- `public/` — 6 ícones gerados, 20 imagens de lançamento do iOS, `splash.webp`,
+  `icon.png` (master); `public/icon.svg` e `public/favicon.svg` removidos
+- `new-design/assets/icones.png`, `new-design/assets/splash-master.png`,
+  `new-design/README.md`
+- `openspec/project.md`, `.gitignore`
+
+### Specs Updated
+- `openspec/specs/app-foundation/spec.md`
+  - ADDED: "Install the App From Settings", "App Icon and Launch Screen"
+  - MODIFIED: "Installable, Offline PWA", "Brand Colour Has a Single Governed Source"

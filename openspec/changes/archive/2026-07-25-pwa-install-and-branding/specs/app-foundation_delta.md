@@ -151,7 +151,7 @@ um início a frio sem rede mostraria um retângulo vazio no lugar da abertura.
 - THEN o fundo é o fundo escuro do app e a marca é exibida
 - AND em nenhum momento aparece um flash de tela branca
 
-#### Scenario: Abertura com a identidade do app no Android
+#### Scenario: Abertura no Android, onde o sistema não ajuda
 - GIVEN o app instalado é lançado no Android, onde o sistema não aceita uma
   imagem de abertura própria
 - WHEN a abertura aparece antes do primeiro conteúdo

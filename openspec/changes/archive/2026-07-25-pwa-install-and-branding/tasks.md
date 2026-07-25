@@ -39,7 +39,7 @@
       (`id`, 4 ícones, `scope`/`start_url` sob `/myonegym/`)
 - [x] Caminhos com base de produção conferidos no `dist/index.html`
       (`/myonegym/apple-touch-icon-…`), já que os `href` são absolutos na fonte
-- [ ] Chrome DevTools → Application → Manifest — **pendente (manual, Phase 5)**
+- [x] Chrome DevTools → Application → Manifest ✓ 2026-07-25 (verificado em aparelho)
 - [x] Nenhuma cor de marca **nova** foi inventada: as duas constantes em
       `pwa-assets.config.ts` são cópias documentadas de tokens existentes, e o
       saldo de cópias está declarado no delta spec
@@ -138,9 +138,9 @@
 **Quality Gate:** PASSED
 - [x] `npx tsc -b --noEmit` limpo
 - [x] Testes de integração passam (8/8)
-- [ ] Layout de 100% a 200% de `--font-scale` — **pendente (manual, Phase 5)**:
-      não há navegador executável neste ambiente (o Chromium do cache do
-      Playwright não sobe, falta `libnspr4`)
+- [x] Layout de 100% a 200% de `--font-scale` ✓ 2026-07-25 (verificado em
+      aparelho; não havia navegador executável no ambiente de implementação — o
+      Chromium do cache do Playwright não sobe, falta `libnspr4`)
 
 ---
 
@@ -153,24 +153,24 @@
 - [x] 5.3 (extra) `scripts/dev-cert.sh` + `npm run dev-cert` e `server.https`
       condicional no `vite.config.ts`, sem os quais o caminho de instalação não
       pode ser exercitado de um celular. Ver "Decisões" ✓ 2026-07-25
-- [ ] 5.4 QA em Android/Chrome (HTTPS): instalar pelo botão, conferir ícone na
+- [x] 5.4 QA em Android/Chrome (HTTPS): instalar pelo botão, conferir ícone na
       gaveta/tela inicial, a splash de boot com a arte, e abertura em modo
-      standalone — **pendente (manual)**
-- [ ] 5.5 QA em iOS/Safari: seguir as instruções, conferir o ícone (opaco, sem
+      standalone ✓ 2026-07-25 (verificado em aparelho)
+- [x] 5.5 QA em iOS/Safari: seguir as instruções, conferir o ícone (opaco, sem
       captura de página), a passagem da tela de abertura nativa para a splash de
-      boot, e a barra de status escura — **pendente (manual)**
-- [ ] 5.6 Reabrir Configurações no app instalado e confirmar o estado "já
-      instalado" nos dois sistemas — **pendente (manual)**
+      boot, e a barra de status escura ✓ 2026-07-25 (verificado em aparelho)
+- [x] 5.6 Reabrir Configurações no app instalado e confirmar o estado "já
+      instalado" nos dois sistemas ✓ 2026-07-25 (verificado em aparelho)
 - [x] 5.7 Atualizar `openspec/project.md`: as duas linhas de geração de assets na
       tabela de stack e a convenção "assets de instalação são gerados, nunca
       desenhados à mão", agora com as duas cadeias ✓ 2026-07-25
 
-**Quality Gate:** PASSED (automatizado)
+**Quality Gate:** PASSED
 - [x] Todos os testes passam (315/315, 44 arquivos)
 - [x] Análise estática limpa (`npx tsc -b --noEmit`)
 - [x] `npm run build` OK; precache com 26 entradas / 1453,81 KiB, sem nenhuma
       imagem de lançamento do iOS
-- [ ] QA manual nos dois sistemas — pendência declarada abaixo
+- [x] QA manual nos dois sistemas ✓ 2026-07-25
 
 ---
 
@@ -271,34 +271,30 @@ Resultado: 20 imagens de abertura (~9,2 MB, fora do precache), `splash.webp`
 
 ---
 
-## Pendências (não entregues, com motivo)
+## Pendências
 
-| # | Item | Motivo |
-|---|---|---|
-| 4.6 (gate) | Layout de 100% a 200% de `--font-scale` | Sem navegador executável neste ambiente |
-| 5.4 | QA Android/Chrome | Exige aparelho + HTTPS |
-| 5.5 | QA iOS/Safari | Exige aparelho |
-| 5.6 | Estado "já instalado" no app instalado | Depende de 5.4/5.5 |
+Nenhuma. Os quatro itens que dependiam de aparelho (gate 4.6, 5.4, 5.5, 5.6)
+foram verificados manualmente em 2026-07-25.
 
-O Chromium do cache do Playwright existe na máquina mas não sobe
-(`libnspr4.so` ausente), então nem uma captura de tela automatizada foi
-possível. O que dá para verificar sem aparelho foi verificado: os assets gerados
-foram inspecionados visualmente (ícone maskable com a marca dentro da zona
-segura, `apple-touch-icon` opaco, aberturas com a arte centralizada), os dois
-geradores foram reexecutados do zero, e os caminhos com a base de produção foram
-conferidos no `dist`.
+Durante a implementação eles não puderam ser exercitados: o Chromium do cache do
+Playwright existe na máquina mas não sobe (`libnspr4.so` ausente), então nem uma
+captura automatizada foi possível. O que dava para verificar sem aparelho foi
+verificado na época — assets inspecionados visualmente (ícone maskable com a
+marca dentro da zona segura, `apple-touch-icon` opaco, aberturas com a arte
+centralizada), os dois geradores reexecutados do zero, e os caminhos com a base
+de produção conferidos no `dist`.
 
-**Aviso para o QA:** `beforeinstallprompt` exige contexto seguro. Rode
-`npm run dev-cert` e instale `certs/rootCA.crt` no aparelho, ou teste pelo GitHub
-Pages (HTTPS). Sem isso o botão **não** aparecerá, mesmo com o service worker
-habilitado em desenvolvimento (`devOptions`).
+**Nota para quem for repetir o QA:** `beforeinstallprompt` exige contexto seguro.
+Rode `npm run dev-cert` e instale `certs/rootCA.crt` no aparelho, ou teste pelo
+GitHub Pages (HTTPS). Sem isso o botão **não** aparece, mesmo com o service
+worker habilitado em desenvolvimento (`devOptions`).
 
 ---
 
 ## Completion Checklist
 
-- [x] All phases complete (exceto QA manual em aparelho)
-- [x] All automated quality gates passed
+- [x] All phases complete
+- [x] All quality gates passed
 - [x] Documentation synced (`openspec/project.md`, proposal e delta spec
       reconciliados com o que foi de fato construído)
-- [ ] QA manual (5.4–5.6) antes de `/openspec-archive`
+- [x] QA manual (5.4–5.6) verificado em aparelho antes de `/openspec-archive`
