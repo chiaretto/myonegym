@@ -2,6 +2,44 @@
 
 **Change ID:** `redesign-onegym-red`
 
+---
+
+## Status da aplicação (2026-07-25)
+
+**Aplicado:** fases 1–3 (fontes, tokens, folhas), 4.2–4.7 (assets, máscaras PNG,
+mapa de avatar, SVG do PWA, theme-color, manifest), 5 (renderCard), 6 (trilha da
+semana + meta 7), 7 (card de dia), 8.1–8.3 (estilos inline).
+
+**Verificado:** typecheck limpo · build OK (4,9 MB) · 278 testes · app rodando com
+o exemplo seeded (6 dias): trilha com 7 células numa linha, "0 / 7 treinos",
+avatares mapeados, nenhuma categoria truncada a 430px, sem rolagem horizontal.
+
+**Não aplicado, e por quê:**
+
+- **4.1 — otimizar `logo-mark.png` (205 KB).** O ambiente não tem nenhuma
+  ferramenta de imagem (`pngquant`, `oxipng`, `optipng`, ImageMagick, PIL, sharp:
+  todas ausentes). Um downscale por canvas do browser chega a ~97 KB (458×256,
+  −53%), mas é um re-encode que eu não consigo inspecionar visualmente. Fica como
+  follow-up: instalar `oxipng`/`pngquant` ou um script com `sharp`. **É o único
+  asset pesado no precache do service worker.**
+- **4.5 — ícones PNG 192/512/maskable.** Mesmo bloqueio. Os dois SVG foram
+  recolorizados (estavam em `#B8524E`, fora de sincronia com qualquer paleta) e o
+  manifest segue apontando para `icon.svg` em `any` e `maskable`.
+- **0.1/0.2 — arquivar `redesign-momentum-dark` e `exercise-form-hero-media`.**
+  É ação de processo sobre changes de terceiros; não arquivei por conta própria.
+  **Continua bloqueando `openspec-approve-apply.yml`, que espera exatamente uma
+  change não arquivada — agora há três.**
+- **8.4 — varredura dos px inline restantes.** Fora do que o redesign estiliza.
+- **10.1 — meta conta sessões ou dias?** Decisão de produto, em aberto.
+
+**Instabilidade pré-existente da suíte, medida:** ~2 falhas em 6 rodadas
+completas, por interferência entre arquivos de teste. Confirmado na `main` **sem**
+estas mudanças (2 em 6, vítimas `App.onboarding` e `session.share`). Cada arquivo
+passa **8/8 isolado** e falha 1/8 quando rodado em par, então não é defeito de um
+teste. Meus 2 arquivos novos aumentam a exposição por adicionar paralelismo, não
+por conterem o problema. Remédio (não incluído aqui, muda comportamento de teste):
+`fileParallelism: false` ou `poolOptions` no `vitest.config.ts`.
+
 Source material: `new-design/` (mockups + drop-in stylesheets + brand assets).
 Every stylesheet under `new-design/css/` was written as a drop-in replacement —
 class names match what the TSX already emits, so most of this is file
