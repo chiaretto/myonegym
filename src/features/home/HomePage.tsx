@@ -150,18 +150,26 @@ export function HomePage() {
   return (
     <>
       <header className="appbar">
-        <h1>
+        {/* aria-label is NOT redundant with the text below: name-from-content
+            joins each element's contribution with a space, so the split wordmark
+            computes to "My One Gym" and would be announced that way. The label
+            pins the brand's real spelling. It also gives the tests a stable
+            handle — findByText cannot see through the split, because Testing
+            Library's getNodeText joins only *direct* child text nodes and so
+            reads this heading as "MyGym". */}
+        <h1 aria-label="MyOneGym">
           {/* CHANGED: the brand mark is the logo PNG, not a gradient tile with an
               icon-font barbell in it.
 
-              The wordmark stays ONE text node on purpose. The mockup splits it as
-              My<em>One</em>Gym to paint "One" in red, but Testing Library's
-              getNodeText joins only *direct* child text nodes, so that markup
-              reads as "MyGym" and breaks findByText('MyOneGym') in App.test.tsx.
-              The red already reads from the mark right beside it, so the split
-              buys a brand flourish at the cost of a real assertion. */}
+              CHANGED: the wordmark is split as My<em>One</em>Gym to paint "One"
+              in red (.wordmark em, global.css), matching the mockups and the
+              splash lockup. It used to be a single text node purely to keep
+              findByText('MyOneGym') working; that assertion moved to the
+              heading's accessible name instead. */}
           <img className="brand-mark" src={logoMark} alt="" />
-          <span className="wordmark">MyOneGym</span>
+          <span className="wordmark">
+            My<em>One</em>Gym
+          </span>
         </h1>
         <span className="spacer" />
         <GymSelector />
@@ -215,11 +223,21 @@ export function HomePage() {
                     </span>
                     <span className="day-sub">{daySubtitle(day, exMap, catMap)}</span>
                     <span className="day-actions">
+                      {/* CHANGED: the label lives in .day-start-lab, which CSS
+                          hides on every day that is neither featured nor being
+                          resumed — those keep the play glyph alone, in a circle.
+                          display:none drops the text from the accessibility
+                          tree, so the name has to come from aria-label; it is
+                          the plain verb (not "Iniciar treino") so the visible
+                          text and the accessible name still match where the
+                          label IS shown. */}
                       <button
                         className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
+                        aria-label={isResume ? 'Continuar' : 'Iniciar'}
                         onClick={() => onStart(day.id!)}
                       >
-                        <i className="png-ic pi-play" aria-hidden /> {isResume ? 'Continuar' : 'Iniciar'}
+                        <i className="png-ic pi-play" aria-hidden />
+                        <span className="day-start-lab">{isResume ? 'Continuar' : 'Iniciar'}</span>
                       </button>
                       <button
                         className="chev-btn"

@@ -19,11 +19,14 @@
 
    The card stacks instead of sitting in a row: seven cells need the full width
    to keep their weekday labels, which are the whole point of the track. */
+/* CHANGED: tightened (gap 16 -> 12, padding 18/20/20 -> 14/16/16) to go with the
+   single-line head below. The card is a summary, not a hero — it was taking
+   ~180px of a ~600px viewport before the first day card appeared. */
 .week-card {
   position: relative; overflow: hidden;
-  display: flex; flex-direction: column; gap: 16px; margin-bottom: 16px;
+  display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;
   background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
-  padding: 18px 20px 20px;
+  padding: 14px 16px 16px;
 }
 /* NEW: watermark. Sits behind the content, clipped by the card's radius. */
 .week-card::after {
@@ -32,12 +35,24 @@
   background: url('../../assets/logo-mark.png') right center / contain no-repeat;
   opacity: 0.07; pointer-events: none;
 }
-.week-head { position: relative; display: flex; align-items: flex-start;
+/* CHANGED: flex-start -> center, now that the body is a single line and the
+   streak pill should sit on its middle. */
+.week-head { position: relative; display: flex; align-items: center;
   justify-content: space-between; gap: 12px; }
-.week-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; position: relative; }
-.week-count { font-family: var(--font-title); font-size: var(--fs-4xl); font-weight: 700;
+/* CHANGED: column -> row. "Esta semana" and the count share one line, aligned on
+   their BASELINE (not centre) so the eyebrow sits on the number's foot instead of
+   floating beside its middle. flex-wrap is the escape hatch: on a very narrow
+   phone, or with the font scale cranked up, the two fall back to stacked rather
+   than squeezing the streak pill. */
+.week-body { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 10px;
+  row-gap: 4px; min-width: 0; position: relative; }
+/* CHANGED: fs-4xl -> fs-2xl (36px -> ~26px at the shipped scale). At 4xl the
+   number was a hero, which only worked when it owned its own line; beside the
+   eyebrow it just forced the row taller than it needed to be. */
+.week-count { font-family: var(--font-title); font-size: var(--fs-2xl); font-weight: 700;
   line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
-.week-of { font-family: var(--font-sans); font-size: var(--fs-lg); font-weight: 400;
+/* CHANGED: fs-lg -> fs-md, keeping the same step down from .week-count. */
+.week-of { font-family: var(--font-sans); font-size: var(--fs-md); font-weight: 400;
   color: var(--text-secondary); letter-spacing: 0; }
 
 /* NEW: streak badge — consecutive days trained. Reuses the flame from the
@@ -58,13 +73,14 @@
   position: relative; list-style: none; margin: 0; padding: 0;
   display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
 }
-.wd { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; }
+.wd { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; }
 
-/* One box per day. 2.05em of --fs-xs lands ~37px at the shipped 150% scale and
-   scales with the user's font-size preference, like every other control. */
+/* One box per day. CHANGED: 2.05em -> 1.9em (~37px -> ~34px at the shipped 150%
+   scale), so the track loses height in step with the head above it. Still em-based,
+   so it scales with the user's font-size preference like every other control. */
 .wd-dot {
   font-size: var(--fs-xs);
-  width: 2.05em; height: 2.05em; border-radius: 50%;
+  width: 1.9em; height: 1.9em; border-radius: 50%;
   display: grid; place-items: center; box-sizing: border-box;
   transition: background-color 0.2s, border-color 0.2s;
 }
@@ -178,8 +194,17 @@
   line-height: 1.4; display: -webkit-box; -webkit-box-orient: vertical;
   -webkit-line-clamp: 2; overflow: hidden; }
 .chev-btn { background: none; border: 0; color: var(--text-secondary); display: grid; place-items: center;
-  padding: 4px; flex-shrink: 0; font-size: var(--fs-xl); }
-.day-chev { transition: transform 0.2s; }
+  padding: 2px; flex-shrink: 0; font-size: var(--fs-2xs); }
+/* CHANGED: fs-xl -> 0.85em of fs-2xs (24px -> 14px at the shipped scale). The
+   generic .chev (global.css) is sized for list rows where it is the only trailing
+   affordance; here it sits beside the Iniciar pill and was competing with it.
+   Note the art is 27x18, and `mask-size: contain` in a 1em box fits the WIDER
+   side — so "font-size" is the chevron's WIDTH and the height comes out at 2/3 of
+   it (14px wide, ~9px tall). That is why sizing it by the usual text tokens read
+   as oversized: a 24px token meant a 24px-wide glyph.
+   home.css loads after global.css, so this wins — setting font-size on .chev-btn
+   alone would NOT, because .chev pins the glyph size directly. */
+.day-chev { transition: transform 0.2s; font-size: 0.85em; }
 .day.open .day-chev { transform: rotate(180deg); color: var(--text-accent); }
 
 .exercises { list-style: none; padding: 0 12px 14px 20px; margin: 0; display: flex;

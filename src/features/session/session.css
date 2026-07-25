@@ -116,18 +116,54 @@
 .done-badge.full { background: var(--accent-grad); color: var(--on-accent); border-color: transparent; }
 
 /* Home day-header start/resume affordance.
-   CHANGED: every card's Iniciar is the solid red pill (the reference draws it
-   that way on all five day cards), with the PNG play glyph in white. */
+   CHANGED: the labelled red pill is now EXCLUSIVE to the featured day (the one
+   carrying the "Próximo treino" eyebrow). The reference draws the label on all
+   five cards, but five identical "Iniciar" pills read as five equal calls to
+   action; only one of them is the next workout. The other days keep the same red
+   affordance reduced to its glyph — see .day:not(.featured) .day-start below. */
+/* CHANGED: dialled down two notches (padding 10/18 -> 6/12, fs-sm -> fs-2xs). At
+   the shipped 150% scale the pill was ~44px tall and dominated the day row; it
+   is now ~33px and reads as the second-loudest element after the day title,
+   which is where it belongs. The smaller pill also gives .day-sub back ~30px of
+   its 11ch floor. */
 .day-start {
-  display: inline-flex; align-items: center; gap: 7px; padding: 10px 18px; border-radius: var(--r-pill);
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: var(--r-pill);
   border: 0; background: var(--accent-grad); color: var(--on-accent);
-  font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; flex-shrink: 0;
-  box-shadow: 0 8px 20px -10px var(--accent);
+  font-size: var(--fs-2xs); font-weight: 700; white-space: nowrap; flex-shrink: 0;
+  box-shadow: 0 6px 16px -10px var(--accent);
 }
 /* ic-play.png is an OUTLINE triangle (hollow), matching the reference — measured
-   there at 14x17 screenshot px, i.e. ~13 CSS px at this font scale. 1.05em lands
-   at ~20px, which is close to the asset's native 21px height so it is not
-   resampled. It reading as "missing" was never the size: it was the mask alpha,
-   fixed in icons.css. */
-.day-start .png-ic { font-size: 1.05em; }
+   there at 14x17 screenshot px, i.e. ~13 CSS px at this font scale.
+   CHANGED: 1.05em -> 0.9em, and the em itself shrank with the label, so the glyph
+   now lands at ~15px instead of ~20px. It reading as "missing" was never the
+   size: it was the mask alpha, fixed in icons.css. */
+.day-start .png-ic { font-size: 0.9em; }
 .day-start:active { filter: brightness(0.92); }
+
+/* Icon-only variant: every day EXCEPT the featured one and the one being resumed.
+   `.resume` is spared because "Continuar" is the strongest CTA the home screen
+   ever shows — there is a session open — and it is NOT featured (the app clears
+   the featured day while a session is active), so it would otherwise fall into
+   this rule. The mockup has no resume state; the selector is here so this file
+   stays byte-identical to the app's copy.
+   `.icon-only` lets the style guide show the variant outside a .day; in the app
+   the class is never needed, the :not() does the work.
+   2em of fs-2xs = 33px, the exact height of the labelled pill beside it, so the
+   two variants sit on the same baseline grid across the accordion. The drop
+   shadow goes: on a 33px circle it smudges more than it lifts. */
+.day:not(.featured) .day-start:not(.resume),
+.day-start.icon-only {
+  width: 2em; height: 2em; padding: 0; gap: 0;
+  border-radius: 50%; justify-content: center;
+  box-shadow: none;
+}
+.day:not(.featured) .day-start:not(.resume) .day-start-lab,
+.day-start.icon-only .day-start-lab { display: none; }
+/* The glyph carries the whole button now, so it earns back the size the label
+   was borrowing: 1.15em of fs-2xs = 19px tall in a 33px circle (~57% fill, the
+   same art-to-circle ratio .day-ic uses). ic-play.png is 17x21, so `contain`
+   fits the HEIGHT here and the width falls out at ~15px.
+   Optical centring: a right-pointing triangle's visual centre of mass sits left
+   of its bounding box, so it needs a nudge right to look centred in a circle. */
+.day:not(.featured) .day-start:not(.resume) .png-ic,
+.day-start.icon-only .png-ic { font-size: 1.15em; margin-left: 0.08em; }
