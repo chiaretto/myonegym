@@ -433,11 +433,15 @@ Poucos e pequenos:
 ### Fase 5 — chrome do PWA
 - `index.html`: `theme-color` `#0b0b0e` → `#0F1115`.
 - `vite.config.ts`: `theme_color` e `background_color` idem.
-- **Ícone do PWA:** hoje é `public/icon.svg`. Para PNG, exportar do
-  `logo-mark.png` sobre fundo `#1C1F26`: `icon-192.png`, `icon-512.png` e uma
-  versão *maskable* (símbolo a ~70% do quadro, para o recorte circular do
-  Android não cortar os halteres). Atualizar `manifest.icons` e `includeAssets`.
-  As quatro variantes de fundo estão em `brand.html`.
+- **Ícone do PWA:** ~~hoje é `public/icon.svg`~~ — **feito** em
+  `pwa-install-and-branding`. Os SVGs saíram; o master é `public/icon.png`
+  (recorte da folha `assets/icones.png`) e os PNGs `any`/`maskable`/Apple são
+  gerados por `npm run pwa-assets`. Não editar os arquivos gerados: mexer no
+  master e rodar o comando de novo.
+- **Telas de abertura:** master `assets/splash-master.png`, geradas por
+  `npm run splash` — as 20 imagens de lançamento do iOS mais `splash.webp`, que o
+  próprio app pinta no primeiro quadro (o Android não aceita imagem de abertura
+  própria pelo manifesto).
 
 ### Fase 6 — verificar
 ```bash

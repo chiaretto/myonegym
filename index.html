@@ -2,13 +2,98 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Raster only: the brand master is a PNG, so there is no SVG favicon. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" href="/pwa-64x64.png" sizes="64x64" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Mirrors --surface-0 in src/styles/tokens.css (hand-kept copy). -->
     <meta name="theme-color" content="#050607" />
     <title>MyOneGym</title>
+
+    <!-- iOS standalone chrome. `black` (not `black-translucent`) on purpose:
+         translucent lets content run under the status bar, and the stylesheet
+         only compensates for env(safe-area-inset-bottom), so the app bar would
+         end up behind the clock. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="MyOneGym" />
+
+    <!-- Home-screen icon for iOS. Must be an opaque PNG: iOS applies its own
+         rounding and would otherwise show the transparent corners. -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+
+    <!-- iOS launch images. iOS does not derive a launch screen from the web app
+         manifest, so every screen size needs its own image and media query.
+         This list is the contract: `npm run splash` (scripts/gen-splash.mjs)
+         reads these links and writes one exact-pixel file per href, so adding a
+         device means adding a link here and re-running. The images do NOT come
+         from `npm run pwa-assets` — that generator makes the icons, from a
+         different master. Never hand-edit the files themselves; the pairing
+         between these hrefs and public/ is guarded by
+         src/lib/installAssets.test.ts. -->
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1290x2796.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2796x1290.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1179x2556.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2556x1179.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1284x2778.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2778x1284.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1170x2532.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2532x1170.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1125x2436.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2436x1125.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1242x2688.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2688x1242.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-portrait-828x1792.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/apple-splash-landscape-1792x828.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)" href="/apple-splash-portrait-1242x2208.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: landscape)" href="/apple-splash-landscape-2208x1242.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-portrait-750x1334.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/apple-splash-landscape-1334x750.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" href="/apple-splash-portrait-640x1136.png" />
+    <link rel="apple-touch-startup-image" media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: landscape)" href="/apple-splash-landscape-1136x640.png" />
+
+    <!-- Boot splash. Inline, in the document itself, on purpose: this has to
+         paint on the very first frame, and anything React-rendered cannot —
+         the bundle has to download, parse and mount first, which on a cold
+         start is exactly the blank stretch this exists to cover.
+
+         Android is the reason it exists at all. Chrome composes a PWA's splash
+         from the manifest icon + name + background_color and offers no field
+         for a custom image, so the artwork can only reach an Android user if
+         the app paints it. On iOS it hands over from the native launch image
+         (the apple-touch-startup-image links above) to the same picture, so
+         the transition into the app is one continuous image rather than a
+         flash of empty background.
+
+         The styles are inline for the same reason as the markup: a linked
+         stylesheet is a second round trip, and a splash that appears late is
+         worse than no splash. -->
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2147483647;
+        /* Mirrors --surface-0. Shows for the instant before the image decodes,
+           and behind it on any browser without WebP (iOS < 14). */
+        background: #050607 center / cover no-repeat url('%BASE_URL%splash.webp');
+        opacity: 1;
+        transition: opacity 320ms ease-out;
+      }
+      /* Set by dismissBootSplash() once the app has rendered; the element is
+         removed when the fade finishes. */
+      #splash[data-leaving] {
+        opacity: 0;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash {
+          transition: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="presentation" aria-hidden="true"></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
