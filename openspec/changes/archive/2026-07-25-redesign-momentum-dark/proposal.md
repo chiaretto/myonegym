@@ -108,3 +108,44 @@ current behavior and data flow intact. Concretely:
 | Lucide→Tabler icon mapping lacks an exact equivalent | Med | Low | Pick nearest Tabler glyph per icon; document the mapping in tasks. |
 | Orange-on-dark contrast fails AA for small text | Low | Med | Use accent for large/CTA text; keep body on `--text`/`--muted`; verify contrast. |
 | Font-family swap disturbs the tuned typography scale | Low | Low | Change families/weights only; keep `--font-scale` tokens and defaults intact. |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** criada e implementada em 2026-07-10; arquivada em 2026-07-25
+**Outcome:** **Superseded** por `redesign-onegym-red` — arquivada sem merge de delta
+
+### Specs Updated
+
+**Nenhuma. Os delta specs desta change foram deliberadamente NÃO mergeados.**
+
+Ela foi implementada em 2026-07-10 mas nunca arquivada, e no meio do caminho
+`redesign-onegym-red` (arquivada hoje, PR #22) substituiu a identidade inteira.
+Os deltas aqui descrevem o estado anterior:
+
+| Delta | Por que não entra na fonte da verdade |
+|---|---|
+| `app-foundation` → `Dark Premium Visual Identity` | Descreve a paleta Momentum (fundo `#0b0b0e`, acento laranja `#ff5a36`). A fonte da verdade já carrega a versão OneGym Red desta mesma requirement, com `#050607` e `#ec2c2e`. Mergear duplicaria o nome e reinstalaria a paleta antiga. |
+| `app-foundation` → `Momentum Type System` | Três famílias (Sora + Manrope + JetBrains Mono). O app usa Poppins em dois pesos desde `redesign-onegym-red`; as três foram removidas do `package.json`. |
+| `app-foundation` → `Legible, Scalable Base Typography` (MODIFIED) | Fixava o padrão de escala em 150%. A fonte da verdade já foi corrigida para 125% hoje. |
+| `home-navigation` → `Weekly Training Summary` | É a versão do **anel de progresso** com denominador `days.length` — exatamente o que `redesign-onegym-red` removeu e substituiu pela trilha de sete dias com meta fixa em 7. |
+| `home-navigation` → `Featured Next Workout` | Já coberta por `Feature the Next Training Day`, que está na fonte da verdade desde antes desta change. |
+
+Mergear qualquer um deles regrediria as specs. O histórico fica preservado aqui,
+no archive, que é onde ele pertence.
+
+### Consequência que isto resolve
+
+`openspec-approve-apply.yml:83` espera **exatamente uma** change não arquivada.
+Havia três. Com este arquivamento e o de `exercise-form-hero-media`, o diretório
+`openspec/changes/` fica só com `archive/`.
+
+### Follow-ups (não entregues, com motivo)
+
+As 6 tarefas em aberto no `tasks.md` são todas de **QA visual manual** (paridade
+com a referência nas 6 telas, contraste AA, regressão de escala de fonte a
+100/150/200%, notas de design no README). Nunca foram executadas, e agora são
+**obsoletas**: mediriam a conformidade com a identidade Momentum, que não é mais
+a identidade do app.
