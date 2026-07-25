@@ -20,6 +20,8 @@ server** — all data lives in the browser.
 | Language | TypeScript | Strict mode |
 | Framework | React 18 + Vite | Fast dev, small bundle |
 | PWA | `vite-plugin-pwa` (Workbox) | Manifest + service worker + installable |
+| App icons | `@vite-pwa/assets-generator` | Generated from `public/icon.png` |
+| Launch screens | `sharp` (`scripts/gen-splash.mjs`) | iOS launch images + boot splash, from `new-design/assets/splash-master.png` |
 | Local storage | IndexedDB via **Dexie.js** | Structured, indexed, migratable |
 | State | Zustand (or React Context) | Lightweight, no boilerplate |
 | Routing | React Router | Home / Detail / Settings |
@@ -62,3 +64,14 @@ server** — all data lives in the browser.
   `/openspec-apply` → `/openspec-archive`.
 - Delta specs use ADDED / MODIFIED / REMOVED with Given/When/Then scenarios.
 - Mobile-first: design for a phone viewport; PWA installable and offline-capable.
+- Install assets are **generated**, never drawn by hand. Two chains, because the
+  icon and the launch screen are different artwork:
+  - **Icons** — master `public/icon.png`, run `npm run pwa-assets`
+    (`pwa-assets.config.ts`).
+  - **Launch screens** — master `new-design/assets/splash-master.png`, run
+    `npm run splash` (`scripts/gen-splash.mjs`), which writes the iOS launch
+    images plus `public/splash.webp` for the in-app boot splash.
+
+  Both masters are versioned, so either command can be re-run from a fresh
+  checkout, and their output is committed so `npm run build` never needs the
+  image toolchain. Edit a master and re-run; never edit a generated file.

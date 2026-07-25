@@ -5,6 +5,8 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css'
 import './styles/fonts.css'
 import './styles/global.css'
 import { App } from './App'
+import { scheduleBootSplashDismissal } from './lib/bootSplash'
+import { initInstall } from './lib/install'
 import { requestPersistentStorage } from './lib/storage'
 import { applyFontScale, useSettings } from './state/settings'
 
@@ -12,6 +14,11 @@ import { applyFontScale, useSettings } from './state/settings'
 // default before the user's preference applies. zustand+persist rehydrates
 // synchronously from localStorage, so getState() already holds the stored value.
 applyFontScale(useSettings.getState().fontScale)
+
+// Also before first render: `beforeinstallprompt` fires early and only once, so
+// a listener mounted later (e.g. by the Settings screen) would never see it and
+// the in-app install button could never appear.
+initInstall()
 
 // Best-effort: ask the browser to keep our IndexedDB data around.
 void requestPersistentStorage()
@@ -26,3 +33,7 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 )
+
+// Hand the boot splash in index.html over to the app now that there is a tree
+// to reveal underneath it.
+scheduleBootSplashDismissal()

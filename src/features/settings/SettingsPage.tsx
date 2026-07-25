@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useCategories, useDays, useExercises, useGyms } from '../../lib/hooks'
+import { useInstall } from '../../lib/install'
 import { Icon } from '../../ui/Icon'
 import { TabBar } from '../../ui/Chrome'
 import { GymSelector } from '../gym/GymSelector'
@@ -25,6 +26,19 @@ export function SettingsPage() {
   const cats = useCategories()
   const exs = useExercises()
   const days = useDays()
+  const canInstall = useInstall((s) => s.canInstall)
+  const isInstalled = useInstall((s) => s.isInstalled)
+  const platform = useInstall((s) => s.platform)
+
+  // The row says what the install screen can actually do here, so tapping it is
+  // never a dead end — iOS has no install button, only instructions.
+  const installSub = isInstalled
+    ? 'Já instalado neste aparelho'
+    : canInstall
+      ? 'Adicione o MyOneGym à tela inicial'
+      : platform === 'ios'
+        ? 'Veja como adicionar à tela inicial'
+        : 'Como abrir o app fora do navegador'
 
   return (
     <>
@@ -43,6 +57,11 @@ export function SettingsPage() {
           <NavRow to="/settings/categories" icon="tags" title="Categorias" sub="Grupos musculares (editáveis)" meta={cats?.length} />
           <NavRow to="/settings/exercises" icon="barbell" title="Exercícios" sub="Nome, imagem/GIF e categoria" meta={exs?.length} />
           <NavRow to="/settings/days" icon="calendar-event" title="Dias de treino" sub="Selecione os exercícios de cada dia" meta={days?.length} />
+        </div>
+
+        <div className="group-label">App</div>
+        <div className="group">
+          <NavRow to="/settings/install" icon="device-mobile" title="Instalar app" sub={installSub} />
         </div>
 
         <div className="group-label">Aparência</div>
