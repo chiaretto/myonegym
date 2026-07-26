@@ -29,7 +29,14 @@ export function ExercisesPage() {
     categorySel === 'all' || categorySel === 'none' ? categorySel : Number(categorySel)
   const dayFilter: DayFilter = daySel === 'all' || daySel === 'none' ? daySel : Number(daySel)
   const filtersActive = search.trim() !== '' || categorySel !== 'all' || daySel !== 'all'
-  const filtered = filterExercises(exs, { search, category: categoryFilter, dayId: dayFilter }, days)
+  // `?? []` only feeds the filter — every branch that *claims* emptiness below
+  // waits for `exs` itself, so a catalog that has not loaded yet is never
+  // reported as "Nenhum exercício".
+  const filtered = filterExercises(
+    exs ?? [],
+    { search, category: categoryFilter, dayId: dayFilter },
+    days ?? [],
+  )
 
   const clearFilters = () => {
     setSearch('')
@@ -53,7 +60,7 @@ export function ExercisesPage() {
     <>
       <BackBar title="Exercícios" to="/settings" />
       <main className="screen has-action-bar">
-        {exs.length === 0 && (
+        {exs && exs.length === 0 && (
           <div className="empty">
             <span className="big">🏋️</span>
             <h2>Nenhum exercício</h2>
@@ -61,7 +68,7 @@ export function ExercisesPage() {
           </div>
         )}
 
-        {exs.length > 0 && (
+        {exs && exs.length > 0 && (
           <div className="filters">
             <div className="field">
               <label htmlFor="ex-filter-search">Buscar por nome</label>
@@ -101,7 +108,7 @@ export function ExercisesPage() {
           </div>
         )}
 
-        {exs.length > 0 && filtered.length === 0 && (
+        {exs && exs.length > 0 && filtered.length === 0 && (
           <div className="empty">
             <span className="big">🔎</span>
             <h2>Nenhum exercício encontrado</h2>

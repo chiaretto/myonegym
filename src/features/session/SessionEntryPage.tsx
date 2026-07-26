@@ -40,7 +40,10 @@ export function SessionEntryPage() {
   const [tab, setTab] = useState<EntryTab>('exec')
 
   const backTo = `/session/${sessionId}`
-  if (session === undefined || entry === undefined) return <BackBar title="Exercício" to={backTo} />
+  // `entries` joins the wait: it drives the stepper, and an empty list would
+  // render this exercise as the only one in the session.
+  if (session === undefined || entry === undefined || entries === undefined)
+    return <BackBar title="Exercício" to={backTo} />
   if (session === null || entry === null) {
     return (
       <>

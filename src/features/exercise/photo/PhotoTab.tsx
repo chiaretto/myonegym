@@ -72,7 +72,7 @@ export function PhotoTab({ gymId, exerciseId }: { gymId: number | null; exercise
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
 
-  const open = useMemo(() => photos.find((p) => p.id === openId), [photos, openId])
+  const open = useMemo(() => photos?.find((p) => p.id === openId), [photos, openId])
 
   if (gymId == null) {
     return (
@@ -129,13 +129,15 @@ export function PhotoTab({ gymId, exerciseId }: { gymId: number | null; exercise
 
   return (
     <section className="note-card">
-      {photos.length === 0 ? (
+      {/* No message until the photos have loaded: "Nenhuma foto ainda" is a
+          statement about this gym's photos, not about the wait for them. */}
+      {photos && photos.length === 0 ? (
         <p className="note-empty">
           Nenhuma foto ainda. Fotografe o aparelho para lembrar a regulagem nesta academia.
         </p>
       ) : (
         <ul className="photo-grid">
-          {photos.map((p) => (
+          {(photos ?? []).map((p) => (
             <li key={p.id}>
               <Thumb photo={p} onOpen={() => setOpenId(p.id!)} />
             </li>

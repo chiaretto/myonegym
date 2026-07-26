@@ -22,6 +22,11 @@ through the accordion instead of leaving Home.
 O gesto de expandir e recolher MUST ser o **toque no cabeçalho do card**, e não
 apenas no nome do dia — ver "Training Day Card".
 
+O **estado vazio** MUST ser exibido apenas quando a leitura dos dias respondeu e
+não há nenhum dia. Enquanto a resposta não chega — inclusive a cada volta para a
+Home, que a remonta —, a Home MUST NOT exibir "Nenhum dia de treino ainda". Ver
+"Estados Vazios Só Depois da Resposta" na spec app-foundation.
+
 #### Scenario: Day header shows derived categories
 - GIVEN "Dia 1" contains "Supino" (Peito) and "Tríceps Corda" (Tríceps)
 - WHEN the user views Home
@@ -49,8 +54,14 @@ apenas no nome do dia — ver "Training Day Card".
 
 #### Scenario: Empty state
 - GIVEN no training days exist
-- WHEN the user opens Home
+- WHEN the user opens Home and the read resolves
 - THEN an empty state guides the user to create data in Settings
+
+#### Scenario: O estado vazio não pisca ao voltar para a Home
+- GIVEN existem dias de treino cadastrados
+- WHEN o usuário abre um exercício, as Configurações ou as Sessões e volta para a Home
+- THEN a Home mostra os dias
+- AND "Nenhum dia de treino ainda" não é exibido em nenhum quadro da transição
 
 #### Scenario: The expanded day survives leaving and returning
 - GIVEN "Dia 3" is expanded on Home
@@ -123,6 +134,12 @@ Where the count and the track can disagree — more than one session on the same
 calendar day — the day MUST be marked so the difference is legible rather than
 looking like a defect.
 
+O **zero state** é uma afirmação sobre os dados, e não sobre o carregamento:
+"0 / 7 treinos" MUST ser exibido apenas quando o histórico já foi lido. Enquanto
+a leitura não responde, o resumo MUST NOT mostrar uma contagem — mostrar zero e
+depois corrigi-lo faz a Home piscar um número falso a cada navegação. Ver
+"Estados Vazios Só Depois da Resposta" na spec app-foundation.
+
 #### Scenario: Summary reflects completed sessions
 - GIVEN the user completed 3 sessions on distinct days of the current week
 - WHEN the user opens Home
@@ -152,9 +169,15 @@ looking like a defect.
 
 #### Scenario: Zero state at the start of the week
 - GIVEN the user has completed no sessions in the current week
-- WHEN the user opens Home on Monday
+- WHEN the user opens Home on Monday and the history read resolves
 - THEN the summary renders "0 / 7 treinos" without error
 - AND Monday is marked as today while the remaining six cells are future
+
+#### Scenario: A contagem não pisca zero antes do número real
+- GIVEN o usuário concluiu 3 sessões nesta semana
+- WHEN o usuário volta para a Home vindo de outra tela
+- THEN o resumo mostra "3 / 7 treinos"
+- AND "0 / 7 treinos" não é exibido em nenhum quadro da transição
 
 #### Scenario: Week starts on Monday
 - GIVEN the user completed a session on Sunday of the current week
