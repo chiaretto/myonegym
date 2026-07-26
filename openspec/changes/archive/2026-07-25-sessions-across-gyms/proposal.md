@@ -193,3 +193,63 @@ Iniciar.
 | O laço N+1 ficar lento com histórico grande | Low | Med | Medir com um histórico sintético grande antes de fechar; se doer, agregar as entradas numa consulta só em vez de uma por sessão |
 | Perder o acesso rápido à troca de academia ao tirar o seletor de Sessões | Low | Low | O seletor continua na Home, que é a primeira aba; nada mais na tela de Sessões dependia dele |
 | Algum consumidor de `SessionSummary` quebrar com o campo novo | Low | Low | Campo adicional, não substituição; `npx tsc -b --noEmit` cobre os consumidores |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** mesmo dia (proposta e implementação em 2026-07-25)
+**Outcome:** Implemented — arquivado com conferência visual não realizada
+
+### Conferência visual não realizada
+
+As tarefas **3.7** e **4.3** (conferência em navegador) **não foram feitas** — não
+há navegador executável no ambiente de implementação, e o arquivamento foi
+autorizado sem elas. Ficam registradas aqui como pendência real, não como item
+verificado.
+
+O ponto a olhar é a linha secundária do item de sessão quando tudo aparece junto
+— "há 2 dias · 24/07 · 52min · Academia com nome comprido" — em viewport estreito
+e com `--font-scale` a 200%. Ela quebra em vez de truncar, porque o nome é o
+último fragmento e uma reticência comeria justamente ele.
+
+Todo o comportamento está coberto por teste automatizado (13 novos); o que ficou
+sem verificação é a aparência.
+
+### Desvio da proposta
+
+Um, registrado em "Decisões" no `tasks.md`: o modo por academia de
+`listSessionSummaries` foi **removido** em vez de mantido. A tarefa 1.2 o
+preservava alegando que "outros pontos ainda usam", o que a busca desmentiu —
+havia dois chamadores, o hook (que passou a ser global) e um teste que afirmava
+justamente o recorte sendo substituído.
+
+### Achado fora do escopo
+
+`session.share.integration.test.tsx:115` é instável (1 falha em 6 execuções da
+suíte completa; 5 execuções limpas em `main` passaram). Não é regressão desta
+mudança: é uma corrida do próprio teste, que clica em "Compartilhar" antes de a
+live query de pesos resolver. Correção de uma linha, deixada de fora por ser
+alheia ao escopo.
+
+### Files Modified
+- `src/db/repos.ts` — `listSessionSummaries` lê todas as academias;
+  `SessionSummary` ganha `gymName` resolvido na leitura
+- `src/lib/hooks.ts` — `useSessionSummaries()` sem argumento
+- `src/features/home/HomePage.tsx` — resumo semanal e "Próximo treino" a partir do
+  histórico global; sessão em andamento segue por academia
+- `src/features/session/SessionsPage.tsx` — lista global, nome da academia no
+  item, rodapé sem recorte, seletor de academia removido
+- `src/features/session/session.css` — fragmento da academia e o estado "removida"
+- `src/db/repos.test.ts`, `src/features/home/next-workout.integration.test.tsx`,
+  `src/features/home/week-across-gyms.integration.test.tsx`,
+  `src/features/session/sessions-across-gyms.integration.test.tsx` — 13 testes
+
+### Specs Updated
+- `openspec/specs/workout-sessions/spec.md`
+  - MODIFIED: "Session History Per Gym" → renomeado para
+    "Session History Across Gyms"
+- `openspec/specs/home-navigation/spec.md`
+  - MODIFIED: "Weekly Training Summary" (escopo global), "Feature the Next
+    Training Day" (origem global, sessão em andamento segue por academia)

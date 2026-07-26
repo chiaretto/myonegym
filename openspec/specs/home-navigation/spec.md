@@ -109,6 +109,16 @@ or broken.
 The summary MAY show a **streak** of consecutive days trained, also derived from
 completed-session history.
 
+A contagem, a trilha e a sequência MUST considerar as sessões concluídas em
+**todas as academias**, e MUST NOT ser recortadas pela academia ativa. A pergunta
+que o resumo responde é "eu treinei esta semana?", não "eu treinei esta semana
+**aqui**?" — quem treina em mais de um lugar tem uma semana só. Dois treinos em
+academias diferentes na mesma semana MUST somar, e MUST marcar seus respectivos
+dias na trilha.
+
+Sessões cuja academia foi excluída MUST contar como qualquer outra: o treino
+aconteceu.
+
 Where the count and the track can disagree — more than one session on the same
 calendar day — the day MUST be marked so the difference is legible rather than
 looking like a defect.
@@ -118,6 +128,22 @@ looking like a defect.
 - WHEN the user opens Home
 - THEN the summary shows the text "3 / 7 treinos"
 - AND exactly 3 cells of the seven-day track are marked done
+
+#### Scenario: Treinos em academias diferentes somam
+- GIVEN o usuário treinou segunda na academia "A" e terça na academia "B"
+- WHEN o usuário abre a Home, com qualquer uma das duas ativa
+- THEN o resumo mostra "2 / 7 treinos"
+- AND segunda e terça estão marcadas na trilha
+
+#### Scenario: A contagem não muda ao trocar de academia
+- GIVEN a Home mostra "2 / 7 treinos"
+- WHEN o usuário troca a academia ativa
+- THEN a contagem e a trilha continuam as mesmas
+
+#### Scenario: Treino em academia excluída continua contando
+- GIVEN o usuário treinou quarta e depois excluiu aquela academia
+- WHEN o usuário abre a Home na mesma semana
+- THEN quarta segue marcada na trilha e o treino segue somando na contagem
 
 #### Scenario: Goal is fixed, not derived from configured days
 - GIVEN the user has 4 configured training days
@@ -408,16 +434,24 @@ new one.
 ### Requirement: Feature the Next Training Day
 
 Home MUST mark exactly one training day as the **"Próximo treino"** (next
-workout), chosen from the **active gym's** workout history rather than always the
-first day. The featured day MUST be the one **immediately after** the day of the
-**most recent completed session** (for the active gym) in the accordion's display
-order. The next day MUST **wrap to the first** day when there are **no completed
-sessions**, when the most recent session's day was the **last** in the list, or
-when that day is **no longer in the list** (e.g. it was deleted). The marking MAY
-be suppressed while the active gym has an **in-progress** session being resumed.
+workout), chosen from the workout history rather than always the first day. The
+featured day MUST be the one **immediately after** the day of the **most recent
+completed session** in the accordion's display order. The next day MUST **wrap to
+the first** day when there are **no completed sessions**, when the most recent
+session's day was the **last** in the list, or when that day is **no longer in
+the list** (e.g. it was deleted).
+
+A sessão mais recente MUST ser tomada entre **todas as academias**, e não apenas
+a da academia ativa. Os dias de treino são **globais** — não pertencem a academia
+nenhuma —, então a rotação "treinou o Dia 1, o próximo é o Dia 2" MUST NOT se
+reiniciar porque o usuário passou a treinar em outro lugar.
+
+A sessão **em andamento**, essa sim, continua sendo por academia: a marcação MAY
+ser suprimida enquanto a **academia ativa** tiver uma sessão em andamento sendo
+retomada (ver "Single Active Session Per Gym").
 
 #### Scenario: No history features the first day
-- GIVEN the active gym has no completed sessions and days are "Dia 1", "Dia 2", "Dia 3"
+- GIVEN there are no completed sessions in any gym and days are "Dia 1", "Dia 2", "Dia 3"
 - WHEN the user views Home
 - THEN "Dia 1" is marked "Próximo treino"
 
@@ -436,12 +470,20 @@ be suppressed while the active gym has an **in-progress** session being resumed.
 - WHEN the user views Home
 - THEN "Dia 2" is marked "Próximo treino" (based on the most recent session, "Dia 1")
 
-#### Scenario: Follows the active gym
-- GIVEN gym "A"'s most recent session was "Dia 2" and gym "B" has no sessions
-- WHEN the user switches the active gym from "A" to "B"
-- THEN the featured day recomputes from "B"'s history and marks "Dia 1"
+#### Scenario: A rotação não se reinicia ao trocar de academia
+- GIVEN o treino concluído mais recente foi o "Dia 2", na academia "A", e a
+  academia "B" não tem nenhuma sessão
+- WHEN o usuário torna "B" a academia ativa e abre a Home
+- THEN "Dia 3" continua marcado como "Próximo treino"
+- AND a rotação não volta para o "Dia 1"
 
 #### Scenario: Deleted last-session day falls back to the first
 - GIVEN the most recent completed session was for a day that has since been deleted
 - WHEN the user views Home
 - THEN "Dia 1" is marked "Próximo treino"
+
+#### Scenario: A sessão em andamento continua sendo da academia ativa
+- GIVEN há uma sessão em andamento na academia "A"
+- WHEN o usuário torna "B" a academia ativa e abre a Home
+- THEN nenhum dia é apresentado como retomável
+- AND o "Próximo treino" segue marcado normalmente, a partir do histórico global
