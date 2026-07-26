@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050607" />
+  <title>MyOneGym — Calendário de consistência: proposta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  <link rel="stylesheet" href="css/global.css" />
+  <link rel="stylesheet" href="css/home.css" />
+  <link rel="stylesheet" href="css/session.css" />
+  <link rel="stylesheet" href="css/consistency.css" />
+  <link rel="stylesheet" href="css/mockup.css" />
+  <style>
+    /* Page scaffolding — same vocabulary as week-proposals.html (mockup-only). */
+    .wp { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+    .wp h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.2em;
+      color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
+    .wp section { margin-bottom: 46px; padding-bottom: 6px; }
+    .wp .lede { font-size: 13px; color: var(--text-secondary); line-height: 1.65; margin-bottom: 18px;
+      max-width: 74ch; }
+    .wp .lede b { color: var(--text-primary); }
+    .stage { background: var(--surface-0); border: 0.5px solid var(--border-strong);
+      border-radius: 26px; padding: 18px; max-width: 430px; }
+    .stage + .stage { margin-top: 14px; }
+    .stage-cap { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-muted); font-weight: 600; margin: 0 0 8px 4px; }
+    .row2 { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+    .verdict { font-size: 13px; line-height: 1.65; color: var(--text-secondary);
+      flex: 1; min-width: 270px; }
+    .verdict b { color: var(--text-primary); }
+    .verdict code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+      background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--text-accent); }
+    .tag { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; padding: 3px 9px; border-radius: 999px; margin-left: 8px;
+      vertical-align: 2px; }
+    .tag.rec  { background: var(--bg-accent); color: var(--text-accent); border: 0.5px solid var(--border-accent); }
+    .tag.no   { background: var(--surface-2); color: var(--text-muted); }
+    .finding { border-left: 3px solid var(--danger); background: var(--surface-1);
+      border-radius: 0 var(--r-ctl) var(--r-ctl) 0; padding: 15px 17px; margin: 0 0 22px;
+      font-size: 13px; line-height: 1.65; color: var(--text-secondary); max-width: 82ch; }
+    .finding b { color: var(--text-primary); }
+    .finding code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
+      background: var(--surface-2); padding: 1px 6px; border-radius: 6px; color: var(--danger); }
+    .finding + .finding { margin-top: -6px; }
+    /* The phone stage for proposal A hosts a full screen, not a lone card. */
+    .stage.phone { padding: 0; overflow: hidden; }
+  </style>
+</head>
+<body class="mock">
+
+<p class="mock-tag"><a href="index.html">← galeria</a> · <b>Calendário de consistência: proposta</b></p>
+
+<div class="wp">
+
+  <section>
+    <h2>Proposta de feature — calendário de consistência</h2>
+    <p class="lede">
+      A trilha da semana na Home responde <em>“como está esta semana?”</em>. Esta proposta responde a
+      pergunta seguinte: <b>“eu tenho sido constante?”</b> — um calendário mensal onde cada treino
+      concluído é um disco vermelho, a lista dos treinos daquele mês, a sequência de semanas ativas
+      e um histórico de 12 semanas. É a métrica que faz alguém abrir o app numa segunda-feira
+      desanimada. A forma escolhida é a <b>proposta C</b> abaixo; A e B ficam como registro do
+      caminho.
+    </p>
+    <p class="lede">
+      Tudo aqui é <b>derivável do dado que já existe</b>: <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">Session.completedAt</code>
+      é epoch ms e já é indexado (<code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">db.ts:41</code>), e a semana já começa na
+      segunda (<code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">lib/week.ts</code>). Nenhuma mudança de schema, nenhum dado novo
+      a coletar — só leitura agregada do que o usuário já registra.
+    </p>
+
+    <div class="finding">
+      <b>Sessões são por academia; consistência é da pessoa.</b> A lista de Sessões filtra pela
+      academia ativa (spec <code>workout-sessions</code>), mas quem treinou terça na academia da
+      empresa e quinta na do bairro <em>treinou duas vezes</em> — o calendário que só mostra uma
+      delas mente sobre a constância. Decisão proposta: a tela <b>agrega todas as academias</b> — e,
+      como ela <b>assume o lugar da tela de Sessões</b>, o histórico inteiro do app passa a ser
+      global, com a academia identificada em cada card. É a mesma razão de a trilha da semana na
+      Home já ser global.
+    </div>
+
+    <div class="finding">
+      <b>Sequência em semanas, não em dias.</b> Uma sequência diária zera no primeiro descanso — e
+      descanso faz parte do treino. A régua proposta: <b>semanas consecutivas com ao menos uma sessão
+      concluída</b>. A semana atual conta se já tem sessão e <em>não quebra a sequência enquanto não
+      termina</em> — na segunda-feira de manhã você ainda não “falhou” a semana. Mesmo princípio da
+      decisão em <code>week-proposals.html</code>: nada de X, nada de estado punitivo — um dia passado
+      sem treino é um número apagado, não uma marca. A tela mostra <em>também</em> os dias em
+      sequência, como termômetro imediato — mas a régua que define “manter a sequência” segue sendo
+      a semana.
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta A -->
+  <section>
+    <h2>Proposta A — tela “Consistência” <span class="tag no">evoluiu para a C</span></h2>
+    <p class="lede">
+      Uma tela própria, aberta a partir do card da semana na Home (rota <b>/consistency</b>).
+      Três blocos, do resumo ao detalhe: os números (sequência, melhor marca, treinos no mês),
+      o mês corrente navegável, e as últimas 12 semanas de relance.
+    </p>
+
+    <div class="row2">
+      <div class="stage phone">
+        <div class="app">
+          <div class="mock-statusbar">
+            <span>07:58</span>
+            <span class="right"><i class="ti ti-bluetooth"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i> 82%</span>
+          </div>
+
+          <header class="appbar">
+            <button class="icon-btn ghost" aria-label="Voltar"><i class="ti ti-arrow-left"></i></button>
+            <h1>Consistência</h1>
+          </header>
+
+          <main class="screen">
+            <div class="cons-stats">
+              <div class="stat-tile streak">
+                <strong class="stat-num"><i class="png-ic pi-flame"></i>6<span class="stat-unit">sem</span></strong>
+                <span class="stat-lab">Sequência atual</span>
+              </div>
+              <div class="stat-tile">
+                <strong class="stat-num">9<span class="stat-unit">sem</span></strong>
+                <span class="stat-lab">Melhor sequência</span>
+              </div>
+              <div class="stat-tile">
+                <strong class="stat-num">13</strong>
+                <span class="stat-lab">Treinos em julho</span>
+              </div>
+            </div>
+
+            <div class="cal-card">
+              <div class="cal-head">
+                <button class="icon-btn" aria-label="Mês anterior"><i class="png-ic pi-chevron-left"></i></button>
+                <span class="cal-title">Julho 2026</span>
+                <button class="icon-btn" aria-label="Próximo mês" disabled><i class="png-ic pi-chevron-right"></i></button>
+              </div>
+              <div class="cal-grid" role="grid" aria-label="Julho de 2026">
+                <span class="cal-wd">seg</span><span class="cal-wd">ter</span><span class="cal-wd">qua</span>
+                <span class="cal-wd">qui</span><span class="cal-wd">sex</span><span class="cal-wd">sáb</span>
+                <span class="cal-wd">dom</span>
+
+                <span class="cal-cell out">29</span>
+                <span class="cal-cell out">30</span>
+                <span class="cal-cell past">1</span>
+                <span class="cal-cell done">2</span>
+                <span class="cal-cell past">3</span>
+                <span class="cal-cell done">4</span>
+                <span class="cal-cell past">5</span>
+
+                <span class="cal-cell past">6</span>
+                <span class="cal-cell done">7</span>
+                <span class="cal-cell past">8</span>
+                <span class="cal-cell done">9</span>
+                <span class="cal-cell past">10</span>
+                <span class="cal-cell done">11</span>
+                <span class="cal-cell past">12</span>
+
+                <span class="cal-cell past">13</span>
+                <span class="cal-cell done">14</span>
+                <span class="cal-cell past">15</span>
+                <span class="cal-cell done multi" title="2 sessões">16</span>
+                <span class="cal-cell past">17</span>
+                <span class="cal-cell done">18</span>
+                <span class="cal-cell past">19</span>
+
+                <span class="cal-cell done">20</span>
+                <span class="cal-cell past">21</span>
+                <span class="cal-cell done">22</span>
+                <span class="cal-cell past">23</span>
+                <span class="cal-cell done">24</span>
+                <span class="cal-cell done">25</span>
+                <span class="cal-cell today">26</span>
+
+                <span class="cal-cell future">27</span>
+                <span class="cal-cell future">28</span>
+                <span class="cal-cell future">29</span>
+                <span class="cal-cell future">30</span>
+                <span class="cal-cell future">31</span>
+                <span class="cal-cell out">1</span>
+                <span class="cal-cell out">2</span>
+              </div>
+              <div class="cal-legend">
+                <span><i class="cal-cell done"></i> treinou</span>
+                <span><i class="cal-cell done multi"></i> 2+ sessões</span>
+                <span><i class="cal-cell today"></i> hoje</span>
+              </div>
+            </div>
+
+            <div class="group-label">Últimas 12 semanas</div>
+            <div class="hm-card">
+              <div class="hm-strip" aria-label="Treinos por semana, últimas 12 semanas">
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l1">2</span>
+                <span class="hm-c">0</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l1">2</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">4</span>
+                <span class="hm-c l2">4</span>
+              </div>
+              <div class="hm-months">
+                <span style="grid-column: 1">mai</span>
+                <span style="grid-column: 5">jun</span>
+                <span style="grid-column: 9">jul</span>
+              </div>
+              <div class="hm-legend">
+                <span>menos</span>
+                <i class="hm-c"></i><i class="hm-c l1"></i><i class="hm-c l2"></i>
+                <span>mais</span>
+              </div>            </div>
+          </main>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <p><b>Por que uma tela própria.</b> O calendário precisa de largura total e de silêncio ao
+        redor — espremido em outra tela ele vira um widget que compete com o conteúdo dela. E a
+        Home continua leve: o card da semana já é o resumo; a tela nova é o “ver mais” dele.</p>
+        <p style="margin-top:12px"><b>A mesma língua visual da trilha.</b> Disco vermelho = treinou,
+        anel = hoje — estados que o usuário já aprendeu na Home. A diferença deliberada: na densidade
+        de um mês, dia passado sem treino é um <b>número apagado</b>, não o disco escuro da trilha —
+        dezoito discos escuros leriam como dezoito broncas.</p>
+        <p style="margin-top:12px"><b>O ponto observável nos dados de exemplo:</b> a lacuna na semana
+        de 8 de junho (viagem) quebra a sequência anterior — por isso “atual: 6” e “melhor: 9”. O
+        heatmap conta essa história de relance; o calendário dá o detalhe do mês; os cards dão o
+        número para se orgulhar.</p>
+        <p style="margin-top:12px"><b>Custo real:</b> um helper de agregação (sessões → dias/semanas),
+        a rota nova e o toque no card da semana. O “mês anterior” navega até o primeiro mês com
+        sessão; “próximo” desabilita no mês corrente.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta C -->
+  <section>
+    <h2>Proposta C — a tela da A com a lista de treinos da B <span class="tag rec">recomendada</span></h2>
+    <p class="lede">
+      A mistura pedida: a tela dedicada da proposta A ganha, <b>logo abaixo do calendário, a lista
+      dos treinos do mês exibido</b>. O que era o defeito fatal da B desaparece aqui: esta lista é
+      <b>global como o calendário</b> — cada card diz em qual academia foi o treino — então os dois
+      blocos sempre contam a mesma história. E a tela <b>substitui a tela de Sessões</b>: a aba do
+      meio da tab bar passa a ser “Consistência”, e este vira o histórico único do app.
+    </p>
+
+    <div class="row2">
+      <div class="stage phone">
+        <div class="app">
+          <div class="mock-statusbar">
+            <span>07:58</span>
+            <span class="right"><i class="ti ti-bluetooth"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i> 82%</span>
+          </div>
+
+          <header class="appbar">
+            <h1>Consistência</h1>
+          </header>
+
+          <main class="screen">
+            <div class="cons-stats">
+              <div class="stat-tile streak">
+                <strong class="stat-num"><i class="png-ic pi-flame"></i>2</strong>
+                <span class="stat-lab">Dias em sequência</span>
+              </div>
+              <div class="stat-tile">
+                <strong class="stat-num">6<span class="stat-unit">sem</span></strong>
+                <span class="stat-lab">Semanas em sequência</span>
+              </div>
+              <div class="stat-tile">
+                <strong class="stat-num">13</strong>
+                <span class="stat-lab">Treinos em julho</span>
+              </div>
+            </div>
+
+            <div class="cal-card">
+              <div class="cal-head">
+                <button class="icon-btn" aria-label="Mês anterior"><i class="png-ic pi-chevron-left"></i></button>
+                <span class="cal-title">Julho 2026</span>
+                <button class="icon-btn" aria-label="Próximo mês" disabled><i class="png-ic pi-chevron-right"></i></button>
+              </div>
+              <div class="cal-grid" role="grid" aria-label="Julho de 2026">
+                <span class="cal-wd">seg</span><span class="cal-wd">ter</span><span class="cal-wd">qua</span>
+                <span class="cal-wd">qui</span><span class="cal-wd">sex</span><span class="cal-wd">sáb</span>
+                <span class="cal-wd">dom</span>
+
+                <span class="cal-cell out">29</span>
+                <span class="cal-cell out">30</span>
+                <span class="cal-cell past">1</span>
+                <span class="cal-cell done">2</span>
+                <span class="cal-cell past">3</span>
+                <span class="cal-cell done">4</span>
+                <span class="cal-cell past">5</span>
+
+                <span class="cal-cell past">6</span>
+                <span class="cal-cell done">7</span>
+                <span class="cal-cell past">8</span>
+                <span class="cal-cell done">9</span>
+                <span class="cal-cell past">10</span>
+                <span class="cal-cell done">11</span>
+                <span class="cal-cell past">12</span>
+
+                <span class="cal-cell past">13</span>
+                <span class="cal-cell done">14</span>
+                <span class="cal-cell past">15</span>
+                <span class="cal-cell done multi" title="2 sessões">16</span>
+                <span class="cal-cell past">17</span>
+                <span class="cal-cell done">18</span>
+                <span class="cal-cell past">19</span>
+
+                <span class="cal-cell done">20</span>
+                <span class="cal-cell past">21</span>
+                <span class="cal-cell done">22</span>
+                <span class="cal-cell past">23</span>
+                <span class="cal-cell done">24</span>
+                <span class="cal-cell done">25</span>
+                <span class="cal-cell today">26</span>
+
+                <span class="cal-cell future">27</span>
+                <span class="cal-cell future">28</span>
+                <span class="cal-cell future">29</span>
+                <span class="cal-cell future">30</span>
+                <span class="cal-cell future">31</span>
+                <span class="cal-cell out">1</span>
+                <span class="cal-cell out">2</span>
+              </div>
+              <div class="cal-legend">
+                <span><i class="cal-cell done"></i> treinou</span>
+                <span><i class="cal-cell done multi"></i> 2+ sessões</span>
+                <span><i class="cal-cell today"></i> hoje</span>
+              </div>
+            </div>
+
+            <div class="group-label">Treinos de julho</div>
+            <div class="context-strip">
+              <span class="count-hint">13 treinos · todas as academias</span>
+            </div>
+            <ul class="session-list">
+              <li>
+                <button class="session-card">
+                  <div class="session-info">
+                    <div class="session-name">Dia 1 – Peito e Tríceps</div>
+                    <div class="session-sub">sáb 25, 21:52 · Fit Park</div>
+                  </div>
+                  <span class="done-badge full"><i class="ti ti-check" style="font-size:.85em"></i> 4/4</span>
+                </button>
+              </li>
+              <li>
+                <button class="session-card">
+                  <div class="session-info">
+                    <div class="session-name">Dia 5 – Ombros, Peito e Trapézio</div>
+                    <div class="session-sub">sex 24, 20:14 · Fit Park</div>
+                  </div>
+                  <span class="done-badge">4/5</span>
+                </button>
+              </li>
+              <li>
+                <button class="session-card">
+                  <div class="session-info">
+                    <div class="session-name">Dia 4 – Pernas (Posterior e Glúteo)</div>
+                    <div class="session-sub">qua 22, 19:40 · Fit Park</div>
+                  </div>
+                  <span class="done-badge full"><i class="ti ti-check" style="font-size:.85em"></i> 6/6</span>
+                </button>
+              </li>
+            </ul>
+            <button class="list-more">
+              Ver mais 10 treinos <i class="png-ic pi-chevron-down"></i>
+            </button>
+
+            <div class="group-label">Últimas 12 semanas</div>
+            <div class="hm-card">
+              <div class="hm-strip" aria-label="Treinos por semana, últimas 12 semanas">
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l1">2</span>
+                <span class="hm-c">0</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l1">2</span>
+                <span class="hm-c l2">3</span>
+                <span class="hm-c l2">4</span>
+                <span class="hm-c l2">4</span>
+              </div>
+              <div class="hm-months">
+                <span style="grid-column: 1">mai</span>
+                <span style="grid-column: 5">jun</span>
+                <span style="grid-column: 9">jul</span>
+              </div>
+              <div class="hm-legend">
+                <span>menos</span>
+                <i class="hm-c"></i><i class="hm-c l1"></i><i class="hm-c l2"></i>
+                <span>mais</span>
+              </div>            </div>
+
+            <div class="group-label">Últimos 12 meses</div>
+            <div class="hm-card">
+              <div class="mo-chart" aria-label="Treinos por mês, últimos 12 meses">
+                <div class="mo-col"><span class="mo-num">8</span><i class="mo-bar" style="height:53px" title="ago 2025: 8"></i></div>
+                <div class="mo-col"><span class="mo-num">10</span><i class="mo-bar" style="height:67px" title="set 2025: 10"></i></div>
+                <div class="mo-col"><span class="mo-num">12</span><i class="mo-bar" style="height:80px" title="out 2025: 12"></i></div>
+                <div class="mo-col"><span class="mo-num">11</span><i class="mo-bar" style="height:73px" title="nov 2025: 11"></i></div>
+                <div class="mo-col"><span class="mo-num">6</span><i class="mo-bar" style="height:40px" title="dez 2025: 6"></i></div>
+                <div class="mo-col"><span class="mo-num">14</span><i class="mo-bar" style="height:93px" title="jan 2026: 14"></i></div>
+                <div class="mo-col"><span class="mo-num">12</span><i class="mo-bar" style="height:80px" title="fev 2026: 12"></i></div>
+                <div class="mo-col"><span class="mo-num">15</span><i class="mo-bar" style="height:100px" title="mar 2026: 15"></i></div>
+                <div class="mo-col"><span class="mo-num">13</span><i class="mo-bar" style="height:87px" title="abr 2026: 13"></i></div>
+                <div class="mo-col"><span class="mo-num">14</span><i class="mo-bar" style="height:93px" title="mai 2026: 14"></i></div>
+                <div class="mo-col"><span class="mo-num">9</span><i class="mo-bar" style="height:60px" title="jun 2026: 9"></i></div>
+                <div class="mo-col"><span class="mo-num">13</span><i class="mo-bar partial" style="height:87px" title="jul 2026: 13 (em andamento)"></i></div>
+              </div>
+              <div class="mo-months">
+                <span></span><span>set</span><span></span><span>nov</span>
+                <span></span><span>jan</span><span></span><span>mar</span>
+                <span></span><span>mai</span><span></span><span>jul</span>
+              </div>
+              <div class="mo-legend">
+                <i class="mo-bar"></i><span>mês completo</span>
+                <i class="mo-bar partial"></i><span>em andamento</span>
+              </div>
+            </div>
+          </main>
+
+          <nav class="tabbar">
+            <a href="home.html"><i class="png-ic pi-home"></i>Treinos</a>
+            <a class="active"><i class="png-ic pi-history"></i>Consistência</a>
+            <a href="settings.html"><i class="png-ic pi-settings"></i>Configurações</a>
+          </nav>
+        </div>
+      </div>
+
+      <div class="verdict">
+        <p><b>O que muda em relação à A:</b> entre o calendário e o heatmap entra a lista de treinos
+        do mês exibido — os mesmos cards de sessão da tela de Sessões (mesma faixa vermelha, mesmo
+        badge de conclusão), mas com a <b>academia no subtítulo</b>, porque aqui a lista é global.
+        Navegar para junho troca calendário <em>e</em> lista juntos: o mês é um só estado. E a tela
+        deixou de ser uma rota empilhada com “voltar”: é a <b>aba do meio da tab bar</b>, no lugar
+        de Sessões — veja a seção seguinte.</p>
+        <p style="margin-top:12px"><b>Só os 3 mais recentes, com “Ver mais”.</b> A lista abre com os
+        três últimos treinos do mês; o botão <b>“Ver mais 10 treinos”</b> expande o restante ali
+        mesmo, sem trocar de tela. Isso mantém o heatmap ao alcance de uma rolagem curta em qualquer
+        mês — a lista completa é opt-in, não custo fixo. O rótulo carrega a contagem para o botão
+        prometer exatamente o que entrega; expandido, ele vira “Ver menos”. Ao navegar para outro
+        mês, a lista volta ao estado recolhido.</p>
+        <p style="margin-top:12px"><b>Por que a academia aparece no card.</b> É o que desarma o
+        conflito que derrubou a B: um mês com 13 treinos e uma lista de 13 cards, sem nenhum “nesta
+        academia” para discordar. O dia 16 — o do badge de 2+ no calendário — tem duas sessões, uma
+        em cada academia; elas aparecem ao expandir.</p>
+        <p style="margin-top:12px"><b>Ordem dos blocos:</b> o heatmap de 12 semanas desce para
+        depois da lista. Ele é leitura de relance, uma vez por visita; a lista é o detalhe do mês
+        que o calendário promete e por isso fica colada nele.</p>
+        <p style="margin-top:12px"><b>Últimos 12 meses:</b> a tela fecha com o zoom mais aberto —
+        barras de treinos por mês, na mesma escala de vermelho (a barra do mês corrente usa o tom
+        médio do heatmap, porque ainda está contando). Cada barra carrega sua contagem em cima, em
+        cinza de texto — são só 12 números de até dois dígitos, cabem sem disputar com as barras, e
+        a leitura dispensa o toque. É este bloco que conta a história longa — a queda de dezembro, a
+        retomada de janeiro — que nem o calendário nem as 12 semanas alcançam.</p>
+        <p style="margin-top:12px"><b>Iteração futura que a C habilita de graça:</b> tocar um dia
+        com treino rola a lista até a sessão daquele dia; tocar um card abre o detalhe da sessão
+        que já existe (<code>/sessions/:id</code>).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================= porta de entrada -->
+  <section>
+    <h2>Onde a tela mora — no lugar de Sessões, na tab bar</h2>
+    <p class="lede">
+      A aba do meio deixa de ser a lista por academia e passa a ser <b>Consistência</b>. Nada de
+      quarto item na tab bar, e <b>nada muda no card da semana da Home</b> — ele fica pixel por
+      pixel como está.
+    </p>
+    <div class="row2">
+      <div class="stage">
+        <p class="stage-cap">Tab bar — “Sessões” dá lugar a “Consistência”</p>
+        <nav class="tabbar">
+          <a href="home.html"><i class="png-ic pi-home"></i>Treinos</a>
+          <a class="active"><i class="png-ic pi-history"></i>Consistência</a>
+          <a href="settings.html"><i class="png-ic pi-settings"></i>Configurações</a>
+        </nav>
+      </div>
+      <div class="verdict">
+        <p><b>Por que substituir, e não somar:</b> a lista mensal da tela de consistência contém
+        tudo o que a lista por academia mostrava — os mesmos cards, agora com a academia em cada um —
+        então manter as duas seria ter dois históricos discordando na contagem. O detalhe de sessão
+        (<code>/sessions/:id</code>), com compartilhar e excluir, continua exatamente onde está;
+        só a listagem muda de dono.</p>
+        <p style="margin-top:12px"><b>Duas consequências da troca:</b> o seletor de academia sai da
+        barra do topo — a tela é global por decisão, e um filtro ali reintroduziria a confusão que a
+        C eliminou — e o ícone e a rota podem ficar os mesmos de hoje (<code>pi-history</code>,
+        <code>/sessions</code>), trocando apenas o rótulo e o conteúdo da página.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ proposta B -->
+  <section>
+    <h2>Proposta B — embutir no topo de Sessões <span class="tag no">descartada</span></h2>
+    <p class="lede">
+      A alternativa óbvia: o calendário já morando na tela que lista as sessões. Montada aqui para
+      ser honesta — e descartada.
+    </p>
+    <div class="row2">
+      <div class="stage">
+        <p class="stage-cap">Sessões — com o calendário espremido acima da lista</p>
+        <div class="context-strip">
+          <span class="count-hint">12 sessões nesta academia</span>
+        </div>
+        <div class="cal-card compact">
+          <div class="cal-head">
+            <button class="icon-btn" aria-label="Mês anterior"><i class="png-ic pi-chevron-left"></i></button>
+            <span class="cal-title">Julho 2026</span>
+            <button class="icon-btn" aria-label="Próximo mês" disabled><i class="png-ic pi-chevron-right"></i></button>
+          </div>
+          <div class="cal-grid">
+            <span class="cal-wd">seg</span><span class="cal-wd">ter</span><span class="cal-wd">qua</span>
+            <span class="cal-wd">qui</span><span class="cal-wd">sex</span><span class="cal-wd">sáb</span>
+            <span class="cal-wd">dom</span>
+            <span class="cal-cell out">29</span><span class="cal-cell out">30</span>
+            <span class="cal-cell past">1</span><span class="cal-cell done">2</span>
+            <span class="cal-cell past">3</span><span class="cal-cell done">4</span>
+            <span class="cal-cell past">5</span>
+            <span class="cal-cell past">6</span><span class="cal-cell done">7</span>
+            <span class="cal-cell past">8</span><span class="cal-cell done">9</span>
+            <span class="cal-cell past">10</span><span class="cal-cell done">11</span>
+            <span class="cal-cell past">12</span>
+            <span class="cal-cell past">13</span><span class="cal-cell done">14</span>
+            <span class="cal-cell past">15</span><span class="cal-cell done multi">16</span>
+            <span class="cal-cell past">17</span><span class="cal-cell done">18</span>
+            <span class="cal-cell past">19</span>
+            <span class="cal-cell done">20</span><span class="cal-cell past">21</span>
+            <span class="cal-cell done">22</span><span class="cal-cell past">23</span>
+            <span class="cal-cell done">24</span><span class="cal-cell done">25</span>
+            <span class="cal-cell today">26</span>
+            <span class="cal-cell future">27</span><span class="cal-cell future">28</span>
+            <span class="cal-cell future">29</span><span class="cal-cell future">30</span>
+            <span class="cal-cell future">31</span><span class="cal-cell out">1</span>
+            <span class="cal-cell out">2</span>
+          </div>
+        </div>
+        <div class="month-label">Julho 2026</div>
+        <ul class="session-list">
+          <li>
+            <button class="session-card">
+              <div class="session-info">
+                <div class="session-name">Dia 1 – Peito e Tríceps</div>
+                <div class="session-sub">ontem, 21:52 · 4 exercícios</div>
+              </div>
+              <span class="done-badge full"><i class="ti ti-check" style="font-size:.85em"></i> 4/4</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div class="verdict">
+        <p><b>Por que perde.</b> Três conflitos, e o primeiro é o fatal: a lista de Sessões é
+        <b>por academia</b> e o calendário é <b>global</b> — os dois lado a lado com números
+        diferentes na mesma tela leem como bug (“12 sessões nesta academia” logo acima de um mês
+        com 13 treinos). Segundo: o calendário empurra a lista — que é o motivo de a tela existir —
+        para baixo da dobra. Terceiro: não sobra lugar para os cards de sequência e para o
+        histórico de 12 semanas, que são metade do valor da feature.</p>
+        <p style="margin-top:12px">O que ela tinha de bom — “o calendário perto das sessões” — é
+        exatamente o que a <b>proposta C</b> incorpora, mas do lado certo: a lista vai morar na tela
+        de consistência (global, com a academia em cada card), em vez de o calendário invadir a
+        tela de Sessões (por academia).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ implementação -->
+  <section>
+    <h2>O que a implementação exige</h2>
+    <p class="lede">
+      Escopo pequeno e sem migração (para a proposta C): <b>(1)</b> um helper de agregação — sessões
+      concluídas → mapa dia→contagem, totais por mês (12 meses), dias em sequência e sequência
+      atual em semanas (reaproveitando
+      <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">lib/week.ts</code>); <b>(2)</b> esta tela
+      <b>substitui a SessionsPage na rota /sessions</b> — aba renomeada para “Consistência”, mesmo
+      ícone, sem o chip de academia — incluindo a consulta dos treinos do mês exibido <b>em todas
+      as academias</b> (o índice de <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">completedAt</code> já serve) com o
+      nome da academia em cada card — a lista mostra os <b>3 mais recentes</b> e o “Ver mais”
+      expande o restante (estado de tela, recolhe ao trocar de mês);
+      <b>(3)</b> <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">css/consistency.css</code>
+      desta pasta vira <code style="font-family:ui-monospace,Menlo,monospace;font-size:12px">src/features/consistency/consistency.css</code>.
+      A Home fica intocada — card da semana como está, sem mudança visual nem de dado.
+      Fora do escopo desta proposta: tocar um dia para rolar até a sessão, metas configuráveis por
+      semana, e qualquer estado punitivo (X, aviso de falta). Tocar um card da lista abre o detalhe
+      de sessão que já existe. Próximo passo natural: uma change OpenSpec com estas decisões.
+    </p>
+  </section>
+
+</div>
+
+</body>
+</html>

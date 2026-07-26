@@ -86,11 +86,9 @@
    never truncates at 390px. */
 .share-row { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 
-/* History */
+/* History (the month list on the Consistência screen) */
 .context-strip { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 4px; }
 .count-hint { font-size: var(--fs-2xs); color: var(--text-muted); }
-.month-label { font-family: var(--font-mono); font-size: var(--fs-2xs); letter-spacing: 0.18em;
-  text-transform: uppercase; color: var(--text-muted); font-weight: 600; padding: 16px 4px 8px; }
 .session-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 /* CHANGED: history cards carry the same red spine as the day cards on Home, so
    "a training day" reads the same across screens. */

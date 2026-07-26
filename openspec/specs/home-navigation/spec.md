@@ -11,6 +11,9 @@ categories** — the distinct categories of the exercises in that day (see the
 training-days spec) — falling back to the **exercise count** when the day has no
 categorized exercises. Expanding a day lists that day's active exercises, each
 showing its **name** and **media thumbnail** (a static image or an animated GIF).
+Each exercise row MUST end with an **icon-only navigation indicator** (a chevron,
+no label), so that "tapping opens the exercise detail" is visible — the same cue
+the workout-session entry rows carry.
 
 The **expanded day MUST be part of the address**, not transient screen state, so
 it survives leaving Home and coming back (see Open Exercise Detail). Opening Home
@@ -41,6 +44,12 @@ Home, que a remonta —, a Home MUST NOT exibir "Nenhum dia de treino ainda". Ve
 - GIVEN "Dia 1" contains "Rosca Direta" and "Supino"
 - WHEN the user taps "Dia 1" on Home
 - THEN the day expands and lists "Rosca Direta" and "Supino" with their media thumbnails (image or GIF)
+
+#### Scenario: Exercise rows show a visible navigation affordance
+- GIVEN "Dia 1" is expanded, listing "Rosca Direta"
+- WHEN the user views the row
+- THEN it ends with an icon-only chevron indicating it opens the exercise detail
+- AND the chevron carries no text label
 
 #### Scenario: Collapse a day
 - GIVEN "Dia 1" is expanded

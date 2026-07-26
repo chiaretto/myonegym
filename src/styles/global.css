@@ -152,6 +152,10 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -
 .row-sub.danger { color: var(--danger); }
 .row-meta { font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; }
 .chev { color: var(--text-muted); font-size: var(--fs-xl); flex-shrink: 0; }
+/* Dense-row variant of the nav chevron (session entries, Home exercise rows,
+   Consistência session cards): the settings-row size crowds rows that already
+   end in a badge, so it steps down and lets the badge stay the loudest trailer. */
+.chev.row-chev { font-size: var(--fs-md); }
 
 /* Forms */
 .field { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }

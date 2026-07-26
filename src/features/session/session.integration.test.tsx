@@ -56,15 +56,17 @@ describe('Workout session end-to-end', () => {
     // Runner shows the day's entries and a progress line.
     expect(await screen.findByText('Supino Reto')).toBeInTheDocument()
     expect(screen.getByText(/de 3 concluídos/)).toBeInTheDocument()
+    // Each row ends with an icon-only chevron — the visible "opens the detail" cue.
+    expect(document.querySelectorAll('.entry-link .row-chev')).toHaveLength(3)
 
     // Mark the first exercise done (1/3 → 33%).
     await user.click(screen.getByRole('button', { name: /Supino Reto/ }))
     await waitFor(() => expect(screen.getByText('33%')).toBeInTheDocument())
 
-    // Complete → lands on the history page with the session listed.
+    // Complete → lands on the Consistência screen with the session listed.
     await user.click(screen.getByRole('button', { name: /Concluir treino/ }))
-    // "Sessões" is both the page heading and the new bottom tab — target the heading.
-    expect(await screen.findByRole('heading', { name: 'Sessões' })).toBeInTheDocument()
+    // "Consistência" is both the page heading and the bottom tab — target the heading.
+    expect(await screen.findByRole('heading', { name: 'Consistência' })).toBeInTheDocument()
     expect(await screen.findByText('1/3')).toBeInTheDocument()
 
     // Open the session detail (read-only) then delete it.
@@ -74,8 +76,8 @@ describe('Workout session end-to-end', () => {
     // Confirm in the sheet.
     await user.click(await screen.findByRole('button', { name: 'Excluir' }))
 
-    // Back to history, now empty.
-    expect(await screen.findByText('Nenhuma sessão ainda')).toBeInTheDocument()
+    // Back to the Consistência screen, now empty.
+    expect(await screen.findByText('Nenhum treino ainda')).toBeInTheDocument()
     expect(await db.sessions.count()).toBe(0)
     expect(await db.sessionEntries.count()).toBe(0)
   })
@@ -215,10 +217,10 @@ describe('Finish-workout prompt at the end of the stepper', () => {
     expect(await screen.findByRole('heading', { name: 'Tríceps Corda', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // last → prompt
 
-    // The finish prompt appears; confirming completes the session → history.
+    // The finish prompt appears; confirming completes the session → Consistência.
     expect(await screen.findByText('Todos os exercícios concluídos!')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir treino' }))
-    expect(await screen.findByRole('heading', { name: 'Sessões' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Consistência' })).toBeInTheDocument()
     await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('completed'))
   })
 

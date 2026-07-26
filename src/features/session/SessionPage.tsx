@@ -177,6 +177,9 @@ export function SessionPage() {
                       <span className="used-weight empty">definir</span>
                     )
                   })()}
+                  {/* Icon-only "this row opens the detail" affordance — the row
+                      already navigates; this just makes that visible. */}
+                  <Icon name="chevron-right" className="chev row-chev" />
                 </Link>
               </li>
             )

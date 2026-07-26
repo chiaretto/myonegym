@@ -154,25 +154,25 @@ describe('Seletor de academia e contadores — nada de zero antes da resposta', 
   })
 })
 
-describe('Sessões — o estado vazio não pisca antes do histórico', () => {
-  it('não renderiza "Nenhuma sessão ainda" quando existe uma sessão', async () => {
+describe('Consistência — o estado vazio não pisca antes do histórico', () => {
+  it('não renderiza "Nenhum treino ainda" quando existe uma sessão', async () => {
     const { gym, day } = await seedOneDay()
     const sid = await startSession(gym, day, db)
     await completeSession(sid, db)
 
     renderApp('/sessions')
 
-    expect(screen.queryByText(/Nenhuma sessão ainda/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nenhum treino ainda/i)).not.toBeInTheDocument()
 
     expect(await screen.findByText('Dia 1')).toBeInTheDocument()
-    expect(screen.queryByText(/Nenhuma sessão ainda/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Nenhum treino ainda/i)).not.toBeInTheDocument()
   })
 
-  it('ainda mostra "Nenhuma sessão ainda" quando não há histórico', async () => {
+  it('ainda mostra "Nenhum treino ainda" quando não há histórico', async () => {
     useOnboarding.getState().markPromptSeen()
 
     renderApp('/sessions')
 
-    expect(await screen.findByText(/Nenhuma sessão ainda/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Nenhum treino ainda/i)).toBeInTheDocument()
   })
 })
