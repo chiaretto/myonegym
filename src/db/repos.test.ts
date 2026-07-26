@@ -407,7 +407,7 @@ describe('sessions', () => {
     await expect(startSession(g, day, d)).resolves.toBeGreaterThan(0)
   })
 
-  it('history lists only completed sessions of the gym, newest first, with counts', async () => {
+  it('history lists completed sessions of every gym, newest first, with counts', async () => {
     const { g, day } = await seedDay()
     const b = await createGym('B', undefined, d)
     // one completed in A with 1/3 done
@@ -415,17 +415,53 @@ describe('sessions', () => {
     const e1 = await listSessionEntries(s1, d)
     await setEntryDone(e1[0].id!, true, d)
     await completeSession(s1, d)
-    // one completed in B
+    // one completed in B, later
     const s2 = await startSession(b, day, d)
     await completeSession(s2, d)
 
-    const histA = await listSessionSummaries(g, d)
-    expect(histA).toHaveLength(1)
-    expect(histA[0]).toMatchObject({ total: 3, done: 1 })
-    expect(histA[0].session.dayName).toBe('Dia 1')
+    // One list, both gyms — the active gym is not a filter on the past.
+    const hist = await listSessionSummaries(d)
+    expect(hist).toHaveLength(2)
+    expect(hist.map((h) => h.gymName)).toEqual(['B', 'A'])
+    expect(hist[1]).toMatchObject({ total: 3, done: 1, gymName: 'A' })
+    expect(hist[1].session.dayName).toBe('Dia 1')
+  })
 
-    const histB = await listSessionSummaries(b, d)
-    expect(histB).toHaveLength(1)
+  it('history is ordered by completion across gyms, not grouped by gym', async () => {
+    const { g, day } = await seedDay()
+    const b = await createGym('B', undefined, d)
+
+    // Interleave: A, then B, then A again. Stamp completedAt directly so the
+    // order under test is the data's, not the clock's resolution.
+    const ids: number[] = []
+    for (const gym of [g, b, g]) {
+      const s = await startSession(gym, day, d)
+      await completeSession(s, d)
+      ids.push(s)
+    }
+    await d.sessions.update(ids[0], { completedAt: 1_000 })
+    await d.sessions.update(ids[1], { completedAt: 2_000 })
+    await d.sessions.update(ids[2], { completedAt: 3_000 })
+
+    const hist = await listSessionSummaries(d)
+    expect(hist.map((h) => h.session.id)).toEqual([ids[2], ids[1], ids[0]])
+    expect(hist.map((h) => h.gymName)).toEqual(['A', 'B', 'A'])
+  })
+
+  it('keeps sessions of a deleted gym, reporting a null gym name', async () => {
+    // deleteGym does not cascade to sessions. Those workouts happened, so they
+    // stay in the history — but with no name to resolve, hence null rather than
+    // a blank that a screen would render as a defect.
+    const { g, day } = await seedDay()
+    const s = await startSession(g, day, d)
+    await completeSession(s, d)
+
+    await deleteGym(g, d)
+
+    const hist = await listSessionSummaries(d)
+    expect(hist).toHaveLength(1)
+    expect(hist[0].gymName).toBeNull()
+    expect(hist[0].session.dayName).toBe('Dia 1')
   })
 
   it('delete removes the session and its entries, leaving other data intact', async () => {

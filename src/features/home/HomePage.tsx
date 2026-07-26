@@ -96,8 +96,12 @@ export function HomePage() {
   const catMap = useCategoryMap()
   const activeGymId = useActiveGym((s) => s.activeGymId)
   const weights = useGymWeights(activeGymId)
+  // Per gym: a workout happens in one place, and only that gym's in-progress
+  // session can be resumed from here.
   const activeSession = useActiveSession(activeGymId)
-  const summaries = useSessionSummaries(activeGymId)
+  // Across gyms: the week summary and the next-day rotation both read the whole
+  // history. Someone training at two gyms has one week and one rotation.
+  const summaries = useSessionSummaries()
   const nav = useNavigate()
   const toast = useToast()
 
@@ -125,7 +129,9 @@ export function HomePage() {
   const streak = currentStreak(weekCells, now)
 
   // "Próximo treino": the day after the most recent completed session (summaries
-  // are newest-first, per active gym), wrapping to the first day.
+  // are newest-first, across every gym), wrapping to the first day. Training
+  // days are global — useDays() takes no gym — so the rotation has no reason to
+  // restart when the user trains somewhere else.
   const nextDayId = nextWorkoutDayId(days ?? [], summaries[0]?.session.dayId ?? null)
 
   const onStart = async (dayId: number) => {

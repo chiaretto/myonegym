@@ -105,4 +105,44 @@ describe('Home "Próximo treino" selection', () => {
     expect(await screen.findByText('Dia 1')).toBeInTheDocument()
     await waitFor(() => expect(featuredDayName()).toBe('Dia 2'))
   })
+
+  it('does not restart the rotation when the user switches gyms', async () => {
+    // Training days are global — useDays() takes no gym — so the rotation has no
+    // reason to reset because the workout happened somewhere else. This used to
+    // fall back to "Dia 1", since the history was read per active gym.
+    const { gym, d2 } = await seedThreeDays()
+    const other = await createGym('B', undefined, db)
+    await completeDay(gym, d2)
+
+    useActiveGym.setState({ activeGymId: other })
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
+    await waitFor(() => expect(featuredDayName()).toBe('Dia 3'))
+  })
+
+  it('still takes the resumable session from the active gym only', async () => {
+    // The counterpart to the test above: history is global, but an in-progress
+    // session is not — a workout is happening in one physical place.
+    const { gym, d1 } = await seedThreeDays()
+    const other = await createGym('B', undefined, db)
+    await startSession(gym, d1, db)
+
+    useActiveGym.setState({ activeGymId: other })
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
+    // Nothing to resume from gym B…
+    expect(screen.queryByRole('button', { name: 'Continuar' })).not.toBeInTheDocument()
+    // …and the featured day is still chosen normally, from the global history.
+    await waitFor(() => expect(featuredDayName()).toBe('Dia 1'))
+  })
 })

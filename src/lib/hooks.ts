@@ -94,13 +94,15 @@ export function useActiveSession(gymId: number | null) {
   )
 }
 
-/** Completed sessions (with done/total counts) for the gym, newest first. */
-export function useSessionSummaries(gymId: number | null) {
-  return useLiveQuery(
-    async () => (gymId == null ? [] : listSessionSummaries(gymId, db)),
-    [gymId],
-    [],
-  )
+/**
+ * Completed sessions (with done/total counts and the gym's name), newest first,
+ * across every gym.
+ *
+ * Takes no gym: the history is not scoped to the active one, so switching gyms
+ * must not change what this returns.
+ */
+export function useSessionSummaries() {
+  return useLiveQuery(async () => listSessionSummaries(db), [], [])
 }
 
 export function useSession(id: number | null) {
