@@ -2,10 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import type { SessionSummary } from '../../db/repos'
 import { fmtDayMonth, fmtDuration, relativeDate } from '../../lib/format'
 import { useSessionSummaries } from '../../lib/hooks'
-import { useActiveGym } from '../../state/activeGym'
 import { TabBar } from '../../ui/Chrome'
 import { Icon } from '../../ui/Icon'
-import { GymSelector } from '../gym/GymSelector'
 import './session.css'
 
 /** Month bucket label for a timestamp, e.g. "Julho de 2026". */
@@ -26,9 +24,14 @@ function groupByMonth(summaries: SessionSummary[]): [string, SessionSummary[]][]
   return [...groups.entries()]
 }
 
+/** Shown in place of the gym name when the gym has since been deleted —
+ *  deleting a gym leaves its sessions behind, and a blank would read as a bug. */
+const REMOVED_GYM = 'Academia removida'
+
 export function SessionsPage() {
-  const activeGymId = useActiveGym((s) => s.activeGymId)
-  const summaries = useSessionSummaries(activeGymId)
+  // No gym argument, and no GymSelector in the header: the history spans every
+  // gym, so nothing on this screen responds to the active one.
+  const summaries = useSessionSummaries()
   const nav = useNavigate()
 
   const groups = groupByMonth(summaries)
@@ -37,14 +40,12 @@ export function SessionsPage() {
     <>
       <header className="appbar">
         <h1>Sessões</h1>
-        <span className="spacer" />
-        <GymSelector />
       </header>
       <main className="screen">
         {summaries.length > 0 && (
           <div className="context-strip">
             <span className="count-hint">
-              {summaries.length} {summaries.length === 1 ? 'sessão' : 'sessões'} nesta academia
+              {summaries.length} {summaries.length === 1 ? 'sessão' : 'sessões'}
             </span>
           </div>
         )}
@@ -61,7 +62,7 @@ export function SessionsPage() {
           <div key={label}>
             <div className="month-label">{label}</div>
             <ul className="session-list">
-              {items.map(({ session, total, done }) => {
+              {items.map(({ session, total, done, gymName }) => {
                 const ts = session.completedAt ?? session.startedAt
                 const full = total > 0 && done === total
                 return (
@@ -69,10 +70,17 @@ export function SessionsPage() {
                     <button className="session-card" onClick={() => nav(`/session/${session.id}`)}>
                       <div className="session-info">
                         <div className="session-name">{session.dayName}</div>
+                        {/* The gym joins the existing "·"-separated context line
+                            rather than getting a line of its own: it answers
+                            "where", the same kind of question as "when". */}
                         <div className="session-sub">
                           {relativeDate(ts)} · {fmtDayMonth(ts)}
                           {session.completedAt != null &&
                             ` · ${fmtDuration(session.completedAt - session.startedAt)}`}
+                          {' · '}
+                          <span className={gymName == null ? 'session-gym missing' : 'session-gym'}>
+                            {gymName ?? REMOVED_GYM}
+                          </span>
                         </div>
                       </div>
                       <span className={`done-badge${full ? ' full' : ''}`} aria-label={`${done} de ${total} concluídos`}>

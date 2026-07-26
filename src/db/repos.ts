@@ -445,6 +445,21 @@ export interface SessionSummary {
   session: Session
   total: number
   done: number
+  /**
+   * Name of the gym the session was done at, resolved at read time — `Session`
+   * stores only `gymId`.
+   *
+   * `null` means the gym no longer exists: deleting a gym does not delete its
+   * sessions (see `deleteGym`), and those sessions are real workouts that must
+   * stay visible. Resolving here rather than in each screen keeps that one case
+   * handled in one place.
+   *
+   * Read-time lookup, not a snapshot like `Session.dayName`: snapshotting would
+   * need a migration and would still leave every already-recorded session
+   * nameless. The trade-off is that renaming a gym relabels its past sessions
+   * too — acceptable for a "where was this" label.
+   */
+  gymName: string | null
 }
 
 /** The in-progress session for a gym, if any (at most one). */
@@ -525,22 +540,35 @@ export async function listSessionEntries(
 }
 
 /** Completed sessions for a gym, newest first, with done/total counts. */
-export async function listSessionSummaries(
-  gymId: number,
-  d: MyOneGymDB = db,
-): Promise<SessionSummary[]> {
-  const sessions = (
-    await d.sessions
-      .where('gymId')
-      .equals(gymId)
-      .filter((s) => s.status === 'completed')
-      .toArray()
-  ).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0) || (b.id ?? 0) - (a.id ?? 0))
+/**
+ * Every completed session, across all gyms, newest first.
+ *
+ * Deliberately not scoped to a gym: the active gym decides where a workout
+ * happens and which target weights apply, not what the user can see of their own
+ * past. A person training at two gyms has one history.
+ *
+ * Sorting is chronological across gyms, not grouped by gym — `completedAt`
+ * descending, with the id as a tiebreak so sessions finished in the same
+ * millisecond keep a stable order.
+ */
+export async function listSessionSummaries(d: MyOneGymDB = db): Promise<SessionSummary[]> {
+  const sessions = (await d.sessions.filter((s) => s.status === 'completed').toArray()).sort(
+    (a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0) || (b.id ?? 0) - (a.id ?? 0),
+  )
+
+  // One read for the whole gym table, not one per session: the list is tiny and
+  // the loop below already costs a query per session.
+  const gymNames = new Map((await d.gyms.toArray()).map((g) => [g.id!, g.name]))
 
   const out: SessionSummary[] = []
   for (const session of sessions) {
     const entries = await d.sessionEntries.where('sessionId').equals(session.id!).toArray()
-    out.push({ session, total: entries.length, done: entries.filter((e) => e.done).length })
+    out.push({
+      session,
+      total: entries.length,
+      done: entries.filter((e) => e.done).length,
+      gymName: gymNames.get(session.gymId) ?? null,
+    })
   }
   return out
 }
