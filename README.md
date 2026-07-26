@@ -71,10 +71,18 @@ npm run typecheck  # tsc --noEmit
   list). You can also finish anytime with **Concluir treino** on the runner
   (enabled once at least one exercise is marked). Only one session runs at a time
   per gym.
-  **Settings → Sessões** lists completed sessions for the active gym (grouped by
-  month, with a done-count badge); open one for a read-only recap or delete it.
-  Entries snapshot the exercise **name** (so a recap still renders after a delete);
-  the weight shown is always the live per-gym target.
+  The middle tab, **Consistência**, is where the history lives: stat cards
+  (**days in a row**, **weeks in a row**, workouts in the displayed month), a
+  navigable **month calendar** (red disc = trained, corner badge = 2+ sessions
+  that day, ring = today; a past day without a session is just a muted number —
+  no X, no punishment states), the **month's session list across every gym**
+  (collapsed to the 3 most recent with a quiet "Ver mais"; each card names its
+  gym), the **last 12 weeks** as one block per week, and a **12-month bar
+  chart** with the current month drawn as in-progress. Everything is derived
+  from `Session.completedAt` — no new stored state. Open a session card for a
+  read-only recap or delete it. Entries snapshot the exercise **name** (so a
+  recap still renders after a delete); the weight shown is always the live
+  per-gym target.
 - **Share a session as an image** — a completed session's recap offers
   **Compartilhar** (with weights and training duration) and **Compartilhar sem
   pesos** (with neither), so a workout can be shown off without revealing how

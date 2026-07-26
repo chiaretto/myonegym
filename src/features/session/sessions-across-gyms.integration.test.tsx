@@ -21,7 +21,14 @@ import { useActiveGym } from '../../state/activeGym'
  * It used to also decide what the user could see of their own past: the list was
  * `where('gymId')`, and the footer even said "nesta academia" — the app knew it
  * was hiding sessions and offered no way to see them.
+ *
+ * The history now lives on the Consistência screen, scoped to the displayed
+ * month — so the seeds below complete sessions *today*, keeping them inside the
+ * month the screen opens on.
  */
+
+/** Recent completion stamps, newest last, all within today. */
+const NOW = Date.now()
 
 afterEach(async () => {
   cleanup()
@@ -75,8 +82,8 @@ function cards() {
 describe('Session history spans every gym', () => {
   it('lists sessions from both gyms in one chronological list', async () => {
     const { a, b, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
-    await completeAt(b, day, 2_000)
+    await completeAt(a, day, NOW - 2_000)
+    await completeAt(b, day, NOW - 1_000)
 
     renderSessions()
 
@@ -88,8 +95,8 @@ describe('Session history spans every gym', () => {
 
   it('shows the same list whichever gym is active', async () => {
     const { a, b, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
-    await completeAt(b, day, 2_000)
+    await completeAt(a, day, NOW - 2_000)
+    await completeAt(b, day, NOW - 1_000)
 
     renderSessions()
     await waitFor(() => expect(cards()).toHaveLength(2))
@@ -103,12 +110,12 @@ describe('Session history spans every gym', () => {
 
   it('counts every session in the footer, without claiming a gym scope', async () => {
     const { a, b, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
-    await completeAt(b, day, 2_000)
+    await completeAt(a, day, NOW - 2_000)
+    await completeAt(b, day, NOW - 1_000)
 
     renderSessions()
 
-    expect(await screen.findByText('2 sessões')).toBeInTheDocument()
+    expect(await screen.findByText(/2 treinos/)).toBeInTheDocument()
     expect(screen.queryByText(/nesta academia/)).not.toBeInTheDocument()
   })
 
@@ -117,7 +124,7 @@ describe('Session history spans every gym', () => {
     // deleted gym can never be the active one — real workouts, hidden by an
     // implementation detail.
     const { a, b, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
+    await completeAt(a, day, NOW - 2_000)
     await deleteGym(a, db)
     useActiveGym.setState({ activeGymId: b })
 
@@ -132,7 +139,7 @@ describe('Session history spans every gym', () => {
     // Nothing on this screen responds to the active gym any more, and a control
     // with no visible effect reads as broken.
     const { a, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
+    await completeAt(a, day, NOW - 2_000)
 
     renderSessions()
     await waitFor(() => expect(cards()).toHaveLength(1))
@@ -144,7 +151,7 @@ describe('Session history spans every gym', () => {
 
   it('opens a session from another gym than the active one', async () => {
     const { a, b, day } = await seedTwoGyms()
-    await completeAt(a, day, 1_000)
+    await completeAt(a, day, NOW - 2_000)
     useActiveGym.setState({ activeGymId: b })
 
     const user = userEvent.setup()

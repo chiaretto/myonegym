@@ -310,6 +310,9 @@ export function HomePage() {
                               ) : (
                                 <span className="weight-badge empty">definir</span>
                               ))}
+                            {/* Icon-only "this row opens the detail" cue, matching
+                                the session runner's rows. */}
+                            <Icon name="chevron-right" className="chev row-chev" />
                           </Link>
                         </li>
                       )

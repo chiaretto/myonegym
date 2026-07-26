@@ -20,7 +20,7 @@ export function TabBar({ active }: { active: 'home' | 'sessions' | 'settings' })
       </Link>
       <Link to="/sessions" className={active === 'sessions' ? 'active' : ''}>
         <i className="png-ic pi-history" aria-hidden />
-        Sessões
+        Consistência
       </Link>
       <Link to="/settings" className={active === 'settings' ? 'active' : ''}>
         <i className="png-ic pi-settings" aria-hidden />
