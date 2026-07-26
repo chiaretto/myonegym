@@ -225,3 +225,44 @@ acessibilidade, então o nome acessível do botão segue sendo só o nome do dia
 | O chevron na primeira linha rouba largura do nome e faz nomes longos quebrarem antes | Med | Low | O glifo tem ~14px de largura (`home.css:198-206`) contra os 163px que as ações ocupam hoje na segunda linha; conferir com o nome mais longo dos dados reais a 200% de `--font-scale` |
 | O chevron desalinhado num nome de duas linhas — centrado na caixa do título, fica flutuando | Med | Low | Decidir o alinhamento de propósito (topo, junto à primeira linha do nome) e verificar com nome curto e longo |
 | O foco de teclado ficar invisível ou desalinhado no alvo maior | Med | Low | Estado de foco explícito sobre o cabeçalho, verificado por teclado |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-07-25
+**Duration:** mesmo dia (proposta, implementação e QA em 2026-07-25)
+**Outcome:** Successfully implemented
+
+### Desvio da abordagem proposta
+
+Um, registrado em "Decisões" no `tasks.md` e já refletido no texto acima: o
+alcance do toque virou um `onClick` no container `.day-head`, e não o
+pseudo-elemento estendido que a proposta escolhera. O motivo apareceu ao escrever
+os testes — o alcance por `::after` existe só em CSS, e o jsdom não faz layout
+nem *hit testing*, então o entregável central ficaria sem cobertura automatizada.
+A árvore de acessibilidade ficou como a proposta previa; o custo é o
+`stopPropagation` no Iniciar, fixado por teste.
+
+### Cenário não promovido à spec
+
+O delta trazia **"Ampliar o alvo não mexe no visual"**, que compara os cards "com
+os de antes da mudança". Foi uma verificação de regressão, útil na revisão e sem
+sentido como fonte de verdade permanente — uma vez arquivada a mudança, não há
+mais "antes" a que se referir. Os outros 14 cenários do requisito foram
+promovidos.
+
+### Files Modified
+- `src/features/home/HomePage.tsx` — chevron sai de `.day-actions` para dentro do
+  botão do cabeçalho e deixa de ser botão; `onClick` no `.day-head`;
+  `stopPropagation` no Iniciar
+- `src/features/home/home.css` — primeira linha em flex com `align-items:
+  baseline`, foco sobre o cabeçalho via `:has`, `cursor: pointer`, tamanho do
+  chevron pinado em `calc(var(--fs-2xs) * 0.85)`
+- `src/features/home/day-tap-target.integration.test.tsx` — novo, 7 testes
+
+### Specs Updated
+- `openspec/specs/home-navigation/spec.md`
+  - MODIFIED: "Training Day Card" — distribuição das linhas, alcance do toque,
+    um único controle de expandir, foco
+  - MODIFIED: "Home Accordion of Training Days" — o gesto é o toque no cabeçalho

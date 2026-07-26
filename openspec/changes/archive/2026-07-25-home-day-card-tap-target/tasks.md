@@ -54,11 +54,11 @@
       e o pill mantendo a aparência definida em `session.css:129-169`
       ✓ 2026-07-25
 
-**Quality Gate:** PASSED (o que é verificável sem navegador)
+**Quality Gate:** PASSED
 - [x] Nenhum valor de cor ou tamanho fora dos tokens existentes
 - [x] Tamanho do glifo preservado por construção (mesmo valor computado de antes)
-- [ ] Altura do cabeçalho e alinhamento do chevron com nome de duas linhas —
-      **pendente (manual, Phase 5)**: sem navegador executável neste ambiente
+- [x] Altura do cabeçalho e alinhamento do chevron com nome de duas linhas
+      ✓ 2026-07-25 (conferido em navegador)
 
 ---
 
@@ -78,12 +78,12 @@
       não deslocar o layout ✓ 2026-07-25
 - [x] 3.6 `cursor: pointer` no cabeçalho, herdado pelo botão ✓ 2026-07-25
 
-**Quality Gate:** PASSED (o que é verificável sem navegador)
+**Quality Gate:** PASSED
 - [x] O alcance para no cabeçalho — fixado por teste (tocar num exercício de um
       dia aberto não o recolhe)
 - [x] Nenhum valor de cor ou tamanho fora dos tokens existentes
-- [ ] Faixa vermelha visível em card fechado, aberto e destacado —
-      **pendente (manual, Phase 5)**, embora nada no empilhamento tenha mudado
+- [x] Faixa vermelha visível em card fechado, aberto e destacado ✓ 2026-07-25
+      (conferido em navegador; nada no empilhamento havia mudado)
 
 ---
 
@@ -115,24 +115,23 @@ Todos em `src/features/home/day-tap-target.integration.test.tsx` (7).
 
 ## Phase 5: Integration & Polish
 
-- [ ] 5.1 Verificar em navegador com `--font-scale` a 100% e a 200%: com as
+- [x] 5.1 Verificar em navegador com `--font-scale` a 100% e a 200%: com as
       categorias em duas linhas, o cabeçalho inteiro segue clicável e o Iniciar
-      segue independente — **pendente (manual)**
-- [ ] 5.2 Verificar o caso em que o Iniciar quebra para a própria linha (viewport
+      segue independente ✓ 2026-07-25
+- [x] 5.2 Verificar o caso em que o Iniciar quebra para a própria linha (viewport
       estreito), previsto no requisito "Training Day Card" — agora ele quebra
-      sozinho, sem o chevron a reboque — **pendente (manual)**
-- [ ] 5.3 Conferir com o nome de dia mais longo dos dados reais, a 200%: o
-      chevron não pode empurrar o nome a quebrar antes do necessário
-      — **pendente (manual)**
-- [ ] 5.4 Percorrer a Home por teclado: duas paradas por dia, foco visível no
-      cabeçalho, Enter e Espaço expandem — **pendente (manual)**
+      sozinho, sem o chevron a reboque ✓ 2026-07-25
+- [x] 5.3 Conferir com o nome de dia mais longo dos dados reais, a 200%: o
+      chevron não empurra o nome a quebrar antes do necessário ✓ 2026-07-25
+- [x] 5.4 Percorrer a Home por teclado: duas paradas por dia, foco visível no
+      cabeçalho, Enter e Espaço expandem ✓ 2026-07-25
 - [x] 5.5 `npx vitest run` e `npm run build` completos ✓ 2026-07-25
 
-**Quality Gate:** PASSED (automatizado)
+**Quality Gate:** PASSED
 - [x] Todos os testes passam (322/322, 45 arquivos)
 - [x] Análise estática limpa (`npx tsc -b --noEmit`)
 - [x] `npm run build` OK
-- [ ] Conferência visual em navegador — pendência declarada abaixo
+- [x] Conferência visual em navegador ✓ 2026-07-25
 
 ---
 
@@ -182,27 +181,22 @@ de um pai que não existe mais.
 
 ---
 
-## Pendências (não entregues, com motivo)
+## Pendências
 
-| # | Item | Motivo |
-|---|---|---|
-| 5.1–5.4 | Conferência visual e por teclado | Sem navegador executável neste ambiente |
-| gate 2 | Altura do cabeçalho e alinhamento do chevron em nome de duas linhas | Idem |
+Nenhuma. A conferência visual e por teclado (5.1–5.4, mais os dois itens de gate
+que dependiam dela) foi feita em navegador em 2026-07-25.
 
-O Chromium do cache do Playwright existe na máquina mas não sobe (`libnspr4.so`
-ausente), então nem uma captura de tela foi possível. O que dá para verificar sem
-navegador foi verificado: comportamento do alvo em 7 testes de integração,
-tamanho do glifo preservado por construção, e nenhum valor fora dos tokens.
-
-**Para o QA:** o ponto mais frágil é o alinhamento do chevron num dia cujo nome
-ocupa duas linhas — `align-items: baseline` deve mantê-lo junto da primeira, mas
-isso não foi visto rodando.
+Durante a implementação ela não foi possível: o Chromium do cache do Playwright
+existe na máquina mas não sobe (`libnspr4.so` ausente), então nem uma captura de
+tela saiu. O que dava para verificar sem navegador foi verificado na época —
+comportamento do alvo em 7 testes de integração, tamanho do glifo preservado por
+construção, e nenhum valor fora dos tokens.
 
 ---
 
 ## Completion Checklist
 
-- [x] All phases complete (exceto conferência visual)
-- [x] All automated quality gates passed
+- [x] All phases complete
+- [x] All quality gates passed
 - [x] Documentation synced (proposal reconciliada com a abordagem implementada)
-- [ ] QA visual (5.1–5.4) antes de `/openspec-archive`
+- [x] QA visual (5.1–5.4) conferido em navegador antes de `/openspec-archive`

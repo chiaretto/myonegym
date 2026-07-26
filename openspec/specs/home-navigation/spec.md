@@ -19,6 +19,9 @@ day that no longer exists MUST expand nothing rather than fail. Expanding or
 collapsing MUST NOT add browser history entries — otherwise Back would step
 through the accordion instead of leaving Home.
 
+O gesto de expandir e recolher MUST ser o **toque no cabeçalho do card**, e não
+apenas no nome do dia — ver "Training Day Card".
+
 #### Scenario: Day header shows derived categories
 - GIVEN "Dia 1" contains "Supino" (Peito) and "Tríceps Corda" (Tríceps)
 - WHEN the user views Home
@@ -38,6 +41,11 @@ through the accordion instead of leaving Home.
 - GIVEN "Dia 1" is expanded
 - WHEN the user taps "Dia 1" again
 - THEN the day collapses and hides its exercise list
+
+#### Scenario: Expandir tocando fora do nome
+- GIVEN "Dia 1" está recolhido
+- WHEN o usuário toca no cabeçalho do card, numa região que não é o nome
+- THEN "Dia 1" expande, exatamente como se o nome tivesse sido tocado
 
 #### Scenario: Empty state
 - GIVEN no training days exist
@@ -145,13 +153,43 @@ Each training day on Home MUST be presented as a card carrying the day **name**,
 the **categories** it covers, an affordance to **start or resume** it, and an
 affordance to **expand** it.
 
-The day **name** MUST occupy the **first line** of the card on its own, with the
-full card width available to it. The **avatar**, **categories**, **start** and
-**expand** affordances MUST sit together on the **second line**.
+O nome do dia MUST ocupar a **primeira linha**, dividindo-a apenas com a
+**indicação de expandir**, que MUST ficar alinhada à direita. O nome MUST ter toda
+a largura restante dessa linha, e é ele que MUST quebrar quando não couber — a
+indicação não encolhe nem desce.
 
-When the second line cannot give the categories a readable width, the start and
-expand affordances MUST wrap to their own line rather than squeezing the
-categories to an unreadable column.
+**Avatar**, **categorias** e a affordance de **iniciar** MUST ficar juntos na
+**segunda linha**. Quando essa linha não puder dar às categorias uma largura
+legível, a affordance de iniciar MUST quebrar para a própria linha em vez de
+espremer as categorias até uma coluna ilegível.
+
+A indicação de expandir fica com o nome, e não com o iniciar, por serem coisas de
+pesos diferentes — uma começa um treino, a outra abre uma gaveta — e porque o que
+expande é o **dia**, cujo nome está na primeira linha.
+
+O **cabeçalho inteiro do card** MUST expandir e recolher o dia: as duas linhas,
+incluindo o avatar, as categorias e o espaço vazio ao redor. Não pode haver
+região do cabeçalho que pareça parte do card e não responda ao toque — num
+aparelho de toque, a diferença entre acertar o nome e errar por poucos pixels é
+invisível, e a ausência de resposta se lê como travamento.
+
+A affordance de **iniciar ou retomar** MUST permanecer um alvo próprio dentro
+desse cabeçalho: tocá-la MUST iniciar o treino e MUST NOT expandir o dia.
+
+A **lista de exercícios expandida** MUST NOT recolher o dia ao ser tocada. Ela
+tem seus próprios destinos, e um toque perdido ali custaria ao usuário o estado
+que ele acabou de abrir.
+
+O cabeçalho MUST expor **um único controle** de expandir à navegação por teclado
+e à tecnologia assistiva, carregando o nome do dia e seu estado de expandido.
+A indicação visual de expandir MUST continuar visível e MUST continuar
+respondendo ao toque, mas MUST NOT ser um segundo controle: dois controles
+adjacentes que fazem a mesma coisa no mesmo card só gastam uma parada de
+navegação por dia.
+
+O estado de **foco** MUST corresponder ao que está de fato focado: quando o alvo
+é o cabeçalho inteiro, um contorno desenhado apenas em volta do nome mente sobre
+o alcance do controle.
 
 The card MAY show a **muscle-group avatar** derived from the day's categories.
 There is no muscle-group concept in the data model — `Category` is free text —
@@ -169,16 +207,24 @@ The start affordance's accessible name MUST remain exactly **"Iniciar"**, or
 the visible label is hidden, since a hidden label contributes nothing to the
 accessibility tree.
 
-#### Scenario: Name gets its own line
+#### Scenario: Name shares the first line only with the expand indicator
 - GIVEN a day whose name is long
 - WHEN the card renders
-- THEN the name occupies the first line alone
-- AND the avatar, categories, start button and chevron are on the line below it
+- THEN the name occupies the first line, with the expand indicator at its right edge
+- AND the avatar, categories and start button are on the line below it
 
-#### Scenario: Actions wrap instead of crushing the categories
+#### Scenario: O nome quebra, o indicador não
+- GIVEN um dia cujo nome não cabe numa linha só
+- WHEN o card é renderizado
+- THEN o nome quebra em duas linhas
+- AND o indicador de expandir continua no canto direito, alinhado à primeira
+  linha do nome, sem encolher nem descer para a segunda
+
+#### Scenario: The start affordance wraps instead of crushing the categories
 - GIVEN a narrow viewport or a large font scale
 - WHEN the categories cannot keep a readable width on the second line
-- THEN the start and expand affordances move to their own line
+- THEN the start affordance moves to its own line
+- AND the expand indicator is unaffected, since it is on the first line
 
 #### Scenario: Unmapped categories still render
 - GIVEN a day whose categories match no artwork in the map
@@ -195,6 +241,51 @@ accessibility tree.
 - WHEN the cards render
 - THEN only the featured day's start affordance shows its text label
 - AND the other four show the glyph alone while still being named "Iniciar" to assistive technology
+
+#### Scenario: Tocar nas categorias expande o dia
+- GIVEN um dia recolhido cujo cabeçalho mostra "Peito · Tríceps"
+- WHEN o usuário toca nas categorias
+- THEN o dia expande e lista seus exercícios
+
+#### Scenario: Tocar no avatar expande o dia
+- GIVEN um dia recolhido
+- WHEN o usuário toca no avatar do grupo muscular
+- THEN o dia expande
+
+#### Scenario: Tocar no vazio do cabeçalho expande o dia
+- GIVEN um dia recolhido cujo nome é curto, deixando espaço vazio entre o nome e
+  o indicador de expandir
+- WHEN o usuário toca nesse espaço vazio
+- THEN o dia expande
+
+#### Scenario: Iniciar não expande
+- GIVEN um dia recolhido
+- WHEN o usuário toca na affordance de iniciar
+- THEN o treino começa
+- AND o dia permanece recolhido
+
+#### Scenario: O chevron continua expandindo, na nova posição
+- GIVEN um dia recolhido, com o indicador de expandir à direita do nome
+- WHEN o usuário toca no indicador
+- THEN o dia expande
+
+#### Scenario: A lista aberta não recolhe o dia
+- GIVEN um dia expandido, listando seus exercícios
+- WHEN o usuário toca em um dos exercícios
+- THEN o exercício é aberto
+- AND o dia continua expandido
+
+#### Scenario: Um controle de expandir por dia
+- GIVEN a Home mostra um dia
+- WHEN a navegação por teclado percorre o card
+- THEN há exatamente dois controles: o cabeçalho, que anuncia o nome do dia e se
+  está expandido, e a affordance de iniciar
+- AND o chevron não é uma parada de navegação
+
+#### Scenario: O foco mostra o alcance real
+- GIVEN o usuário navega até o cabeçalho de um dia pelo teclado
+- WHEN o foco chega nele
+- THEN a indicação de foco cobre o cabeçalho inteiro, e não apenas o nome
 
 ### Requirement: Open Exercise Detail
 
