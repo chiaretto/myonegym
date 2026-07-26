@@ -1,5 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import 'fake-indexeddb/auto'
+import { beforeEach } from 'vitest'
+import { clearQueryCache } from './src/lib/hooks'
+
+// The read hooks keep each query's last resolved value in module state, so a
+// revisited screen can paint before IndexedDB answers (see src/lib/hooks.ts).
+// That state outlives both the component tree and the `table.clear()` a test
+// does in teardown, so without this a list from one test would show up in the
+// next test's first frame.
+beforeEach(() => {
+  clearQueryCache()
+})
 
 // jsdom implements no layout, and therefore no ResizeObserver — without this,
 // any component that measures itself (see ui/StepperBar) throws on mount and

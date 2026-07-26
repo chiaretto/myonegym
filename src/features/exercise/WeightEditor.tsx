@@ -174,7 +174,7 @@ export function WeightEditor({
         )}
       </section>
 
-      {history.length > 0 && (
+      {history && history.length > 0 && (
         <section className="history">
           <div className="section-head">
             <h3>

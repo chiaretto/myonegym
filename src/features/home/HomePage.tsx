@@ -121,24 +121,36 @@ export function HomePage() {
 
   // CHANGED: the summary used to be a single count against `days.length`. It is
   // now a seven-day track against a fixed goal of 7 — see lib/week.ts.
+  //
+  // Everything below waits for `summaries` to arrive. An unanswered history is
+  // not an empty one: deriving from `[]` would paint "0 / 7 treinos" and put
+  // "Próximo treino" on the first day, then correct both a frame later.
   const now = Date.now()
-  const weekCells = buildWeekTrack(
-    summaries.map((s) => s.session.completedAt ?? 0).filter((ts) => ts > 0),
-    now,
-  )
-  const streak = currentStreak(weekCells, now)
+  const weekCells = summaries
+    ? buildWeekTrack(
+        summaries.map((s) => s.session.completedAt ?? 0).filter((ts) => ts > 0),
+        now,
+      )
+    : null
+  const streak = weekCells ? currentStreak(weekCells, now) : 0
 
   // "Próximo treino": the day after the most recent completed session (summaries
   // are newest-first, across every gym), wrapping to the first day. Training
   // days are global — useDays() takes no gym — so the rotation has no reason to
   // restart when the user trains somewhere else.
-  const nextDayId = nextWorkoutDayId(days ?? [], summaries[0]?.session.dayId ?? null)
+  const nextDayId = summaries
+    ? nextWorkoutDayId(days ?? [], summaries[0]?.session.dayId ?? null)
+    : null
 
   const onStart = async (dayId: number) => {
     if (activeGymId == null) {
       toast('Crie ou selecione uma academia primeiro.')
       return
     }
+    // Still asking whether a workout is already in progress. Starting a second
+    // one would be rejected by the repository anyway; better to let the tap fall
+    // on the floor for the millisecond it takes to know.
+    if (activeSession === undefined) return
     if (activeSession) {
       // Only one active session per gym: resume it (whichever day it belongs to).
       if (activeSession.dayId !== dayId) toast('Você já tem um treino em andamento.')
@@ -193,14 +205,19 @@ export function HomePage() {
           </div>
         )}
 
-        {days && days.length > 0 && <WeeklySummary cells={weekCells} streak={streak} />}
+        {days && days.length > 0 && weekCells && (
+          <WeeklySummary cells={weekCells} streak={streak} />
+        )}
 
         <ul className="accordion">
           {days?.map((day) => {
             const isOpen = openId === day.id
             const isResume = activeSession != null && activeSession.dayId === day.id
-            // Feature the next workout day (from history) when nothing is being resumed.
-            const isFeatured = day.id === nextDayId && activeSession == null
+            // Feature the next workout day (from history) when nothing is being
+            // resumed. `=== null` and not `== null`: while the active session is
+            // still unknown, "nothing is being resumed" is not yet true, and
+            // guessing moves the badge between cards a frame later.
+            const isFeatured = day.id === nextDayId && activeSession === null
             return (
               <li
                 key={day.id}
@@ -274,7 +291,7 @@ export function HomePage() {
                     {day.exerciseIds.map((exId, i) => {
                       const ex = exMap.get(exId)
                       if (!ex) return null
-                      const w = weights.get(exId)
+                      const w = weights?.get(exId)
                       const exCats = exerciseCategoryNames(ex, catMap)
                       return (
                         <li key={`${exId}-${i}`}>
@@ -284,11 +301,15 @@ export function HomePage() {
                               <span className="ex-name">{ex.name}</span>
                               {exCats.length > 0 && <span className="ex-cat">{exCats.join(' · ')}</span>}
                             </span>
-                            {w ? (
-                              <span className="weight-badge">{fmtWeight(w.value, w.unit)}</span>
-                            ) : (
-                              <span className="weight-badge empty">definir</span>
-                            )}
+                            {/* No badge until the gym's weights have loaded:
+                                "definir" claims this exercise has no target
+                                weight, which is not yet known. */}
+                            {weights &&
+                              (w ? (
+                                <span className="weight-badge">{fmtWeight(w.value, w.unit)}</span>
+                              ) : (
+                                <span className="weight-badge empty">definir</span>
+                              ))}
                           </Link>
                         </li>
                       )

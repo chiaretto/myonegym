@@ -68,7 +68,14 @@ describe('Reorder training days', () => {
         <App />
       </MemoryRouter>,
     )
-    const titles = await screen.findAllByText(/^Dia [123]$/)
-    expect(titles.map((t) => t.textContent)).toEqual(['Dia 2', 'Dia 1', 'Dia 3'])
+    // waitFor, not a bare findAllByText: a fresh mount paints the previous
+    // answer to `useDays()` before IndexedDB replies (see src/lib/hooks.ts), so
+    // the very first frame here can still carry the pre-reorder order — this
+    // test reorders and remounts within milliseconds. The live query corrects it
+    // a tick later, and that settled order is what this asserts.
+    await waitFor(async () => {
+      const titles = await screen.findAllByText(/^Dia [123]$/)
+      expect(titles.map((t) => t.textContent)).toEqual(['Dia 2', 'Dia 1', 'Dia 3'])
+    })
   })
 })

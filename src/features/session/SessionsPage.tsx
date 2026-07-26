@@ -34,7 +34,9 @@ export function SessionsPage() {
   const summaries = useSessionSummaries()
   const nav = useNavigate()
 
-  const groups = groupByMonth(summaries)
+  // `undefined` until the history answers — not the same as "no sessions", which
+  // is what the empty state and the counter below are allowed to claim.
+  const groups = groupByMonth(summaries ?? [])
 
   return (
     <>
@@ -42,7 +44,7 @@ export function SessionsPage() {
         <h1>Sessões</h1>
       </header>
       <main className="screen">
-        {summaries.length > 0 && (
+        {summaries && summaries.length > 0 && (
           <div className="context-strip">
             <span className="count-hint">
               {summaries.length} {summaries.length === 1 ? 'sessão' : 'sessões'}
@@ -50,7 +52,7 @@ export function SessionsPage() {
           </div>
         )}
 
-        {summaries.length === 0 && (
+        {summaries && summaries.length === 0 && (
           <div className="empty">
             <span className="big">🏋️</span>
             <h2>Nenhuma sessão ainda</h2>

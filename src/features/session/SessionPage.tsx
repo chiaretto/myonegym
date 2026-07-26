@@ -36,7 +36,9 @@ export function SessionPage() {
   const nav = useNavigate()
   const [sharing, setSharing] = useState<ShareVariant | null>(null)
 
-  if (session === undefined) return <SessionBar onDelete={undefined} />
+  // `entries` joins the wait: the progress row counts them, and "0 de 0
+  // concluídos" is a claim about the workout, not about the loading.
+  if (session === undefined || entries === undefined) return <SessionBar onDelete={undefined} />
   if (session === null) {
     return (
       <>
@@ -75,6 +77,9 @@ export function SessionPage() {
 
   const onShare = async (variant: ShareVariant) => {
     if (sharing) return // a second tap would open a second share sheet
+    // The card prints the target weights; generating it before they load would
+    // silently ship a card with none.
+    if (!weights) return
     setSharing(variant)
     try {
       const card = buildShareCard({ session, entries, gym, weights, exMap, catMap, variant })
@@ -159,6 +164,9 @@ export function SessionPage() {
                     {cat && <span className="entry-cat">{cat}</span>}
                   </span>
                   {(() => {
+                    // No badge while the gym's targets are unknown — "definir"
+                    // would be claiming this exercise has none.
+                    if (!weights) return null
                     const w = entry.exerciseId != null ? weights.get(entry.exerciseId) : undefined
                     return w ? (
                       <span className="used-weight readonly">
