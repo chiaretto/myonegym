@@ -11,8 +11,10 @@ import {
   listSessionEntries,
   saveNote,
   saveWeight,
+  setAlternatives,
   setEntryDone,
   startSession,
+  swapEntryExercise,
 } from '../db/repos'
 import {
   exportBackup,
@@ -177,6 +179,95 @@ describe('exercise categories: multi-category and back-compat', () => {
     expect((await d.exercises.get(8888))?.categoryIds).toEqual([])
     expect(await d.categories.get(reservedId)).toBeUndefined()
     expect((await d.categories.toArray()).some((c) => c.name === 'Sem categoria')).toBe(false)
+  })
+})
+
+describe('exercise alternatives survive a backup', () => {
+  const setsOf = async (ids: number[]) =>
+    Promise.all(ids.map(async (id) => (await d.exercises.get(id))?.alternativeIds))
+
+  /** export → JSON → parse → wipe → import, the way a real restore goes. */
+  async function roundTrip() {
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+  }
+
+  it('round-trips one exercise heading two unrelated variations', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const cruc = await createExercise({ name: 'Crucifixo' }, d)
+    await setAlternatives(reto, [maq, cruc], d)
+
+    await roundTrip()
+
+    // The machine and the fly must NOT come back as alternatives of each other.
+    expect(await setsOf([reto, maq, cruc])).toEqual([[maq, cruc], [reto], [reto]])
+  })
+
+  it("round-trips a session entry's swapped exercise", async () => {
+    const g = await createGym('A', undefined, d)
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    await setAlternatives(reto, [maq], d)
+    // Only the barbell is in the day; the machine is reached by swapping.
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [reto] }, d)
+    const sid = await startSession(g, day, d)
+    const [entry] = await listSessionEntries(sid, d)
+    await swapEntryExercise(entry.id!, maq, d)
+    await setEntryDone(entry.id!, true, d)
+    await completeSession(sid, d)
+
+    await roundTrip()
+
+    const [restored] = await listSessionEntries(sid, d)
+    expect(restored.exerciseId).toBe(maq)
+    expect(restored.exerciseName).toBe('Supino Máquina')
+    expect(restored.done).toBe(true)
+  })
+
+  it('imports a backup made before alternatives existed', async () => {
+    const ex = await createExercise({ name: 'Supino' }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    for (const e of doc.exercises as Record<string, unknown>[]) delete e.alternativeIds
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect((await d.exercises.get(ex))?.alternativeIds).toEqual([])
+  })
+
+  it('drops a reference to an exercise the backup does not contain', async () => {
+    const ex = await createExercise({ name: 'Supino' }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    ;(doc.exercises as Record<string, unknown>[])[0].alternativeIds = [7777]
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    // Repaired, not rejected: a dangling id is not worth failing a restore over.
+    expect((await d.exercises.get(ex))?.alternativeIds).toEqual([])
+  })
+
+  it('mirrors a link that only points one way', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    const exs = doc.exercises as Record<string, unknown>[]
+    exs.find((e) => e.id === reto)!.alternativeIds = [maq]
+    exs.find((e) => e.id === maq)!.alternativeIds = []
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect(await setsOf([reto, maq])).toEqual([[maq], [reto]])
+  })
+
+  it('ignores an exercise listing itself', async () => {
+    const ex = await createExercise({ name: 'Supino' }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    ;(doc.exercises as Record<string, unknown>[])[0].alternativeIds = [ex]
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect((await d.exercises.get(ex))?.alternativeIds).toEqual([])
   })
 })
 

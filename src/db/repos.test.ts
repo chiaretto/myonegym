@@ -29,8 +29,11 @@ import {
   renameCategory,
   saveNote,
   saveWeight,
+  setAlternatives,
   setEntryDone,
   startSession,
+  swapEntryExercise,
+  updateExercise,
   validateMediaUrl,
 } from './repos'
 
@@ -150,6 +153,121 @@ describe('exercises', () => {
     expect(await getNote(g, ex, d)).toBeUndefined()
     expect(await listPhotos(g, ex, d)).toHaveLength(0)
     expect(await d.exercises.get(ex)).toBeUndefined()
+  })
+})
+
+describe('exercise alternatives', () => {
+  /** What each of `ids` lists as its own alternatives. */
+  const setsOf = async (ids: number[]) =>
+    Promise.all(ids.map(async (id) => (await d.exercises.get(id))?.alternativeIds))
+
+  it('creates the link on BOTH exercises', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    await setAlternatives(reto, [maq], d)
+    expect(await setsOf([reto, maq])).toEqual([[maq], [reto]])
+  })
+
+  it('accepts alternatives at creation time', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina', alternativeIds: [reto] }, d)
+    expect(await setsOf([reto, maq])).toEqual([[maq], [reto]])
+  })
+
+  it('one exercise heads SEVERAL unrelated kinds of variation', async () => {
+    // The point of the whole design: the bench press swaps for the machine
+    // (same movement) and for the fly (same muscle), and those two must not
+    // become alternatives of each other by association.
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const cruc = await createExercise({ name: 'Crucifixo' }, d)
+    await setAlternatives(reto, [maq, cruc], d)
+    expect(await setsOf([reto, maq, cruc])).toEqual([[maq, cruc], [reto], [reto]])
+  })
+
+  it('picking a peer that already has alternatives does not absorb them', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const halter = await createExercise({ name: 'Supino Halter' }, d)
+    await setAlternatives(reto, [maq], d)
+    await setAlternatives(halter, [maq], d)
+    // The machine now answers to both, but the barbell and the dumbbell were
+    // never declared alternatives of each other.
+    expect(await setsOf([reto, maq, halter])).toEqual([[maq], [reto, halter], [maq]])
+  })
+
+  it('removing one alternative leaves the others alone', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const cruc = await createExercise({ name: 'Crucifixo' }, d)
+    await setAlternatives(reto, [maq, cruc], d)
+    await setAlternatives(reto, [maq], d)
+    expect(await setsOf([reto, maq, cruc])).toEqual([[maq], [reto], []])
+  })
+
+  it("an edit never touches a peer's OTHER alternatives", async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const halter = await createExercise({ name: 'Supino Halter' }, d)
+    await setAlternatives(maq, [halter], d) // machine ↔ dumbbell
+    await setAlternatives(reto, [maq], d) // barbell ↔ machine
+    await setAlternatives(reto, [], d) // …and undone
+    // The machine keeps the dumbbell throughout: it was none of that edit's business.
+    expect(await setsOf([reto, maq, halter])).toEqual([[], [halter], [maq]])
+  })
+
+  it('clearing the list dissolves the pair', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    await setAlternatives(reto, [maq], d)
+    await updateExercise(reto, { name: 'Supino Reto', alternativeIds: [] }, d)
+    expect(await setsOf([reto, maq])).toEqual([[], []])
+  })
+
+  it('updateExercise without the field leaves the alternatives untouched', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    await setAlternatives(reto, [maq], d)
+    await updateExercise(reto, { name: 'Supino Reto (barra)' }, d)
+    expect(await setsOf([reto, maq])).toEqual([[maq], [reto]])
+  })
+
+  it('ignores an id that no longer exists', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    await setAlternatives(reto, [999], d)
+    expect(await setsOf([reto])).toEqual([[]])
+  })
+
+  it('ignores the exercise itself', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    await setAlternatives(reto, [reto], d)
+    expect(await setsOf([reto])).toEqual([[]])
+  })
+
+  it('deleting an exercise unlinks it from its peers', async () => {
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const cruc = await createExercise({ name: 'Crucifixo' }, d)
+    await setAlternatives(reto, [maq, cruc], d)
+    await deleteExercise(cruc, d)
+    expect(await setsOf([reto, maq])).toEqual([[maq], [reto]])
+  })
+
+  it('alternatives keep their own per-gym weight and history', async () => {
+    const g = await createGym('A', undefined, d)
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    await setAlternatives(reto, [maq], d)
+    await saveWeight(g, reto, 60, 'KG', d)
+    await saveWeight(g, maq, 45, 'KG', d)
+    await saveWeight(g, reto, 62.5, 'KG', d)
+    expect((await getWeight(g, reto, d))?.value).toBe(62.5)
+    expect((await getWeight(g, maq, d))?.value).toBe(45)
+    expect(await listHistory(g, maq, d)).toHaveLength(1)
+  })
+
+  it('rejects setting alternatives on a missing exercise', async () => {
+    await expect(setAlternatives(999, [], d)).rejects.toThrow(ValidationError)
   })
 })
 
@@ -496,6 +614,99 @@ describe('sessions', () => {
     // the target weight is gone with the exercise (no per-session copy)
     expect(await getWeight(g, rosca, d)).toBeUndefined()
     expect((await getSession(sid, d))?.dayName).toBe('Dia 1')
+  })
+})
+
+describe('sessions with alternatives', () => {
+  /** Dia 1 = Rosca, Supino Reto (alternates with Máquina, which is NOT in the
+   *  day), Tríceps. The alternative deliberately stays out of the day. */
+  async function seedDay() {
+    const g = await createGym('A', undefined, d)
+    const rosca = await createExercise({ name: 'Rosca Direta' }, d)
+    const reto = await createExercise({ name: 'Supino Reto' }, d)
+    const maq = await createExercise({ name: 'Supino Máquina' }, d)
+    const triceps = await createExercise({ name: 'Tríceps Corda' }, d)
+    await setAlternatives(reto, [maq], d)
+    await saveWeight(g, reto, 60, 'KG', d)
+    await saveWeight(g, maq, 45, 'KG', d)
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [rosca, reto, triceps] }, d)
+    return { g, rosca, reto, maq, triceps, day }
+  }
+
+  it('an alternative does not add itself to the session', async () => {
+    const { g, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entries = await listSessionEntries(sid, d)
+    // Exactly the day's three exercises — the machine press is not one of them.
+    expect(entries.map((e) => e.exerciseName)).toEqual([
+      'Rosca Direta',
+      'Supino Reto',
+      'Tríceps Corda',
+    ])
+  })
+
+  it('swap rewrites the exercise and its name snapshot', async () => {
+    const { g, maq, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[1]
+    await swapEntryExercise(entry.id!, maq, d)
+    const after = await getSessionEntry(entry.id!, d)
+    expect(after?.exerciseId).toBe(maq)
+    expect(after?.exerciseName).toBe('Supino Máquina')
+  })
+
+  it('swap preserves the done state and the entry count', async () => {
+    const { g, maq, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[1]
+    await setEntryDone(entry.id!, true, d)
+    await swapEntryExercise(entry.id!, maq, d)
+    const after = await getSessionEntry(entry.id!, d)
+    expect(after?.done).toBe(true)
+    expect(await listSessionEntries(sid, d)).toHaveLength(3)
+  })
+
+  it('the swapped-in exercise can be swapped back (the link is symmetric)', async () => {
+    const { g, reto, maq, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[1]
+    await swapEntryExercise(entry.id!, maq, d)
+    await swapEntryExercise(entry.id!, reto, d)
+    expect((await getSessionEntry(entry.id!, d))?.exerciseName).toBe('Supino Reto')
+  })
+
+  it('the session counts the same lines the day has', async () => {
+    const { g, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entries = await listSessionEntries(sid, d)
+    for (const e of entries) await setEntryDone(e.id!, true, d)
+    await completeSession(sid, d)
+    const [summary] = await listSessionSummaries(d)
+    expect(summary.total).toBe(3)
+    expect(summary.done).toBe(3)
+  })
+
+  it('rejects swapping to an exercise that is not an alternative', async () => {
+    const { g, rosca, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[1] // Supino Reto
+    await expect(swapEntryExercise(entry.id!, rosca, d)).rejects.toThrow(ValidationError)
+  })
+
+  it('rejects swapping from an exercise that has no alternatives', async () => {
+    const { g, maq, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[0] // Rosca
+    await expect(swapEntryExercise(entry.id!, maq, d)).rejects.toThrow(ValidationError)
+  })
+
+  it('rejects swapping once the session is completed', async () => {
+    const { g, maq, day } = await seedDay()
+    const sid = await startSession(g, day, d)
+    const entry = (await listSessionEntries(sid, d))[1]
+    await setEntryDone(entry.id!, true, d)
+    await completeSession(sid, d)
+    await expect(swapEntryExercise(entry.id!, maq, d)).rejects.toThrow(ValidationError)
   })
 })
 

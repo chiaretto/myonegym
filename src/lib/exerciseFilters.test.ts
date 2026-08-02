@@ -3,11 +3,11 @@ import { filterExercises, matchesSearch, normalizeForSearch } from './exerciseFi
 import type { Day, Exercise } from '../db/types'
 
 const exercises: Exercise[] = [
-  { id: 1, name: 'Rosca Direta', categoryIds: [1] },
-  { id: 2, name: 'Rosca Scott', categoryIds: [1] },
-  { id: 3, name: 'Supino Reto', categoryIds: [2] },
-  { id: 4, name: 'Elevação Lateral', categoryIds: [2] },
-  { id: 5, name: 'Alongamento', categoryIds: [] }, // no category
+  { id: 1, name: 'Rosca Direta', categoryIds: [1], alternativeIds: [] },
+  { id: 2, name: 'Rosca Scott', categoryIds: [1], alternativeIds: [] },
+  { id: 3, name: 'Supino Reto', categoryIds: [2], alternativeIds: [] },
+  { id: 4, name: 'Elevação Lateral', categoryIds: [2], alternativeIds: [] },
+  { id: 5, name: 'Alongamento', categoryIds: [], alternativeIds: [] }, // no category
 ]
 
 const days: Day[] = [
@@ -56,8 +56,8 @@ describe('filterExercises', () => {
     // A view filter must not crash on unexpected data shape — such a record is
     // treated as uncategorized. (Regression: selecting "Sem categoria" threw.)
     const messy = [
-      { id: 1, name: 'Legado', categoryIds: undefined } as unknown as Exercise,
-      { id: 2, name: 'Peito', categoryIds: [1] },
+      { id: 1, name: 'Legado', categoryIds: undefined, alternativeIds: [] } as unknown as Exercise,
+      { id: 2, name: 'Peito', categoryIds: [1], alternativeIds: [] },
     ]
     expect(() => filterExercises(messy, { category: 'none' }, days)).not.toThrow()
     expect(filterExercises(messy, { category: 'none' }, days).map((e) => e.name)).toEqual(['Legado'])
@@ -66,9 +66,9 @@ describe('filterExercises', () => {
 
   it('a specific category matches any exercise that includes it (compound)', () => {
     const compound: Exercise[] = [
-      { id: 1, name: 'Rosca Direta', categoryIds: [1] },
-      { id: 2, name: 'Remada', categoryIds: [2, 1] }, // includes cat 1
-      { id: 3, name: 'Supino', categoryIds: [2] }, // does not
+      { id: 1, name: 'Rosca Direta', categoryIds: [1], alternativeIds: [] },
+      { id: 2, name: 'Remada', categoryIds: [2, 1], alternativeIds: [] }, // includes cat 1
+      { id: 3, name: 'Supino', categoryIds: [2], alternativeIds: [] }, // does not
     ]
     const result = filterExercises(compound, { category: 1 }, days)
     expect(result.map((e) => e.id).sort()).toEqual([1, 2])

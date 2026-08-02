@@ -8,12 +8,12 @@ const cats = new Map<number, Category>([
   [3, { id: 3, name: 'Costas' }],
 ])
 const exs = new Map<number, Exercise>([
-  [10, { id: 10, name: 'Supino', categoryIds: [1] }],
-  [11, { id: 11, name: 'Crucifixo', categoryIds: [1] }],
-  [12, { id: 12, name: 'Tríceps Corda', categoryIds: [2] }],
-  [13, { id: 13, name: 'Puxada', categoryIds: [3] }],
-  [14, { id: 14, name: 'Sem categoria', categoryIds: [] }], // no category
-  [15, { id: 15, name: 'Supino Inclinado', categoryIds: [1, 2] }], // compound: Peito + Tríceps
+  [10, { id: 10, name: 'Supino', categoryIds: [1], alternativeIds: [] }],
+  [11, { id: 11, name: 'Crucifixo', categoryIds: [1], alternativeIds: [] }],
+  [12, { id: 12, name: 'Tríceps Corda', categoryIds: [2], alternativeIds: [] }],
+  [13, { id: 13, name: 'Puxada', categoryIds: [3], alternativeIds: [] }],
+  [14, { id: 14, name: 'Sem categoria', categoryIds: [], alternativeIds: [] }], // no category
+  [15, { id: 15, name: 'Supino Inclinado', categoryIds: [1, 2], alternativeIds: [] }], // compound: Peito + Tríceps
 ])
 const day = (exerciseIds: number[]): Day => ({ id: 1, name: 'Dia 1', exerciseIds })
 

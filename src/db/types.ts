@@ -22,6 +22,26 @@ export interface Exercise {
   /** Zero or more categories. Empty = uncategorized (shown as "Sem categoria").
    *  There is no reserved category — an empty list IS uncategorized. */
   categoryIds: number[]
+  /**
+   * The OTHER exercises this one can be swapped for — same stimulus, different
+   * equipment (barbell bench / machine press). Empty is the normal case.
+   *
+   * **Symmetric**: marking B an alternative of A marks A an alternative of B,
+   * so the pair is declared once, from whichever side the user is editing.
+   *
+   * Deliberately **NOT transitively closed**: A may list both B and C without
+   * B and C becoming alternatives of each other. One exercise therefore heads
+   * as many *kinds* of variation as the user wants — the bench press swaps for
+   * the machine (same movement) and for the dumbbell fly (same muscle), and
+   * those two never become interchangeable by association.
+   *
+   * The symmetry is maintained **exclusively** by `setAlternatives` (and by
+   * `deleteExercise`, which unlinks the peers). No screen writes this field.
+   *
+   * Deliberately NOT indexed: because the relation is symmetric, "who points at
+   * me" is answered by my own record — nothing ever scans for referrers.
+   */
+  alternativeIds: number[]
 }
 
 export interface Day {
@@ -122,10 +142,16 @@ export interface Session {
  * session still renders after the source exercise is renamed/deleted. The entry
  * stores NO weight — the weight shown/edited for an entry is always the
  * exercise's per-gym target weight (see Weight), looked up live by the UI.
+ *
+ * One entry per exercise of the day. Alternatives do not multiply entries:
+ * only the exercise the user put in the day is listed, and swapping to one of
+ * its alternatives mid-workout rewrites this entry in place (see
+ * `swapEntryExercise`) rather than adding a second one.
  */
 export interface SessionEntry {
   id?: number
   sessionId: number
+  /** The exercise being done — rewritten by a swap; absent once it is deleted. */
   exerciseId?: number
   exerciseName: string
   done: boolean

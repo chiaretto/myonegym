@@ -17,10 +17,14 @@ import { base64ToBytes, bytesToBase64 } from './base64'
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
+// v5: exercises carry their ALTERNATIVES (`alternativeIds`) and a session entry
+// that stands for a set carries its members. Nothing was removed, so a v4 file
+// still imports — see `normalizeAlternatives`.
+//
 // v4: the backup carries the WHOLE database — weight history, sessions and photos
 // included (photos base64-encoded). Older backups (v3 and earlier) omit some of
 // these arrays and still import (missing tables restore empty).
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 /** Bundled sample routine (issue #4) used by "Gerar exemplo". */
 const EXAMPLE_DATA = exampleBackup as unknown as {
@@ -152,7 +156,44 @@ export function parseBackup(json: string): BackupDoc {
     }
   }
   normalizeCategories(obj)
+  normalizeAlternatives(obj)
   return obj as unknown as BackupDoc
+}
+
+/**
+ * Make the alternative sets importable, whatever the file says.
+ *
+ * The relation has to land symmetric and free of dangling ids, because that is
+ * the invariant the app maintains and never re-checks at read time (see
+ * `Exercise.alternativeIds`). A backup can violate it three ways — it predates
+ * the field, it names an exercise it doesn't contain, or it was hand-edited —
+ * and none of them is worth rejecting a whole restore over. So: drop what
+ * cannot resolve, mirror what only points one way, and move on.
+ *
+ * Deliberately NOT transitively closed here: closing an asymmetric mess would
+ * invent sets the user never declared. Mirroring is the smallest repair that
+ * makes the data legal.
+ */
+function normalizeAlternatives(obj: Record<string, unknown>): void {
+  const exercises = obj.exercises as Record<string, unknown>[]
+  const known = new Set<number>(
+    exercises.map((e) => e.id).filter((id): id is number => typeof id === 'number'),
+  )
+
+  const sets = new Map<number, Set<number>>()
+  for (const ex of exercises) {
+    if (typeof ex.id !== 'number') continue // no id, so nothing can point at it
+    const ids: number[] = Array.isArray(ex.alternativeIds) ? (ex.alternativeIds as number[]) : []
+    sets.set(ex.id, new Set(ids.filter((id) => id !== ex.id && known.has(id))))
+  }
+  // Second pass: a link named on one side is a link on both.
+  for (const [id, peers] of sets) {
+    for (const peer of peers) sets.get(peer)?.add(id)
+  }
+  for (const ex of exercises) {
+    const peers = typeof ex.id === 'number' ? sets.get(ex.id) : undefined
+    ex.alternativeIds = [...(peers ?? [])].sort((a, b) => a - b)
+  }
 }
 
 /**
@@ -250,7 +291,14 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
   for (const e of EXAMPLE_DATA.exercises) {
     const mapped = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
     const categoryIds = mapped != null ? [mapped] : []
-    const id = await d.exercises.add({ name: e.name, mediaUrl: e.mediaUrl, categoryIds })
+    // The sample routine declares no alternatives — it is a starting point, not
+    // a showcase of every feature.
+    const id = await d.exercises.add({
+      name: e.name,
+      mediaUrl: e.mediaUrl,
+      categoryIds,
+      alternativeIds: [],
+    })
     if (e.id != null) exRemap.set(e.id, id)
   }
 

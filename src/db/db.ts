@@ -86,6 +86,25 @@ export class MyOneGymDB extends Dexie {
           })
         if (reservedId != null) await tx.table('categories').delete(reservedId)
       })
+    // v7 — exercises may be declared ALTERNATIVES of one another (same
+    // stimulus, different equipment). Additive: every existing exercise starts
+    // with no alternatives, which is exactly how the app behaved before.
+    //
+    // No index and no `.stores()` change: the relation is symmetric, so the
+    // only question ever asked ("who are my alternatives?") is answered by the
+    // record itself — nothing scans for referrers. Nothing else changes shape:
+    // a day still lists the exercises the user put in it, and a session still
+    // has one entry per exercise. See `Exercise.alternativeIds`.
+    this.version(7)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            e.alternativeIds = []
+          })
+      })
   }
 }
 

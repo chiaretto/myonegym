@@ -4,7 +4,14 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createExercise, deleteExercise, updateExercise, ValidationError } from '../../db/repos'
 import { db } from '../../db/db'
 import type { Exercise } from '../../db/types'
-import { useCategories, useCategoryMap, useDays, useExercises } from '../../lib/hooks'
+import {
+  useCategories,
+  useCategoryMap,
+  useDays,
+  useExerciseMap,
+  useExercises,
+} from '../../lib/hooks'
+import { alternativesOf } from '../../lib/alternatives'
 import { dayNamesForExercise, exerciseCategoryLabel } from '../../lib/days'
 import { filterExercises, type CategoryFilter, type DayFilter } from '../../lib/exerciseFilters'
 import { ActionBar } from '../../ui/ActionBar'
@@ -17,6 +24,7 @@ export function ExercisesPage() {
   const exs = useExercises()
   const cats = useCategories()
   const catMap = useCategoryMap()
+  const exMap = useExerciseMap()
   const days = useDays()
   const toast = useToast()
   const confirm = useConfirm()
@@ -125,6 +133,7 @@ export function ExercisesPage() {
         <div className="group">
           {filtered.map((e) => {
             const dayNames = dayNamesForExercise(e.id!, days ?? [])
+            const alts = alternativesOf(e, exMap)
             return (
             <div key={e.id} className="row">
               <Media className="thumb" url={e.mediaUrl} alt={e.name} />
@@ -142,6 +151,17 @@ export function ExercisesPage() {
                 ) : (
                   <span className="row-sub" style={{ color: 'var(--text-muted)' }}>
                     <Icon name="calendar-event" /> Nenhum dia
+                  </span>
+                )}
+                {/* Only when there ARE alternatives: having none is the normal
+                    case and does not deserve a line of its own. */}
+                {alts.length > 0 && (
+                  <span className="chip-row">
+                    {alts.map((a) => (
+                      <span key={a.id} className="chip sm">
+                        <Icon name="arrows-left-right" /> {a.name}
+                      </span>
+                    ))}
                   </span>
                 )}
               </span>
@@ -199,16 +219,31 @@ export function ExerciseFormPage() {
 
 function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const cats = useCategories()
+  const exs = useExercises()
   const toast = useToast()
   const nav = useNavigate()
   const [name, setName] = useState(exercise?.name ?? '')
   const [mediaUrl, setMediaUrl] = useState(exercise?.mediaUrl ?? '')
   const [categoryIds, setCategoryIds] = useState<number[]>(exercise?.categoryIds ?? [])
+  const [alternativeIds, setAlternativeIds] = useState<number[]>(exercise?.alternativeIds ?? [])
+  const [altSearch, setAltSearch] = useState('')
   const [err, setErr] = useState('')
 
   const back = () => nav('/settings/exercises')
   const toggleCat = (id: number) =>
     setCategoryIds((cur) => (cur.includes(id) ? cur.filter((c) => c !== id) : [...cur, id]))
+  const toggleAlt = (id: number) =>
+    setAlternativeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+
+  // Every other exercise is a candidate; the selected ones stay visible whatever
+  // the search says, so unchecking never requires finding them again.
+  const others = (exs ?? []).filter((e) => e.id !== exercise?.id)
+  const chosen = others.filter((e) => alternativeIds.includes(e.id!))
+  const offered = filterExercises(
+    others.filter((e) => !alternativeIds.includes(e.id!)),
+    { search: altSearch },
+    [],
+  )
 
   const submit = async () => {
     try {
@@ -216,6 +251,7 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
         name,
         mediaUrl: mediaUrl || undefined,
         categoryIds,
+        alternativeIds,
       }
       if (exercise) {
         await updateExercise(exercise.id!, input, db)
@@ -270,6 +306,55 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
             </div>
           ) : (
             <p className="note-empty">Nenhuma categoria ainda. Crie categorias em Configurações → Categorias.</p>
+          )}
+        </div>
+
+        <div className="field">
+          <label htmlFor="ex-alt-search">Alternativas</label>
+          <p className="note-empty">
+            Exercícios que substituem este. Eles não entram nos dias de treino junto com ele —
+            aparecem no detalhe, e durante o treino você pode marcar que fez um deles no lugar.
+          </p>
+          {others.length === 0 ? (
+            <p className="note-empty">Nenhum outro exercício cadastrado ainda.</p>
+          ) : (
+            <>
+              <input
+                id="ex-alt-search"
+                value={altSearch}
+                onChange={(e) => setAltSearch(e.target.value)}
+                placeholder="Buscar por nome"
+              />
+              <div className="chip-select" role="group" aria-label="Alternativas">
+                {/* Selected first and always shown — a search that hid them
+                    would make unchecking a scavenger hunt. */}
+                {chosen.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className="chip-toggle on"
+                    aria-pressed={true}
+                    onClick={() => toggleAlt(e.id!)}
+                  >
+                    <Icon name="check" size={12} /> {e.name}
+                  </button>
+                ))}
+                {offered.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className="chip-toggle"
+                    aria-pressed={false}
+                    onClick={() => toggleAlt(e.id!)}
+                  >
+                    {e.name}
+                  </button>
+                ))}
+              </div>
+              {offered.length === 0 && altSearch.trim() !== '' && (
+                <p className="note-empty">Nenhum exercício encontrado.</p>
+              )}
+            </>
           )}
         </div>
         {err && <span className="err" style={{ display: 'block', marginBottom: 10 }}>{err}</span>}
