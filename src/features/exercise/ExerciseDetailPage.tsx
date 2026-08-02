@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { useCategoryMap, useDays } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
+import { AlternativesSection } from './AlternativesSection'
 import { exerciseCategoryNames } from '../../lib/days'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
@@ -38,16 +39,26 @@ export function ExerciseDetailPage() {
   // Back to a plain Home.
   const backTo = fromDay ? `/?day=${fromDay.id}` : '/'
 
-  // Neighbours within that day's ordered list.
+  // Neighbours within that day's ordered list. Alternatives do not affect it:
+  // a day lists the exercises the user put in it, and an alternative that is
+  // not in the day is not a stop on the way through it.
   const dayIdx = fromDay ? fromDay.exerciseIds.indexOf(exerciseId) : -1
+  // Opening an alternative carries the day along so Back still works, but that
+  // alternative may not be IN the day — and a stepper with both arrows dead is
+  // worse than no stepper.
+  const inDay = dayIdx >= 0
   const prevEx = dayIdx > 0 ? fromDay!.exerciseIds[dayIdx - 1] : undefined
   const nextEx =
-    fromDay && dayIdx >= 0 && dayIdx < fromDay.exerciseIds.length - 1
+    fromDay && inDay && dayIdx < fromDay.exerciseIds.length - 1
       ? fromDay.exerciseIds[dayIdx + 1]
       : undefined
   // Stepping keeps the day, so the context survives across exercises.
   const goTo = (id: number) => nav(`/exercise/${id}?day=${fromDay!.id}`)
   const catNames = exerciseCategoryNames(exercise ?? undefined, catMap)
+  // Opening an alternative keeps the day in the address, so Voltar still lands
+  // on the Home the user came from — even though that alternative may not be
+  // in the day itself (its stepper is then simply absent).
+  const altHref = (id: number) => (fromDay ? `/exercise/${id}?day=${fromDay.id}` : `/exercise/${id}`)
 
   if (exercise === undefined) return <BackBar title="Exercício" to={backTo} />
   if (exercise === null) {
@@ -98,13 +109,18 @@ export function ExerciseDetailPage() {
         ) : tab === 'notes' ? (
           <NoteEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
         ) : (
-          <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+          <>
+            <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+            {/* Under the weight, not in the header: this is a place to go, not
+                a label, and it can be several rows tall. */}
+            <AlternativesSection exercise={exercise} hrefFor={altHref} />
+          </>
         )}
       </main>
 
-      {/* Only when opened from a day: without one there is no defined "next".
-          No Concluir here — that belongs to a workout session. */}
-      {fromDay && (
+      {/* Only when opened from a day THIS exercise is in: without one there is
+          no defined "next". No Concluir here — that belongs to a session. */}
+      {inDay && (
         <StepperBar
           onPrev={() => prevEx != null && goTo(prevEx)}
           onNext={() => nextEx != null && goTo(nextEx)}

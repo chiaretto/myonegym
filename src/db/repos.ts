@@ -165,27 +165,95 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
 }
 
 export async function createExercise(
-  input: { name: string; mediaUrl?: string; categoryIds?: number[] },
+  input: { name: string; mediaUrl?: string; categoryIds?: number[]; alternativeIds?: number[] },
   d: MyOneGymDB = db,
 ): Promise<number> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
-  return d.exercises.add({ name, mediaUrl, categoryIds: input.categoryIds ?? [] })
+  return d.transaction('rw', d.exercises, async () => {
+    const id = await d.exercises.add({
+      name,
+      mediaUrl,
+      categoryIds: input.categoryIds ?? [],
+      alternativeIds: [],
+    })
+    // Through setAlternatives, never by writing the field: the set has to stay
+    // symmetric on the peers too.
+    if (input.alternativeIds?.length) await setAlternatives(id, input.alternativeIds, d)
+    return id
+  })
 }
 
 export async function updateExercise(
   id: number,
-  input: { name: string; mediaUrl?: string; categoryIds?: number[] },
+  input: { name: string; mediaUrl?: string; categoryIds?: number[]; alternativeIds?: number[] },
   d: MyOneGymDB = db,
 ): Promise<void> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
-  await d.exercises.update(id, { name, mediaUrl, categoryIds: input.categoryIds ?? [] })
+  await d.transaction('rw', d.exercises, async () => {
+    await d.exercises.update(id, { name, mediaUrl, categoryIds: input.categoryIds ?? [] })
+    // `undefined` means "this caller isn't editing alternatives" — only an
+    // explicit list (including `[]`, which clears the set) touches them.
+    if (input.alternativeIds !== undefined) await setAlternatives(id, input.alternativeIds, d)
+  })
 }
 
 /**
- * Delete an exercise: pull it from all days and drop its weights, history,
- * per-gym notes, and per-gym photos.
+ * Declare which exercises `exerciseId` can be swapped for, keeping the relation
+ * symmetric (see `Exercise.alternativeIds`).
+ *
+ * Each side is edited independently: `ids` becomes this exercise's own list,
+ * and the only thing written on the others is a link back to this one. Picking
+ * a peer that already has alternatives of its own does **not** absorb them —
+ * that is what lets one exercise head several unrelated kinds of variation
+ * (the bench press swaps for the machine *and* for the fly, which never become
+ * alternatives of each other).
+ *
+ * This is the ONLY writer of the symmetry — every caller goes through here.
+ */
+export async function setAlternatives(
+  exerciseId: number,
+  ids: number[],
+  d: MyOneGymDB = db,
+): Promise<void> {
+  await d.transaction('rw', d.exercises, async () => {
+    const self = await d.exercises.get(exerciseId)
+    if (!self) throw new ValidationError('Exercício não encontrado.')
+
+    // A stale pick can't resurrect a deleted exercise, and nothing is its own
+    // alternative.
+    const next: number[] = []
+    for (const id of ids) {
+      if (id === exerciseId || next.includes(id)) continue
+      if (await d.exercises.get(id)) next.push(id)
+    }
+    await d.exercises.update(exerciseId, { alternativeIds: next })
+
+    // Mirror onto the peers: add the back-link where it's new, drop it where
+    // the edit removed it. Only this exercise's own id is ever touched on
+    // them, so their other alternatives are none of this edit's business.
+    for (const id of next) {
+      const peer = await d.exercises.get(id)
+      const peers = peer?.alternativeIds ?? []
+      if (!peers.includes(exerciseId)) {
+        await d.exercises.update(id, { alternativeIds: [...peers, exerciseId] })
+      }
+    }
+    for (const gone of self.alternativeIds ?? []) {
+      if (next.includes(gone)) continue
+      const peer = await d.exercises.get(gone)
+      if (!peer) continue
+      await d.exercises.update(gone, {
+        alternativeIds: (peer.alternativeIds ?? []).filter((x) => x !== exerciseId),
+      })
+    }
+  })
+}
+
+/**
+ * Delete an exercise: pull it from all days, unlink it from its alternatives,
+ * and drop its weights, history, per-gym notes, and per-gym photos.
  */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
   // Array form: Dexie's typed overloads stop at 5 tables.
@@ -193,6 +261,18 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
     'rw',
     [d.exercises, d.days, d.weights, d.weightHistory, d.exerciseNotes, d.exercisePhotos],
     async () => {
+      // Unlink first, while the record is still there to say who its peers are.
+      // Because the relation is symmetric, its own list IS the list of referrers
+      // — no scan needed. A pair left with one member ends up with `[]`, which
+      // is exactly "no alternatives".
+      const self = await d.exercises.get(id)
+      for (const peerId of self?.alternativeIds ?? []) {
+        const peer = await d.exercises.get(peerId)
+        if (!peer) continue
+        await d.exercises.update(peerId, {
+          alternativeIds: (peer.alternativeIds ?? []).filter((x) => x !== id),
+        })
+      }
       await d.days
         .filter((day) => day.exerciseIds.includes(id))
         .modify((day) => {
@@ -480,6 +560,9 @@ export async function getActiveSession(
  * no weight — the weight shown/edited is always the exercise's per-gym target.
  * Rejects if the gym already has an in-progress session (only one active session
  * per gym). Returns the new id.
+ *
+ * Alternatives do not appear here: only the exercise the user put in the day
+ * does. Swapping to one of its alternatives happens mid-workout, in place.
  */
 export async function startSession(
   gymId: number,
@@ -579,6 +662,40 @@ export async function setEntryDone(
   d: MyOneGymDB = db,
 ): Promise<void> {
   await d.sessionEntries.update(entryId, { done })
+}
+
+/**
+ * "I did this one instead" — point a session entry at one of the alternatives
+ * of the exercise it currently holds.
+ *
+ * Rewrites the exercise and its name snapshot, and deliberately leaves `done`
+ * alone: swapping says "this is the one I did", not "undo it". No entry is
+ * created or removed either, so the day's exercise count and the session's
+ * progress never move — the workout still has exactly the lines the day had.
+ *
+ * The target must be an alternative of the entry's **current** exercise, read
+ * live from the catalog. Only while the session is in progress: a completed
+ * session records what happened.
+ */
+export async function swapEntryExercise(
+  entryId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  await d.transaction('rw', [d.sessionEntries, d.sessions, d.exercises], async () => {
+    const entry = await d.sessionEntries.get(entryId)
+    if (!entry) throw new ValidationError('Exercício da sessão não encontrado.')
+    const session = await d.sessions.get(entry.sessionId)
+    if (session?.status !== 'active') throw new ValidationError('Este treino já foi concluído.')
+
+    const current = entry.exerciseId != null ? await d.exercises.get(entry.exerciseId) : undefined
+    if (!current?.alternativeIds?.includes(exerciseId)) {
+      throw new ValidationError('Este exercício não é uma alternativa do atual.')
+    }
+    const ex = await d.exercises.get(exerciseId)
+    if (!ex) throw new ValidationError('Exercício não encontrado.')
+    await d.sessionEntries.update(entryId, { exerciseId, exerciseName: ex.name })
+  })
 }
 
 /** Mark an in-progress session completed, stamping the completion time. */

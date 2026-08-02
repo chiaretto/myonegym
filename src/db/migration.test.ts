@@ -87,11 +87,68 @@ describe('v6 migration: categoryId → categoryIds, retire reserved', () => {
     try {
       // Add a compound exercise post-migration and query by the indexed path.
       const triceps = await db.categories.add({ name: 'Tríceps' })
-      await db.exercises.add({ name: 'Mergulho', categoryIds: [peito, triceps] })
+      await db.exercises.add({ name: 'Mergulho', categoryIds: [peito, triceps], alternativeIds: [] })
       const inPeito = await db.exercises.where('categoryIds').equals(peito).toArray()
       expect(inPeito.map((e) => e.name).sort()).toEqual(['Mergulho', 'Supino'])
     } finally {
       db.close()
     }
   })
+})
+
+/**
+ * v7 migration: every exercise gains an empty `alternativeIds`. Additive — a
+ * database that predates alternatives must come out behaving exactly as before,
+ * with the field present so nothing has to guess at read time.
+ */
+describe('v7 migration: exercises gain alternativeIds', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig7-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  /** Open a Dexie declaring only up to v6 — exercises with no alternatives. */
+  async function openV6() {
+    const db = new Dexie(name)
+    db.version(1).stores({
+      gyms: '++id, name, createdAt',
+      categories: '++id, &name',
+      exercises: '++id, name, categoryId',
+      days: '++id, name',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
+    })
+    db.version(2).stores({
+      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
+    })
+    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
+    db.version(4).stores({})
+    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
+    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
+    await db.open()
+    return db
+  }
+
+  it('gives every existing exercise an empty set', async () => {
+    const v6 = await openV6()
+    const supino = (await v6.table('exercises').add({ name: 'Supino', categoryIds: [1] })) as number
+    const rosca = (await v6.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
+    v6.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      expect((await db.exercises.get(supino))?.alternativeIds).toEqual([])
+      expect((await db.exercises.get(rosca))?.alternativeIds).toEqual([])
+      // Nothing else about the exercise moved.
+      expect((await db.exercises.get(supino))?.categoryIds).toEqual([1])
+    } finally {
+      db.close()
+    }
+  })
+
 })
