@@ -185,10 +185,15 @@ describe('Workout session end-to-end', () => {
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
     expect(await screen.findByRole('button', { name: 'Continuar' })).toBeInTheDocument()
 
-    // Starting another day just resumes; no second session is created.
+    // CHANGED: tapping another day used to drop the user into the Dia 1 runner.
+    // Dia 2's button is now drawn and announced as disabled, and answers the tap
+    // with the reason instead of a navigation nobody asked for. Either way, no
+    // second session is created — that is what this test is really about.
     const others = await screen.findAllByRole('button', { name: 'Iniciar' })
+    await waitFor(() => expect(others[0]).toHaveAttribute('aria-disabled', 'true'))
     await user.click(others[0])
-    await screen.findByText(/de 3 concluídos/)
+    expect(await screen.findByText(/treino em andamento/i)).toBeInTheDocument()
+    expect(screen.queryByText(/de 3 concluídos/)).not.toBeInTheDocument()
     expect(await db.sessions.count()).toBe(1)
   })
 })

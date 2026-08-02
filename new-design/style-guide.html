@@ -215,6 +215,7 @@
         <button class="icon-btn"><i class="ti ti-arrow-left"></i></button>
         <button class="day-start" aria-label="Iniciar"><i class="png-ic pi-play"></i><span class="day-start-lab">Iniciar</span></button>
         <button class="day-start icon-only" aria-label="Iniciar"><i class="png-ic pi-play"></i><span class="day-start-lab">Iniciar</span></button>
+        <button class="day-start icon-only blocked" aria-label="Iniciar" aria-disabled="true"><i class="png-ic pi-play"></i><span class="day-start-lab">Iniciar</span></button>
       </div>
       <div class="mock-note">
         <strong>Iniciar treino.</strong> A pílula com rótulo é exclusiva do dia em destaque
@@ -222,6 +223,11 @@
         vira só o glifo, num círculo de mesma altura — no app basta não passar <code>featured</code>,
         a regra é <code>.day:not(.featured) .day-start</code>. A classe <code>.icon-only</code>
         existe só para demonstrar a variante fora de um card de dia, como acima.
+        O terceiro, cinza, é <code>.blocked</code>: enquanto há um treino em andamento em
+        <em>outro</em> dia, só existe um caminho aberto — o “Continuar” daquele dia —, e os
+        demais dias mostram que não são iniciáveis. É <code>aria-disabled</code>, não
+        <code>disabled</code>: o botão continua respondendo ao toque para explicar o motivo,
+        porque um controle mudo no dedo se lê como app travado.
       </div>
       <div style="max-width:340px;margin-bottom:18px">
         <div class="tabs"><button class="on">Detalhe</button><button>Observações</button><button>Foto</button></div>
