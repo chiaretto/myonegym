@@ -167,3 +167,33 @@
    of its bounding box, so it needs a nudge right to look centred in a circle. */
 .day:not(.featured) .day-start:not(.resume) .png-ic,
 .day-start.icon-only .png-ic { font-size: 1.15em; margin-left: 0.08em; }
+
+/* Blocked: a session is open on ANOTHER day, so this one cannot be started.
+   Only one session per gym, and the accordion used to hide that — five identical
+   red affordances, four of which the rule forbids.
+
+   Shape is untouched. A blocked day is never .featured (the app clears the
+   featured day while a session is active) and never .resume, so the rule above
+   has already made it the 2em circle; all that changes is what fills it.
+
+   NOT the app's .btn:disabled (opacity: 0.4): dropping the red gradient to 40%
+   over --surface-1 yields a dimmed red, which reads as "the accent, but at
+   night". Grey is a different colour, not a weaker one, and the distinction has
+   to survive the glance that decides where to tap.
+
+   --surface-3 on the --surface-1 card is only 1.2:1, so the circle needs
+   --border-strong to keep an edge — a fill this quiet without one stops looking
+   like a control at all. box-sizing is border-box globally, so the border does
+   not push the circle past the 33px it shares with the labelled pill.
+   The glyph rides currentColor (.png-ic is a mask), and --text-secondary on
+   --surface-3 measures 4.9:1 — past the 3:1 that non-text needs, because
+   "disabled" should be legible, not illegible.
+
+   :active still applies. This button is aria-disabled, not disabled: it answers
+   the tap with the reason, so it must also look like it received one. */
+.day-start.blocked {
+  background: var(--surface-3);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-strong);
+  box-shadow: none;
+}

@@ -152,8 +152,16 @@ export function HomePage() {
     // on the floor for the millisecond it takes to know.
     if (activeSession === undefined) return
     if (activeSession) {
-      // Only one active session per gym: resume it (whichever day it belongs to).
-      if (activeSession.dayId !== dayId) toast('Você já tem um treino em andamento.')
+      // Only one active session per gym. CHANGED: a day that is NOT the session's
+      // no longer navigates there. This button is drawn disabled (see isBlocked),
+      // and taking someone who tapped "Iniciar" on Dia 3 into the Dia 1 workout
+      // was a third outcome they asked for neither. It still answers the tap —
+      // a control that goes dead under the finger reads as a frozen app — but it
+      // answers with the reason, and "Continuar" is a tap away on its own card.
+      if (activeSession.dayId !== dayId) {
+        toast('Você já tem um treino em andamento.')
+        return
+      }
       nav(`/session/${activeSession.id}`)
       return
     }
@@ -218,6 +226,13 @@ export function HomePage() {
             // still unknown, "nothing is being resumed" is not yet true, and
             // guessing moves the badge between cards a frame later.
             const isFeatured = day.id === nextDayId && activeSession === null
+            // Only one session per gym, so while one is open every OTHER day is
+            // unstartable. It used to look otherwise: five red pills, four of
+            // them promising something the rule forbids. `!= null` covers both
+            // "no session" and "still loading" — painting these grey before the
+            // read answers would flash the whole accordion on every return to
+            // Home, the same reason isFeatured waits above.
+            const isBlocked = activeSession != null && activeSession.dayId !== day.id
             return (
               <li
                 key={day.id}
@@ -268,9 +283,18 @@ export function HomePage() {
                       {/* stopPropagation: this button sits inside the head, and
                           the head toggles the day. Without it, starting a
                           workout would also expand the card on the way out. */}
+                      {/* aria-disabled, NOT the disabled attribute: a disabled
+                          button receives no events at all, so on a touch device
+                          it would be indistinguishable from a hung app — the
+                          same argument that made the whole head tappable. This
+                          one stays focusable, announces itself as disabled, and
+                          still explains itself when tapped. The accessible name
+                          stays the plain verb: it is the button for starting
+                          THIS day, merely unavailable. */}
                       <button
-                        className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}`}
+                        className={`day-start${isResume ? ' resume' : ''}${isFeatured ? ' featured' : ''}${isBlocked ? ' blocked' : ''}`}
                         aria-label={isResume ? 'Continuar' : 'Iniciar'}
+                        aria-disabled={isBlocked || undefined}
                         onClick={(e) => {
                           e.stopPropagation()
                           onStart(day.id!)
