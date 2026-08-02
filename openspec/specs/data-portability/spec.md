@@ -44,11 +44,13 @@ versioned JSON file, so that the export can serve as a true **backup** against t
 loss of the PWA's local storage. The export MUST include **all** persistent user
 data:
 
-- gyms, categories, exercises, training days;
+- gyms, categories, exercises (com suas **categorias** e suas **alternativas**),
+  training days;
 - the current per-gym **weight** for each exercise, and the full per-gym
   **weight-change history**;
 - the per-gym exercise **notes**;
-- every **workout session** and its **entries** (with their done states);
+- every **workout session** and its **entries** (with their done states and the
+  exercise each one ended up recording, swap included);
 - every per-gym exercise **photo**, with its image bytes.
 
 Because a JSON document cannot carry binary directly, photo image bytes MUST be
@@ -79,6 +81,17 @@ Device-local **UI preferences** — the font-size setting and the first-launch
 - WHEN the user exports the backup
 - THEN the JSON contains the photo record with its image bytes base64-encoded and its mime type
 
+#### Scenario: Alternativas SÃO exportadas
+- GIVEN "Supino Reto" e "Supino Máquina" são alternativas entre si
+- WHEN o usuário exporta o backup
+- THEN o JSON registra a relação nos dois exercícios
+
+#### Scenario: A troca feita na sessão É exportada
+- GIVEN uma sessão concluída em que a linha começou como "Supino Reto" e o
+  usuário registrou que fez "Supino Máquina" no lugar
+- WHEN o usuário exporta o backup
+- THEN o JSON contém a entrada registrando "Supino Máquina"
+
 #### Scenario: The Backup screen states the backup is complete
 - GIVEN the user opens Configurações → Backup
 - WHEN they read the export section
@@ -101,6 +114,21 @@ days, weights, **weight history**, **workout sessions and entries**, notes, and
 every cross-reference (a session's entries, a photo's exercise, a weight's gym)
 remains valid. Base64 photo bytes MUST be decoded back to their original binary
 form, **byte-for-byte**.
+
+A restauração MUST deixar as **alternativas em estado íntegro**, porque a relação
+é simétrica e uma importação não pode produzir um banco que o app não saberia
+manter. A importação MUST NOT, porém, **fechar transitivamente** o que o arquivo
+traz: unir A–B e A–C num trio inventaria um tipo de variação que o usuário nunca
+declarou. As reparações são apenas:
+
+- um exercício **sem** o campo (backup anterior às alternativas) MUST ser
+  restaurado **sem alternativas**;
+- uma referência **pendente** — apontando para um exercício que não está no
+  backup — MUST ser descartada;
+- uma **auto-referência** MUST ser ignorada;
+- um vínculo **de um lado só** MUST ser restaurado nos **dois** sentidos.
+
+Nenhum desses casos MUST rejeitar o arquivo: a importação corrige e segue.
 
 A backup produced by an **older version** that lacks some arrays (e.g. no
 `sessions`, `exercisePhotos`, or `weightHistory`) MUST import cleanly, restoring
@@ -136,6 +164,32 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - GIVEN a backup JSON produced before sessions/history/photos were exported (those keys absent)
 - WHEN the user imports it
 - THEN the import succeeds, those tables are empty, and gyms/exercises/days/weights/notes are restored
+
+#### Scenario: Round-trip preserva os tipos de variação separados
+- GIVEN um backup em que "Supino Reto" tem "Supino Máquina" e "Crucifixo" como
+  alternativas, e esses dois não são alternativas entre si
+- WHEN o usuário importa esse backup
+- THEN "Supino Reto" volta com as duas
+- AND "Supino Máquina" e "Crucifixo" voltam listando apenas "Supino Reto"
+
+#### Scenario: Backup anterior às alternativas
+- GIVEN um backup produzido antes desta mudança (exercícios sem o campo)
+- WHEN o usuário o importa
+- THEN todos os exercícios são restaurados sem alternativas
+- AND nada mais na importação é afetado
+
+#### Scenario: Referência pendente é descartada
+- GIVEN um backup em que "Supino Reto" lista como alternativa um exercício que
+  não existe no documento
+- WHEN o usuário o importa
+- THEN "Supino Reto" é restaurado sem essa referência
+- AND a importação não é rejeitada
+
+#### Scenario: Vínculo de um lado só é corrigido
+- GIVEN um backup em que "Supino Reto" lista "Supino Máquina", mas "Supino
+  Máquina" não lista ninguém
+- WHEN o usuário o importa
+- THEN os dois ficam alternativas entre si
 
 #### Scenario: Reject a non-backup file
 - GIVEN a file that is not a MyOneGym backup (malformed, or some other document)
