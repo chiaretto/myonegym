@@ -26,6 +26,19 @@ import {
 /** Thrown when a proposal cannot be applied. User-facing message, in Portuguese. */
 export class ProposalError extends Error {}
 
+/**
+ * The readable half of whatever went wrong.
+ *
+ * Applying reaches code that raises errors of its own — `ValidationError` from
+ * the repositories, Dexie's own failures — and every one of them already says
+ * something useful. "Não consegui aplicar a proposta." is what the user got
+ * instead, for want of this line.
+ */
+function causeOf(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  return message.trim() || 'erro desconhecido'
+}
+
 /* ------------------------------------------------------------ dependencies */
 
 /**
@@ -299,8 +312,14 @@ export function validateProposal(
         throw new ProposalError(`Proposta inválida: exercício com id ${e.id} não existe.`)
       }
       // Same validator the exercise form uses, so the assistant cannot land a
-      // media URL the user could not have typed.
-      validateMediaUrl(e.mediaUrl ?? undefined)
+      // media URL the user could not have typed. Re-thrown with the exercise
+      // named: the raw message says what is wrong with the URL but not which of
+      // sixty exercises carries it.
+      try {
+        validateMediaUrl(e.mediaUrl ?? undefined)
+      } catch (err) {
+        throw new ProposalError(`Imagem de "${e.name.trim()}": ${causeOf(err)}`)
+      }
       for (const ref of e.categoryRefs) assertUsable(ref, 'categoria')
       for (const ref of e.alternativeRefs) assertUsable(ref, 'exercício')
     }
@@ -342,11 +361,28 @@ export interface ApplyOutcome {
  * than writing the tables directly — the same cascade the manual delete
  * performs, including dropping that exercise's weights, history, notes and
  * photos.
+ *
+ * Everything that escapes is a `ProposalError` with a cause in it. The caller
+ * shows what it catches to the user, so an error type from further down —
+ * a repository validation, a Dexie failure — must not reach it unexplained.
  */
 export async function applyCatalogProposal(
   proposal: CatalogProposal,
   selection: SectionSelection,
   d: MyOneGymDB = db,
+): Promise<ApplyOutcome> {
+  try {
+    return await applyInTransaction(proposal, selection, d)
+  } catch (err) {
+    if (err instanceof ProposalError) throw err
+    throw new ProposalError(`Não consegui aplicar a proposta: ${causeOf(err)}`)
+  }
+}
+
+async function applyInTransaction(
+  proposal: CatalogProposal,
+  selection: SectionSelection,
+  d: MyOneGymDB,
 ): Promise<ApplyOutcome> {
   return d.transaction(
     'rw',

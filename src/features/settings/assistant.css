@@ -142,6 +142,36 @@
   font-style: italic;
 }
 
+/* A caution, not a destructive action — which is exactly what --danger's amber
+   is for here (see tokens.css), and the register .group-note.warn already uses
+   a few lines above. */
+.as-repairs {
+  margin: 0 0 10px;
+  padding: 10px;
+  border-radius: var(--r-ctl);
+  background: var(--bg-danger);
+  border: 0.5px solid var(--border-danger);
+}
+.as-repairs-title {
+  margin: 0 0 6px;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--danger);
+}
+.as-repairs ul {
+  margin: 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.as-repairs li {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .as-decide {
   display: grid;
   grid-template-columns: 1fr 1fr;

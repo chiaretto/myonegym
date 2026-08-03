@@ -213,6 +213,21 @@ function ProposalCard({ entry }: { entry: ChatEntry & { kind: 'proposal' } }) {
         })}
       </ul>
 
+      {/* Before the buttons, never after: a repair the person only learns about
+          once it is applied is not something they agreed to. */}
+      {entry.repairs.length > 0 && (
+        <div className="as-repairs">
+          <p className="as-repairs-title">
+            <Icon name="alert-triangle" size={12} /> Ajustes na proposta
+          </p>
+          <ul>
+            {entry.repairs.map((repair, i) => (
+              <li key={i}>{repair.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <p className="group-note">
         Aplicar reescreve o catálogo. Vale <Link to="/settings/data">exportar um backup</Link> antes.
       </p>

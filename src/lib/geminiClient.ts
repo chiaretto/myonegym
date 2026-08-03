@@ -1,3 +1,4 @@
+import type { Part } from '@google/genai'
 import {
   PROPOSE_TOOL_NAME,
   PROPOSE_TOOL_SCHEMA,
@@ -19,7 +20,29 @@ export class AssistantError extends Error {}
  */
 export type TurnResult =
   | { kind: 'text'; text: string }
-  | { kind: 'proposal'; callId: string; proposal: CatalogProposal; text: string }
+  | {
+      kind: 'proposal'
+      callId: string
+      proposal: CatalogProposal
+      text: string
+      /**
+       * The model's own part, to be echoed into the history untouched.
+       *
+       * It is not just `{ functionCall }`: from Gemini 3 on, the part also
+       * carries a `thoughtSignature`, an opaque token for the reasoning behind
+       * the call. The API requires it back, in the same part, on every later
+       * turn of the conversation — a history rebuilt from the call alone is
+       * refused with a 400, which is what happens the moment the user rejects a
+       * proposal and says anything else.
+       *
+       * Echoed **verbatim**, including the arguments: the signature is opaque,
+       * so the only safe assumption is that it signs the part it arrived in.
+       * What the app made of those arguments is a separate matter — the card
+       * decides on the repaired proposal, and what was really applied goes back
+       * to the model in the function response.
+       */
+      callPart: unknown
+    }
 
 /**
  * Conversation history in Gemini's own shape: `role` is `user` or **`model`**
@@ -157,7 +180,7 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
     })
 
     let text = ''
-    let call: { id?: string; name?: string; args?: unknown } | undefined
+    let callPart: Part | undefined
     let truncated = false
 
     for await (const chunk of stream) {
@@ -166,11 +189,16 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
         text += piece
         input.onText?.(piece)
       }
+      // The whole part, not `chunk.functionCalls[0]`: that accessor hands back
+      // the call and drops the part around it, and the `thoughtSignature` the
+      // API wants back lives on the part.
+      //
       // Only the first call is kept: one proposal per turn is all the screen can
       // render a decision for.
-      call ??= chunk.functionCalls?.[0]
+      callPart ??= chunk.candidates?.[0]?.content?.parts?.find((p) => p.functionCall)
       if (chunk.candidates?.[0]?.finishReason === 'MAX_TOKENS') truncated = true
     }
+    const call = callPart?.functionCall
 
     // A cut-off turn is a failure, never a smaller success: applying half a
     // catalog is exactly the outcome the accept/reject gate exists to prevent.
@@ -186,8 +214,12 @@ export async function runTurn(input: RunTurnInput): Promise<TurnResult> {
         // Gemini matches a function response by name and only sometimes carries
         // an id, so the name is the dependable half and stands in as fallback.
         callId: call.id ?? PROPOSE_TOOL_NAME,
-        proposal: call.args as CatalogProposal,
+        // The schema constrains the shape but cannot guarantee it (see
+        // PROPOSE_TOOL_SCHEMA); `repairProposal` and `validateProposal` are what
+        // actually stand between this cast and the database.
+        proposal: call.args as unknown as CatalogProposal,
         text: text.trim(),
+        callPart,
       }
     }
     return { kind: 'text', text: text.trim() }

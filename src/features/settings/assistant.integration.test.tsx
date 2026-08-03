@@ -6,6 +6,11 @@ import { App } from '../../App'
 import { db } from '../../db/db'
 import { createCategory, createDay, createExercise, listCategories, listDays } from '../../db/repos'
 import type { CatalogProposal } from '../../data/catalogPayload'
+import {
+  reportedProposal,
+  seedReportedCatalog,
+  type SeededCatalog,
+} from '../../data/__fixtures__/noisyProposal'
 import type { TurnResult } from '../../lib/geminiClient'
 import { useAssistantChat } from '../../state/assistantChat'
 import { useAssistantToken } from '../../state/assistantToken'
@@ -62,11 +67,15 @@ function proposal(): CatalogProposal {
 }
 
 const asText = (text: string): TurnResult => ({ kind: 'text', text })
-const asProposal = (): TurnResult => ({
+const asProposal = (p: CatalogProposal = proposal()): TurnResult => ({
   kind: 'proposal',
   callId: 'call_1',
-  proposal: proposal(),
+  proposal: p,
   text: '',
+  callPart: {
+    functionCall: { id: 'call_1', name: 'propor_catalogo', args: p },
+    thoughtSignature: 'EjQKMgERTTIPQd2VNoR',
+  },
 })
 
 function open(path = '/settings/assistant') {
@@ -225,7 +234,7 @@ describe('deciding a proposal', () => {
       alternativeRefs: [],
     })
     p.days[1].exerciseRefs = ['novo']
-    mockedTurn.mockResolvedValue({ kind: 'proposal', callId: 't', proposal: p, text: '' })
+    mockedTurn.mockResolvedValue(asProposal(p))
 
     const user = userEvent.setup()
     open()
@@ -248,5 +257,57 @@ describe('deciding a proposal', () => {
 
     expect(screen.queryByRole('button', { name: 'Aceitar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rejeitar' })).not.toBeInTheDocument()
+  })
+})
+
+describe('the proposal from the bug report', () => {
+  let seeded: SeededCatalog
+
+  beforeEach(async () => {
+    for (const table of [db.categories, db.exercises, db.days]) await table.clear()
+    seeded = await seedReportedCatalog(db)
+  })
+
+  async function propose() {
+    withToken()
+    mockedTurn.mockResolvedValue(asProposal(reportedProposal(seeded)))
+    const user = userEvent.setup()
+    open()
+    await ask(user, 'Pode apagar.')
+    await screen.findByText(/Reorganizei seus treinos/)
+    return user
+  }
+
+  it('says what it repaired, before there is anything to decide', async () => {
+    await propose()
+
+    expect(await screen.findByText('Ajustes na proposta')).toBeInTheDocument()
+    expect(screen.getByText(/fica sem imagem/)).toHaveTextContent('HIIT (Esteira ou Bike)')
+    expect(screen.getByText(/fica sem a categoria/)).toHaveTextContent('Cardio')
+    // Still a decision, not a report of something already done.
+    expect(screen.getByRole('button', { name: 'Aceitar' })).toBeEnabled()
+  })
+
+  it('applies from the screen, where before it could only fail', async () => {
+    const user = await propose()
+
+    await user.click(screen.getByRole('button', { name: 'Aceitar' }))
+
+    await waitFor(async () => expect((await listDays(db)).length).toBe(3))
+    expect((await listCategories(db)).length).toBe(6)
+    expect(await db.exercises.count()).toBe(18)
+    expect(await screen.findByText(/Aplicado:/)).toBeInTheDocument()
+    expect(screen.queryByText('Não consegui aplicar a proposta.')).not.toBeInTheDocument()
+  })
+
+  it('shows no repair section for a proposal that needed none', async () => {
+    withToken()
+    mockedTurn.mockResolvedValue(asText('Quantos dias você treina?'))
+    const user = userEvent.setup()
+    open()
+    await ask(user, 'oi')
+
+    await screen.findByText('Quantos dias você treina?')
+    expect(screen.queryByText('Ajustes na proposta')).not.toBeInTheDocument()
   })
 })

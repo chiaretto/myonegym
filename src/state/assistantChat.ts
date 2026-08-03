@@ -8,6 +8,7 @@ import {
   type ProposalImpact,
 } from '../data/catalogProposal'
 import { PROPOSE_TOOL_NAME } from '../data/catalogContract'
+import { repairProposal, type Repair } from '../data/proposalRepair'
 import { AssistantError, runTurn, type ApiContent } from '../lib/geminiClient'
 import { useAssistantToken } from './assistantToken'
 
@@ -24,7 +25,9 @@ export type ChatEntry =
       kind: 'proposal'
       id: string
       callId: string
+      /** Already repaired — this is the proposal the card decides on. */
       proposal: CatalogProposal
+      repairs: Repair[]
       impact: ProposalImpact
       decision: Decision | null
     }
@@ -125,13 +128,24 @@ export const useAssistantChat = create<AssistantChatState>()((set, get) => ({
         return
       }
 
-      // Impact is measured against the catalog as it stands **now**, not the
-      // frozen one: what the card promises has to match what applying would do.
-      const impact = proposalImpact(await catalogSnapshot(db), result.proposal)
+      // Read once, against the catalog as it stands **now** rather than the
+      // frozen one: both the repair and the impact have to be about the catalog
+      // the apply will meet, or the card promises something else.
+      const current = await catalogSnapshot(db)
+      // Repaired before anything else looks at it: the impact, the card and the
+      // history all have to be about the proposal that would actually be
+      // applied, not the one that came off the wire.
+      const { proposal, repairs } = repairProposal(current, result.proposal)
+      const impact = proposalImpact(current, proposal)
       const id = nextId()
+      // The model's part goes back exactly as it came, thought signature and
+      // original arguments included — see `TurnResult.callPart`. The repaired
+      // proposal is what the card decides on and what gets applied; the model
+      // hears about the result through the function response, not through an
+      // edited copy of its own turn.
       const parts: unknown[] = [
         ...(result.text ? [{ text: result.text }] : []),
-        { functionCall: { name: PROPOSE_TOOL_NAME, args: result.proposal } },
+        result.callPart,
       ]
       set((s) => ({
         status: 'idle',
@@ -143,7 +157,8 @@ export const useAssistantChat = create<AssistantChatState>()((set, get) => ({
             kind: 'proposal',
             id,
             callId: result.callId,
-            proposal: result.proposal,
+            proposal,
+            repairs,
             impact,
             decision: null,
           },
@@ -190,8 +205,14 @@ export const useAssistantChat = create<AssistantChatState>()((set, get) => ({
     } catch (err) {
       // Nothing was written (the apply is transactional), so the proposal stays
       // pending and the user can adjust the selection and try again.
+      //
+      // The apply promises a ProposalError with the cause in it; the fallback is
+      // for a failure that never reached it at all, and still says what it was —
+      // a message the user cannot act on is a dead end, not a report.
       const message =
-        err instanceof ProposalError ? err.message : 'Não consegui aplicar a proposta.'
+        err instanceof ProposalError
+          ? err.message
+          : `Não consegui aplicar a proposta: ${err instanceof Error ? err.message : String(err)}`
       set((s) => ({
         entries: [...s.entries, { kind: 'error', id: nextId(), text: message }],
       }))

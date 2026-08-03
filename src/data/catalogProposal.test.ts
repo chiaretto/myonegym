@@ -23,6 +23,7 @@ import {
   type ProposedExercise,
   type SectionSelection,
 } from './catalogPayload'
+import { reportedProposal, seedReportedCatalog } from './__fixtures__/noisyProposal'
 import {
   ProposalError,
   applyCatalogProposal,
@@ -423,5 +424,42 @@ describe('applyCatalogProposal — partial accept', () => {
   it('refuses a selection with no section at all', async () => {
     const s = await seed()
     await expect(applyCatalogProposal(unchanged(s), only(), d)).rejects.toThrow(ProposalError)
+  })
+})
+
+/* ------------------------------------------------------- the reported bug */
+
+describe('the proposal from the bug report', () => {
+  it('reports the cause instead of leaking a foreign error type', async () => {
+    const seeded = await seedReportedCatalog(d)
+
+    // `mediaUrl: "null"` — the text, not the literal — reaches validateMediaUrl,
+    // which throws ValidationError. Anything that escapes the apply has to be a
+    // ProposalError, or the conversation has nothing to show the user.
+    const err = await applyCatalogProposal(reportedProposal(seeded), ALL_SECTIONS, d).catch((e) => e)
+    expect(err).toBeInstanceOf(ProposalError)
+    expect((err as ProposalError).message).toMatch(/HIIT/)
+    expect((err as ProposalError).message).toMatch(/URL/i)
+  })
+
+  it('wraps a failure that is not about the proposal, cause included', async () => {
+    const seeded = await seedReportedCatalog(d)
+    const p = reportedProposal(seeded)
+    p.exercises.find((e) => e.name.startsWith('HIIT'))!.mediaUrl = null
+    d.close() // whatever the apply hits now is Dexie's, not the proposal's
+
+    const err = await applyCatalogProposal(p, ALL_SECTIONS, d).catch((e) => e)
+    expect(err).toBeInstanceOf(ProposalError)
+    expect((err as ProposalError).message).not.toBe('Não consegui aplicar a proposta.')
+    expect((err as ProposalError).message.length).toBeGreaterThan(30)
+  })
+
+  it('changes nothing when it is refused', async () => {
+    const seeded = await seedReportedCatalog(d)
+    await applyCatalogProposal(reportedProposal(seeded), ALL_SECTIONS, d).catch(() => undefined)
+
+    expect(await d.exercises.count()).toBe(27)
+    expect(await d.categories.count()).toBe(8)
+    expect(await d.days.count()).toBe(6)
   })
 })
