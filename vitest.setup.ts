@@ -26,6 +26,15 @@ if (!('ResizeObserver' in globalThis)) {
   }
 }
 
+// jsdom implements no layout, so no scrolling either — `scrollIntoView` is
+// simply absent. The assistant thread calls it to follow the tail as messages
+// arrive; without this the whole screen throws on its first render. Every target
+// browser has it natively, so this is an environment gap like ResizeObserver
+// above, and the scroll position itself is not something these tests assert on.
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {}
+}
+
 // jsdom's Blob/File lack `.text()` and `.arrayBuffer()` (both are standard in
 // every target browser). The backup import reads the picked file via
 // `file.text()`, so without this the whole import path is untestable. jsdom's

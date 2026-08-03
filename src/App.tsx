@@ -21,6 +21,7 @@ import { ExercisesPage, ExerciseFormPage } from './features/settings/ExercisesPa
 import { DaysPage, DayFormPage } from './features/settings/DaysPage'
 import { DataPage } from './features/settings/DataPage'
 import { AppearancePage } from './features/settings/AppearancePage'
+import { AssistantPage } from './features/settings/AssistantPage'
 import { InstallPage } from './features/settings/InstallPage'
 
 export function App() {
@@ -95,6 +96,7 @@ export function App() {
           <Route path="/settings/days/:id/edit" element={<DayFormPage />} />
           <Route path="/settings/data" element={<DataPage />} />
           <Route path="/settings/appearance" element={<AppearancePage />} />
+          <Route path="/settings/assistant" element={<AssistantPage />} />
           <Route path="/settings/install" element={<InstallPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
