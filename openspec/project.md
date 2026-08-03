@@ -57,6 +57,11 @@ server** — all data lives in the browser.
 7. **Full-backup import replaces all** local data (with an overwrite warning).
    Importing *shared exercises* JSON instead merges/adds without touching gyms or
    weights.
+8. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
+   sends categories, exercises and days to the Gemini API to reorganize them.
+   It is opt-in (needs a token the user supplies), it never sends gyms, weights,
+   notes, photos or sessions, and its client is loaded on demand so the offline
+   bundle does not carry it. Everything else in the app remains local-only.
 
 ## Conventions
 

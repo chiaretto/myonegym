@@ -1,0 +1,185 @@
+/* Assistente (IA) — conversation screen.
+   Everything sizes in `em` / --fs-* so it follows the Aparência font scale, the
+   same rule the rest of the app follows. */
+
+.as-token .field {
+  margin-bottom: 10px;
+}
+.as-token-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.group-note.warn {
+  color: var(--danger);
+}
+
+/* Intro shown while the thread is empty */
+.as-intro {
+  padding: 4px 2px 10px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.as-intro p {
+  margin: 0 0 8px;
+}
+.as-examples {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+
+/* Thread */
+.as-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 0 4px;
+}
+
+.as-msg {
+  max-width: 88%;
+  padding: 11px 14px;
+  border-radius: var(--r-card);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.as-msg.user {
+  align-self: flex-end;
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  border-bottom-right-radius: 6px;
+}
+.as-msg.bot {
+  align-self: flex-start;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border);
+  color: var(--text-primary);
+  border-bottom-left-radius: 6px;
+}
+.as-msg.error {
+  align-self: stretch;
+  max-width: 100%;
+  background: var(--bg-danger);
+  border: 0.5px solid var(--border-danger);
+  color: var(--danger);
+  font-size: var(--fs-xs);
+}
+.as-thinking {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Proposal card */
+.as-card {
+  align-self: stretch;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--r-card);
+  padding: 14px;
+}
+.as-card.decided {
+  opacity: 0.75;
+}
+.as-summary {
+  margin: 0 0 12px;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.as-sections {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.as-sections label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border-radius: var(--r-ctl);
+  background: var(--surface-2);
+  border: 0.5px solid var(--border);
+}
+.as-sections label.locked {
+  opacity: 0.75;
+}
+.as-sections input {
+  margin-top: 0.15em;
+  width: 1.05em;
+  height: 1.05em;
+  accent-color: var(--accent);
+  flex: none;
+}
+.as-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.as-section-title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+.as-impact {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+}
+.as-impact.danger {
+  color: var(--danger);
+  font-weight: 600;
+}
+.as-locked {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.as-decide {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.as-verdict {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+.as-verdict.ok {
+  color: var(--text-primary);
+}
+.as-skipped {
+  color: var(--text-muted);
+}
+
+.as-new {
+  margin-top: 14px;
+}
+
+/* Composer — lives inside .action-bar, which already lifts above the keyboard */
+.as-composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+.as-composer .note-input {
+  min-height: 3.2em;
+  font-size: var(--fs-sm);
+}
+.btn.as-send {
+  width: 3.1em;
+  height: 3.1em;
+  padding: 0;
+  border-radius: var(--r-ctl);
+  flex: none;
+}

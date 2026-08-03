@@ -13,6 +13,7 @@ import type {
   Weight,
   WeightHistory,
 } from '../db/types'
+import { mirrorSymmetric } from './alternativesRepair'
 import { base64ToBytes, bytesToBase64 } from './base64'
 import exampleBackup from './example-data.json'
 
@@ -173,26 +174,27 @@ export function parseBackup(json: string): BackupDoc {
  * Deliberately NOT transitively closed here: closing an asymmetric mess would
  * invent sets the user never declared. Mirroring is the smallest repair that
  * makes the data legal.
+ *
+ * The repair itself lives in `mirrorSymmetric` — shared with the assistant's
+ * apply path, which faces the same problem with the same required outcome.
  */
 function normalizeAlternatives(obj: Record<string, unknown>): void {
   const exercises = obj.exercises as Record<string, unknown>[]
-  const known = new Set<number>(
-    exercises.map((e) => e.id).filter((id): id is number => typeof id === 'number'),
+
+  const repaired = mirrorSymmetric(
+    exercises
+      // No id, so nothing can point at it — and it cannot point at anything.
+      .filter((ex) => typeof ex.id === 'number')
+      .map((ex) => ({
+        key: ex.id as number,
+        peers: Array.isArray(ex.alternativeIds) ? (ex.alternativeIds as number[]) : [],
+      })),
+    (a, b) => a - b,
   )
 
-  const sets = new Map<number, Set<number>>()
   for (const ex of exercises) {
-    if (typeof ex.id !== 'number') continue // no id, so nothing can point at it
-    const ids: number[] = Array.isArray(ex.alternativeIds) ? (ex.alternativeIds as number[]) : []
-    sets.set(ex.id, new Set(ids.filter((id) => id !== ex.id && known.has(id))))
-  }
-  // Second pass: a link named on one side is a link on both.
-  for (const [id, peers] of sets) {
-    for (const peer of peers) sets.get(peer)?.add(id)
-  }
-  for (const ex of exercises) {
-    const peers = typeof ex.id === 'number' ? sets.get(ex.id) : undefined
-    ex.alternativeIds = [...(peers ?? [])].sort((a, b) => a - b)
+    const peers = typeof ex.id === 'number' ? repaired.get(ex.id) : undefined
+    ex.alternativeIds = peers ?? []
   }
 }
 

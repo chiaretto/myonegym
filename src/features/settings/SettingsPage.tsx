@@ -69,13 +69,29 @@ export function SettingsPage() {
           <NavRow to="/settings/appearance" icon="text-size" title="Aparência" sub="Tamanho da fonte do app" />
         </div>
 
+        <div className="group-label">Assistente</div>
+        <div className="group">
+          <NavRow
+            to="/settings/assistant"
+            icon="sparkles"
+            title="Assistente (IA)"
+            sub="Converse para reorganizar exercícios, categorias e dias"
+          />
+        </div>
+
         <div className="group-label">Dados</div>
         <div className="group">
           <NavRow to="/settings/data" icon="database" title="Backup" sub="Gerar exemplo · exportar · importar backup" />
         </div>
 
+        {/* CHANGED: the old copy said "todos os dados ficam apenas neste
+            dispositivo", which stopped being true the moment the assistant
+            could send the catalog to the Gemini API. The carve-out is named
+            instead of quietly dropped — the claim still holds for everything
+            else, and that is worth keeping. */}
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', padding: '16px 8px 0' }}>
-          Todos os dados ficam apenas neste dispositivo (IndexedDB). Sem login, sem servidor.
+          Seus dados ficam neste dispositivo (IndexedDB). Sem login e sem servidor — só o
+          Assistente (IA), se você usar, envia categorias, exercícios e dias para a API do Gemini.
         </p>
       </main>
 
