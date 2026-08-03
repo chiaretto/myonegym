@@ -1,6 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from '../db/db'
-import { createCategory, createDay, createExercise, listCategories, listDays } from '../db/repos'
+import {
+  createCategory,
+  createDay,
+  createExercise,
+  listCategories,
+  listDays,
+  listExercises,
+} from '../db/repos'
+import {
+  reportedProposal,
+  seedReportedCatalog,
+  type SeededCatalog,
+} from '../data/__fixtures__/noisyProposal'
 import { ALL_SECTIONS, type CatalogProposal, type SectionSelection } from '../data/catalogPayload'
 import type { TurnResult } from '../lib/geminiClient'
 import { useAssistantChat } from './assistantChat'
@@ -53,11 +65,16 @@ function twoSectionProposal(): CatalogProposal {
 }
 
 const textTurn = (text: string): TurnResult => ({ kind: 'text', text })
+/** As the API hands it over: the part carries the call *and* its signature. */
 const proposalTurn = (proposal: CatalogProposal): TurnResult => ({
   kind: 'proposal',
   callId: 'call_1',
   proposal,
   text: 'Fiz assim:',
+  callPart: {
+    functionCall: { id: 'call_1', name: 'propor_catalogo', args: proposal },
+    thoughtSignature: 'EjQKMgERTTIPQd2VNoR',
+  },
 })
 
 const send = (text: string) => useAssistantChat.getState().send(text)
@@ -177,6 +194,21 @@ describe('deciding a proposal', () => {
     expect(parts[1]).toEqual({ text: 'mantém o dia 1 como está' })
   })
 
+  it('keeps the signature in the history after a rejection, which is when it is read', async () => {
+    const id = await proposeAndGetId()
+    useAssistantChat.getState().reject(id)
+
+    mockedTurn.mockResolvedValue(textTurn('ajustado'))
+    await send('remover dia 1')
+
+    // The turn that used to come back as a 400: the model content sent along
+    // with the follow-up still carries the signature of the call it answers.
+    const sent = mockedTurn.mock.calls.at(-1)![0].contents
+    const model = sent.find((c) => c.role === 'model' && (c.parts as { functionCall?: unknown }[]).some((p) => p.functionCall))!
+    const part = (model.parts as { thoughtSignature?: string }[]).at(-1)!
+    expect(part.thoughtSignature).toBe('EjQKMgERTTIPQd2VNoR')
+  })
+
   it('accepting everything applies it and records the decision', async () => {
     const id = await proposeAndGetId()
     await useAssistantChat.getState().accept(id, ALL_SECTIONS)
@@ -238,5 +270,102 @@ describe('deciding a proposal', () => {
     expect(useAssistantChat.getState().entries.at(-1)!.kind).toBe('error')
     const entry = useAssistantChat.getState().entries.find((e) => e.id === id)!
     expect(entry.kind === 'proposal' && entry.decision).toBeNull()
+  })
+})
+
+/* ------------------------------------------------------- the reported bug */
+
+describe('the conversation from the bug report', () => {
+  let seeded: SeededCatalog
+
+  beforeEach(async () => {
+    for (const table of [db.categories, db.exercises, db.days]) await table.clear()
+    seeded = await seedReportedCatalog(db)
+    useAssistantChat.getState().reset()
+  })
+
+  async function propose() {
+    mockedTurn.mockResolvedValue(proposalTurn(reportedProposal(seeded)))
+    await send('Pode apagar.')
+    const entry = useAssistantChat.getState().entries.at(-1)!
+    if (entry.kind !== 'proposal') throw new Error(`esperava uma proposta, veio ${entry.kind}`)
+    return entry
+  }
+
+  it('turns the noisy proposal into a decidable card, saying what it repaired', async () => {
+    const entry = await propose()
+
+    expect(entry.repairs.map((r) => r.kind)).toEqual(['media-cleared', 'category-unlinked'])
+    expect(entry.repairs.every((r) => r.text.includes('HIIT (Esteira ou Bike)'))).toBe(true)
+    expect(entry.repairs[1].text).toContain('Cardio')
+  })
+
+  it('applies it, and the catalog ends up as the card promised', async () => {
+    const entry = await propose()
+    const { impact } = entry
+
+    await useAssistantChat.getState().accept(entry.id, ALL_SECTIONS)
+
+    // No error entry: the whole point of the change.
+    expect(useAssistantChat.getState().entries.some((e) => e.kind === 'error')).toBe(false)
+
+    const cats = await listCategories(db)
+    const exercises = await listExercises(db)
+    const days = await listDays(db)
+    expect(cats).toHaveLength(6)
+    expect(exercises).toHaveLength(18)
+    expect(days.map((x) => x.name)).toEqual([
+      'Dia A - Superior (Peito, Ombros e Tríceps)',
+      'Dia B - Costas e Bíceps',
+      'Dia C - Core, Cardio e Ombros',
+    ])
+
+    // What the card promised to remove is what disappeared.
+    expect(impact.exercises.removed).toBe(9)
+    expect(impact.categories.removed).toBe(2)
+    expect(impact.days.removed).toBe(3)
+    expect(impact.exercises.removedNames).toContain('Encolhimento para Trapézio (Halteres)')
+  })
+
+  it('leaves the repaired exercise without image and without the dropped category', async () => {
+    const entry = await propose()
+    await useAssistantChat.getState().accept(entry.id, ALL_SECTIONS)
+
+    const hiit = (await listExercises(db)).find((e) => e.name.startsWith('HIIT'))!
+    expect(hiit.mediaUrl).toBeUndefined()
+    expect(hiit.categoryIds).toEqual([])
+  })
+
+  it('keeps every image that was valid', async () => {
+    const entry = await propose()
+    await useAssistantChat.getState().accept(entry.id, ALL_SECTIONS)
+
+    const supino = (await listExercises(db)).find((e) => e.name === 'Supino Reto com Barra')!
+    expect(supino.mediaUrl).toBe(
+      'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-reto.gif',
+    )
+    // The one whose url carries a query string — the case that looks broken and is not.
+    const triceps = (await listExercises(db)).find((e) => e.name.startsWith('Tríceps Pulley'))!
+    expect(triceps.mediaUrl).toContain('?resize=675%2C811&ssl=1')
+  })
+
+  it("echoes the model's own part into the history, signature and all", async () => {
+    await propose()
+
+    // Gemini 3 refuses a history whose functionCall part lost its
+    // thoughtSignature — which is every turn after a rejected proposal.
+    const model = useAssistantChat.getState().contents.at(-1)!
+    const part = (model.parts as { functionCall?: unknown; thoughtSignature?: string }[]).find(
+      (p) => p.functionCall,
+    )!
+    expect(part.thoughtSignature).toBe('EjQKMgERTTIPQd2VNoR')
+
+    // Verbatim: the arguments are the model's, not the repaired copy. The card
+    // and the apply use the repaired one; the model is told what really
+    // happened through the function response.
+    const args = (part.functionCall as { args: CatalogProposal }).args
+    const hiit = args.exercises.find((e) => e.name.startsWith('HIIT'))!
+    expect(hiit.mediaUrl).toBe('null')
+    expect(hiit.categoryRefs).toEqual([String(seeded.categories[6])])
   })
 })

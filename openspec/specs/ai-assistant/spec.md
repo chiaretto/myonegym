@@ -161,6 +161,123 @@ confirmation it has already been given.
 - THEN the assistant does not ask how many days there are
 
 
+### Requirement: A Proposal Is Repaired Before It Is Shown
+
+The model's answer can arrive carrying defects that express no intention at all:
+an image URL serialized as the *text* `"null"`, an exercise still pointing at a
+category the same proposal dropped. Before it becomes a card, a proposal MUST go
+through a conservative repair against the current catalog.
+
+The repair MUST be limited to:
+
+- a `mediaUrl` that is a text sentinel (`"null"`, `"undefined"`, empty or blank)
+  becomes an absence of image;
+- a `mediaUrl` that is not a valid image URL: an exercise that already exists
+  MUST keep its stored URL; a new exercise ends up with no image;
+- a reference that does not resolve within the proposal — an exercise's
+  category, an alternative, a day's exercise — MUST be dropped, along with a
+  self-reference in alternatives.
+
+The line that bounds the repair: **it drops links, never entities.** The repair
+MUST NOT remove, create or rename a category, an exercise or a day, MUST NOT
+change an id or an order, and MUST NOT change what the proposal removes.
+
+Everything else MUST go on to validation and be refused whole, exactly as it is
+refused today: a repeated `ref`, a repeated id, an empty name, an id that is no
+longer in the catalog.
+
+Only a repair that **changes the outcome** MUST be reported. A normalization the
+apply would perform anyway — whitespace around a URL, an empty `mediaUrl`, an
+alternative pointing at its own exercise — is done silently: a line on the card
+about it would compete with the lines the user needs to read.
+
+The impact shown on the card MUST be measured against the **repaired** proposal
+— the one that will be applied. The history sent to the model, however, MUST
+keep the call as it arrived (see "The History Returns the Model's Call
+Untouched"): the repair is what the app made of what the model said, and the
+model learns the result from the function response, not from an edited copy of
+its own turn.
+
+The repair MUST NOT loosen validation: a repaired proposal is still validated
+whole, inside the transaction, against the catalog read there.
+
+#### Scenario: A mediaUrl that arrived as the text "null"
+- GIVEN the proposal carries an existing exercise whose `mediaUrl` is the string `"null"`
+- WHEN the proposal arrives
+- THEN it is understood as "no image" and the card appears normally
+- AND accepting applies without error
+
+#### Scenario: An invalid mediaUrl does not erase the photo that was there
+- GIVEN "Rosca Direta" has a stored image
+- AND the proposal returns a `mediaUrl` for it that is not an image URL
+- WHEN the proposal arrives
+- THEN the card says the previous image was kept
+- AND accepting leaves the stored image as it was
+
+#### Scenario: An omitted category costs only the link
+- GIVEN the proposal omits the category "Cardio" and keeps an exercise pointing at it
+- WHEN the proposal arrives
+- THEN the exercise ends up without that category and the card says so
+- AND the exercise is still in the proposal, not removed
+
+#### Scenario: The repair does not change what the proposal removes
+- GIVEN a proposal with dangling refs in exercises and days
+- WHEN it is repaired
+- THEN the number of categories, exercises and days is exactly the same
+- AND the names the card promises to remove are the same as before the repair
+
+#### Scenario: A proposal with no noise is left alone
+- GIVEN a coherent proposal
+- WHEN it is repaired
+- THEN it comes out identical and no repair is listed on the card
+
+#### Scenario: A normalization that changes nothing is not a warning
+- GIVEN the proposal carries an exercise with an empty `mediaUrl`
+- WHEN it is repaired
+- THEN the exercise ends up with no image, as it already would have
+- AND no repair is listed on the card
+
+#### Scenario: What is not noise still refuses the proposal
+- GIVEN a proposal with two exercises using the same `ref`
+- WHEN the user tries to accept it
+- THEN the proposal is refused whole, with an explanation, and nothing is written
+
+
+### Requirement: The History Returns the Model's Call Untouched
+
+The conversation continues after a proposal — the user rejects it and says what
+to adjust, or accepts and asks for something else — and every turn re-sends the
+whole history. The turn in which the model proposed MUST go back **exactly as it
+arrived**, in the same part: the function call, its arguments, and the reasoning
+signature that accompanies it.
+
+That signature is an opaque token the model emits alongside the call and
+requires back on subsequent turns. A history rebuilt from the call alone — name
+and arguments, without the part around it — is refused with a 400, and what the
+user sees is the conversation dying right after they reject a proposal.
+
+Being opaque, the signature MUST be treated as if it covered the whole part:
+nothing in it is edited on the way back, not even the arguments. Reading it MUST
+be optional — a model that emits no signature keeps working.
+
+#### Scenario: Rejecting and carrying on
+- GIVEN the user rejected a proposal
+- WHEN they send the next message
+- THEN the proposal turn goes along with the signature it came with
+- AND the assistant answers normally
+
+#### Scenario: The call goes back unedited
+- GIVEN a proposal that needed repair before becoming a card
+- WHEN the next turn is sent
+- THEN the call in the history carries the model's original arguments
+- AND what was actually applied reaches the model through the function response
+
+#### Scenario: A model with no signature keeps working
+- GIVEN the answer carries no signature at all
+- WHEN the proposal is read
+- THEN it becomes a card normally
+
+
 ### Requirement: A Proposal Arrives as a Reviewable Card in the Thread
 
 A proposal MUST be a **distinct kind of turn**, not prose the app has to
@@ -188,6 +305,13 @@ with **removals** called out distinctly, since they are the destructive part.
 Because accepting rewrites the catalog, the card MUST suggest exporting a backup
 first.
 
+When the proposal went through a repair, the card MUST list each repair in
+Portuguese, next to the impact and **before** the decision buttons — never after
+applying. With no repair, the card MUST look exactly as it does today.
+
+The card MUST describe the effect for the person, not the defect in the payload:
+"mantém a imagem atual", "fica sem a categoria Cardio".
+
 #### Scenario: Talking and proposing are different turns
 - GIVEN a conversation in progress
 - WHEN the assistant asks a question
@@ -213,6 +337,17 @@ first.
 - WHEN the user reviews the card
 - THEN the exercises section states the removal and the days section states the moves
 - AND the removal is highlighted as destructive
+
+#### Scenario: The card shows the repairs before the decision
+- GIVEN a proposal that needed repair in two exercises
+- WHEN the card appears
+- THEN both repairs are listed next to the impact
+- AND the accept and reject buttons are still available
+
+#### Scenario: No repair, no visual noise
+- GIVEN a proposal that needed no repair
+- WHEN the card appears
+- THEN no repairs section is shown
 
 
 ### Requirement: Accept in Full or in Part, or Reject, Without Leaving the Conversation
@@ -394,6 +529,15 @@ treated as a failure — never applied in part.
 A failed turn MUST leave the conversation usable: the user can retry or say
 something else, without the thread being lost.
 
+No failure to apply a proposal MUST be reported without a cause. The message
+MUST say what prevented the application — including when the error comes from a
+field validation or from the database rather than from the proposal's own
+validation. A generic message along the lines of "não consegui aplicar" MUST NOT
+be what the person sees, whatever the origin of the failure.
+
+The failure MUST still leave the catalog untouched and the proposal pending, so
+the person can adjust the selection and try again.
+
 While a turn is in flight the screen MUST show that it is working, and MUST NOT
 let a second message start on top of it.
 
@@ -414,6 +558,18 @@ let a second message start on top of it.
 - WHEN the failure surfaces
 - THEN the thread says the catalog is too large for one turn
 - AND nothing is applied
+
+#### Scenario: An invalid field explains the refusal
+- GIVEN applying fails because a field of an exercise does not pass validation
+- WHEN the error appears in the conversation
+- THEN the message says which exercise and what the problem was
+- AND the catalog is untouched and the proposal is still pending
+
+#### Scenario: An unexpected failure still says something
+- GIVEN applying fails with an error that is not about proposal validation
+- WHEN the error appears in the conversation
+- THEN the message carries the original cause
+- AND the catalog is untouched
 
 #### Scenario: One turn at a time
 - GIVEN a turn is in flight
