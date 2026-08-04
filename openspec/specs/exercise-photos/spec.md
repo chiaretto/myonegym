@@ -177,7 +177,6 @@ left pointing at a deleted file is a visibly broken photo.
 - THEN that photo's image file no longer exists
 - AND the other photo's file is untouched
 
----
 
 ### Requirement: Report Storage Failures
 
@@ -296,5 +295,3 @@ Failures*) rather than silently retried into the database.
 - WHEN the file write fails for that reason
 - THEN the failure is reported to the user
 - AND the app does NOT fall back to storing the bytes in the record
-
----

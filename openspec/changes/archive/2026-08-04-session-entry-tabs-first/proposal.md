@@ -151,3 +151,41 @@ tela em dois contextos, e o usuário troca de uma para a outra o tempo todo.
 | Usuário estranhar a foto "sumindo" nas outras abas | Média | Baixo | É o objetivo — a foto volta em um toque, e a aba ativa fica evidente |
 | Divergência entre as duas telas se só uma for ajustada | Baixa | Médio | As duas entram na mesma mudança, com cenários espelhados no spec |
 | Categorias ficarem "escondidas" para quem as usava como referência rápida | Média | Baixo | Ficam no topo de Observações, a um toque, e nunca foram acionáveis ali |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-08-04
+**Duration:** mesmo dia (proposta → implementação → arquivo)
+**Outcome:** Implementado com sucesso
+
+### Files Modified
+
+- `src/features/session/SessionEntryPage.tsx` — abas primeiro, mídia dentro de
+  "Execução", categorias em "Observações", cabeçalho só com status
+- `src/features/exercise/ExerciseDetailPage.tsx` — mesma reordenação, abas
+  encostando na barra de título
+- `src/features/exercise/CategoryChips.tsx` (novo) — os chips compartilhados
+  pelas duas telas
+- `src/features/exercise/exercise.css` — `.ex-chips-tab`, o respiro que o
+  cabeçalho fornecia antes
+- `src/features/exercise/detail-tabs-layout.integration.test.tsx` (novo) —
+  7 casos de ordem/pertencimento nas duas telas
+- `src/features/exercise/detail-header.integration.test.tsx` — "keeps the
+  category labels" → "moves the category labels into Observações"
+
+### Specs Updated
+
+- `openspec/specs/workout-sessions/spec.md` — *Session Exercise Detail*: abas
+  como primeiro controle, o que cada aba carrega, status acima das abas
+- `openspec/specs/exercises/spec.md` — *Exercise Note and Photos on the Catalog
+  Detail* e *Single Exercise Title on Detail Views*: mesma disposição no
+  catálogo; o cabeçalho deixa de autorizar categorias
+
+### Nota de limpeza
+
+O merge de deltas anteriores vinha deixando um `---` solto no meio dos
+requisitos (o separador de seção do arquivo de delta). Removidos os 5 casos
+existentes em `exercise-photos`, `data-portability`, `exercises` e
+`workout-sessions`.
