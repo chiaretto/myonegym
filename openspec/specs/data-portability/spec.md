@@ -3,6 +3,7 @@
 ## Purpose
 TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
 ## Requirements
+
 ### Requirement: Generate Example Data
 
 From Settings, the user MUST be able to **generate a realistic sample routine**
@@ -58,6 +59,18 @@ Because a JSON document cannot carry binary directly, photo image bytes MUST be
 restorable with no special tool, at the cost of size — a backup with many photos
 may be several megabytes, which is acceptable for a safety-net backup.
 
+Photo bytes now live in a **file** rather than in the photo record (see the
+`exercise-photos` spec), so the export MUST **read each photo's image** before
+encoding it. Where the image lives MUST NOT change the document: the exported
+JSON MUST have the **same shape as before** — each photo carrying its bytes
+base64-encoded and its mime type — so that a backup taken by this version imports
+into an older one, and a backup taken by an older version imports into this one.
+The backup's schema version MUST NOT be bumped for this change.
+
+A photo whose image file cannot be read MUST NOT abort the export: the rest of
+the backup is far more valuable than one unreadable image, and the user MUST be
+told how many photos could not be included.
+
 Device-local **UI preferences** — the font-size setting and the first-launch
 "already asked" flag — are NOT user data and MUST remain outside the backup.
 
@@ -98,6 +111,18 @@ Device-local **UI preferences** — the font-size setting and the first-launch
 - THEN it states the backup includes everything (weights, notes, sessions, history, and photos)
 - AND it no longer claims photos are excluded
 
+#### Scenario: The document does not reveal where the image was stored
+- GIVEN one photo whose image is a file and another whose bytes are in its record
+- WHEN the user exports the backup
+- THEN both appear identically in the JSON, each with base64 bytes and a mime type
+- AND the document's schema version is unchanged from the previous release
+
+#### Scenario: An unreadable photo does not abort the export
+- GIVEN a photo whose image file is missing
+- WHEN the user exports the backup
+- THEN the backup is produced with all the other data and photos
+- AND the user is told that one photo could not be included
+
 ### Requirement: Import JSON (Replace All)
 
 From Settings, the user MUST be able to import a previously exported backup JSON,
@@ -108,12 +133,19 @@ first and MUST NOT corrupt existing data on failure. The user MUST be warned,
 with a destructive-action confirmation, that **all** current data — **including
 photos** — will be overwritten.
 
+Replacing "all existing local data" MUST include the **image files** of the
+photos being replaced: clearing the records alone would leave the previous
+device's images occupying storage with nothing pointing at them.
+
 The restore MUST reproduce the source faithfully: gyms, categories, exercises,
 days, weights, **weight history**, **workout sessions and entries**, notes, and
 **photos** are all restored, with their **original identifiers preserved** so that
 every cross-reference (a session's entries, a photo's exercise, a weight's gym)
 remains valid. Base64 photo bytes MUST be decoded back to their original binary
-form, **byte-for-byte**.
+form, **byte-for-byte**, and written to the app's photo **file** storage, so that
+an imported photo is indistinguishable from one attached on this device. On a
+device without writable file storage, imported photos MUST fall back to the same
+in-record storage used when attaching (see `exercise-photos`).
 
 A restauração MUST deixar as **alternativas em estado íntegro**, porque a relação
 é simétrica e uma importação não pode produzir um banco que o app não saberia
@@ -144,9 +176,10 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 
 #### Scenario: Restore replaces existing data, including photos
 - GIVEN the device currently has gym "A" with its own exercises and photos
-- WHEN the user imports a backup containing gym "B" and confirms the overwrite
+- WHEN the user imports a backup containing only gym "B"
 - THEN local data contains only the imported content (gym "B" and its photos)
 - AND gym "A", its data, and its photos are gone
+- AND gym "A"'s image files are gone from storage as well
 
 #### Scenario: References survive the restore
 - GIVEN a backup with a completed session whose entries reference exercises, and photos attached to those exercises
@@ -197,13 +230,26 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - THEN import is rejected with a clear error before any replacement occurs
 - AND existing local data is left unchanged
 
+#### Scenario: An imported photo lands in file storage
+- GIVEN a backup containing a photo
+- WHEN the user imports it
+- THEN the photo's bytes are decoded and written as an image file
+- AND its record references that file and carries no bytes of its own
+- AND opening the exercise shows the photo, byte-for-byte identical to the source
+
+#### Scenario: A backup taken before this change imports cleanly
+- GIVEN a backup exported by a previous version (photos as base64, no notion of files)
+- WHEN the user imports it
+- THEN every photo is restored and displays
+- AND the restored photos live in file storage like any other
+
 ### Requirement: Reset App (Erase All Data)
 
 From Settings, the user MUST be able to **reset the app**, erasing **all
 registered data** from the device: gyms, categories, exercises, training
-days, weights, weight history, **exercise notes**, and workout sessions/entries
-— the same full set already cleared as the first step of "Importar backup". The
-action MUST
+days, weights, weight history, **exercise notes**, workout sessions/entries, and
+the photos **together with their image files** — the same full set already
+cleared as the first step of "Importar backup". The action MUST
 require an explicit confirmation, and the confirmation MUST clearly state
 that the action **cannot be undone** before anything is erased. On confirm,
 all local data is erased immediately; declining or dismissing the
@@ -219,10 +265,12 @@ font-size setting) are unaffected by a reset.
 - THEN a confirmation is shown stating that all data will be erased and the action cannot be undone
 
 #### Scenario: Confirming erases all registered data
-- GIVEN the reset confirmation is shown
-- WHEN the user confirms
-- THEN all gyms, categories, exercises, days, weights, weight history, exercise notes, and workout sessions are erased
-- AND Home and Settings reflect an empty app (equivalent to a fresh install)
+- GIVEN the user has gyms, exercises, days, weights, notes, sessions and photos
+- WHEN the user confirms the reset
+- THEN all of it is erased, including the photos' image files
+- AND the app behaves like a fresh install
+
+---
 
 #### Scenario: Declining keeps data intact
 - GIVEN the reset confirmation is shown

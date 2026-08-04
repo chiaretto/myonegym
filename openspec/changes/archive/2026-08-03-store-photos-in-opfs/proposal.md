@@ -2,7 +2,8 @@
 
 **Change ID:** `store-photos-in-opfs`
 **Created:** 2026-08-03
-**Status:** Draft
+**Status:** Implementation Complete
+**Completed:** 2026-08-03
 
 ---
 
@@ -173,3 +174,39 @@ fica em 5.
 | Registro cujo arquivo sumiu (usuário limpou dados do site) | Baixa | Médio | Falha explícita na miniatura, com mensagem, sem apagar o registro sozinho |
 | jsdom não tem OPFS, testes ficam impossíveis | Alta | Alto | Shim em memória no `vitest.setup.ts`, no mesmo espírito do `fake-indexeddb` |
 | Quota do OPFS estourar na gravação | Baixa | Médio | `QuotaExceededError` tratado como hoje: mensagem clara e nenhum registro parcial |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-08-03
+**Duration:** mesmo dia (proposta → implementação → arquivo)
+**Outcome:** Implementado com sucesso
+
+### Files Modified
+
+- `src/data/photoStore.ts` (novo) — OPFS com fallback para bytes no registro
+- `src/data/photoStore.test.ts` (novo) — 13 testes do store
+- `src/test/memoryOpfs.ts` (novo) — OPFS em memória para os testes
+- `src/db/types.ts` — `ExercisePhoto.file/size`, `bytes` opcional
+- `src/db/db.ts` — Dexie v8 (no-op documentado)
+- `src/db/repos.ts` — escrita/exclusão em duas etapas, cascatas, migração e varredura
+- `src/data/portability.ts` — export lê pelo store, import grava nele, reset limpa os arquivos
+- `src/features/exercise/photo/{PhotoTab.tsx,downscale.ts,fitDimensions.ts}` — leitura
+  assíncrona, estado de imagem ausente, `MAX_EDGE` 1280
+- `src/features/settings/DataPage.tsx` — aviso de fotos sem imagem no export
+- `src/main.tsx` — `maintainPhotoStorage()` no boot
+- `src/styles/global.css` — estado visual da foto ilegível
+- `vitest.setup.ts` — instala o shim de OPFS por teste
+- testes atualizados: `repos.test.ts`, `migration.test.ts`, `portability.test.ts`,
+  `photo.integration.test.tsx`, `backup-restore.integration.test.tsx`,
+  `catalogProposal.test.ts`, `fitDimensions.test.ts`
+
+### Specs Updated
+
+- `openspec/specs/exercise-photos/spec.md` — 4 requisitos revisados
+  (persistência, downscale, falhas de armazenamento, remoção em cascata) e 3
+  novos (migração, órfãos, dispositivos sem OPFS)
+- `openspec/specs/data-portability/spec.md` — export, import e reset passam a
+  descrever o binário em arquivo; formato do JSON inalterado
+- `openspec/project.md` — decisão 9 (OPFS + metadado no IndexedDB)
