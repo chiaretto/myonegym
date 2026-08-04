@@ -120,7 +120,7 @@ describe('catalogSnapshot', () => {
     const gym = await createGym('Academia', undefined, d)
     await saveWeight(gym, s.supino, 60, 'KG', d)
     await saveNote(gym, s.supino, 'banco na altura 3', d)
-    await addPhoto(gym, s.supino, new TextEncoder().encode('jpeg').buffer as ArrayBuffer, 'image/jpeg', 10, 10, d)
+    await addPhoto(gym, s.supino, new Blob(['jpeg'], { type: 'image/jpeg' }), 10, 10, d)
     await startSession(gym, s.dia1, d)
 
     const snapshot = await catalogSnapshot(d)
@@ -284,7 +284,7 @@ describe('applyCatalogProposal', () => {
     const gym = await createGym('Academia', undefined, d)
     await saveWeight(gym, s.maquina, 45, 'KG', d)
     await saveNote(gym, s.maquina, 'pino 7', d)
-    await addPhoto(gym, s.maquina, new TextEncoder().encode('jpeg').buffer as ArrayBuffer, 'image/jpeg', 8, 8, d)
+    await addPhoto(gym, s.maquina, new Blob(['jpeg'], { type: 'image/jpeg' }), 8, 8, d)
 
     const p = unchanged(s)
     p.days = [day('d1', s.dia1, 'Dia 1', ['e1']), day('d2', s.dia2, 'Dia 2', ['e3', 'e2'])]

@@ -5,6 +5,7 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css'
 import './styles/fonts.css'
 import './styles/global.css'
 import { App } from './App'
+import { maintainPhotoStorage } from './db/repos'
 import { scheduleBootSplashDismissal } from './lib/bootSplash'
 import { initInstall } from './lib/install'
 import { requestPersistentStorage } from './lib/storage'
@@ -22,6 +23,11 @@ initInstall()
 
 // Best-effort: ask the browser to keep our IndexedDB data around.
 void requestPersistentStorage()
+
+// Also best-effort, and deliberately un-awaited: move photos that predate file
+// storage out of the database, then drop image files no record points at. The
+// first screen must not wait on either (see db/repos).
+void maintainPhotoStorage()
 
 // BASE_URL is "/" in dev and "/myonegym/" in the GitHub Pages build.
 const basename = import.meta.env.BASE_URL.replace(/\/$/, '')

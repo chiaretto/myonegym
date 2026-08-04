@@ -296,6 +296,10 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
   border: 0.5px solid var(--border); background: var(--surface-2); overflow: hidden; display: block; }
 .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo-thumb:active { border-color: var(--accent); }
+/* A photo whose image file is gone (site data cleared): the record stays, and
+   says so, instead of the tile rendering as an unexplained blank square. */
+.photo-broken { display: grid; place-items: center; width: 100%; height: 100%;
+  color: var(--text-secondary); font-size: 24px; }
 .photo-actions { display: flex; flex-direction: column; gap: 8px; }
 /* Cap the viewer so a portrait photo can't push the sheet actions off-screen. */
 .photo-viewer { display: grid; place-items: center; background: var(--surface-0);

@@ -86,24 +86,36 @@ export interface ExerciseNote {
  * Keyed by `(gymId, exerciseId)` like a Weight or an ExerciseNote, but unlike
  * those a pair holds **many** photos, so the index is non-unique.
  *
- * The image is stored as raw **bytes + mime type**, not as a `Blob`. Both are
- * structured-cloneable in principle, but Blob-in-IndexedDB has a long history of
- * Safari bugs — a bad bet for an installable PWA — and fake-indexeddb drops a
- * Blob's contents entirely, which would leave this untestable. Bytes are
- * portable and verifiable; the UI wraps them back into a Blob to display.
- * Base64 was rejected: it would inflate the same data ~33% and cost a conversion
- * on every read. Device-local — never exported (see data-portability).
+ * The record holds **metadata only**: the image itself is a file in the origin's
+ * private file system, named by `file` (see `data/photoStore`). Keeping a few MB
+ * of image out of the record is what makes listing a pair's photos cheap — the
+ * bytes are read only when one is actually displayed.
+ *
+ * `bytes` is the exception, and it is deliberately still here: photos attached
+ * before the move to files keep their image in the record until the background
+ * migration gets to them, and a browser with no writable OPFS stores every photo
+ * that way for good. A record always says which of the two it is. Base64 was
+ * rejected for either form: it would inflate the same data ~33% and cost a
+ * conversion on every read.
  */
 export interface ExercisePhoto {
   id?: number
   gymId: number
   exerciseId: number
-  bytes: ArrayBuffer
-  /** Mime type of `bytes`, e.g. "image/jpeg" — needed to rebuild the Blob. */
+  /** File name in the app's photo directory (OPFS). Absent → see `bytes`. */
+  file?: string
+  /** The image itself, for legacy records and browsers without a writable OPFS. */
+  bytes?: ArrayBuffer
+  /** Mime type of the image, e.g. "image/jpeg" — needed to rebuild the Blob. */
   type: string
   /** Dimensions of the stored (downscaled) image, not the original. */
   width: number
   height: number
+  /** Size in bytes of the stored image. Absent on a record that predates file
+   *  storage and has not been migrated yet — nothing computes it for those, on
+   *  purpose: reading every old image just to measure it is what the migration
+   *  is already doing, once. */
+  size?: number
   createdAt: number
 }
 

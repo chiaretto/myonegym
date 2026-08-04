@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { allTables, MyOneGymDB } from '../db/db'
+import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
+import { removeImage } from './photoStore'
 import {
   addPhoto,
+  readPhotoBlob,
   completeSession,
   createDay,
   createExercise,
@@ -19,6 +22,7 @@ import {
 import {
   exportBackup,
   generateExample,
+  SCHEMA_VERSION,
   importBackupReplaceAll,
   parseBackup,
   PortabilityError,
@@ -281,7 +285,7 @@ describe('full backup is a complete snapshot', () => {
     await saveWeight(g, ex, 40, 'KG', d)
     await saveWeight(g, ex, 42.5, 'KG', d) // history
     await saveNote(g, ex, 'cotovelo fixo', d)
-    await addPhoto(g, ex, new Uint8Array([9, 8, 7, 200, 255]).buffer as ArrayBuffer, 'image/jpeg', 100, 80, d)
+    await addPhoto(g, ex, new Blob([new Uint8Array([9, 8, 7, 200, 255])], { type: 'image/jpeg' }), 100, 80, d)
     const sid = await startSession(g, day, d)
     await setEntryDone((await listSessionEntries(sid, d))[0].id!, true, d)
     await completeSession(sid, d)
@@ -343,11 +347,12 @@ describe('full backup is a complete snapshot', () => {
 
 describe('exercise photos are part of the backup', () => {
   /** Distinctive bytes so a round-trip can be checked exactly. */
-  const photoBytes = () => new Uint8Array([0, 1, 2, 253, 254, 255, 128, 7]).buffer as ArrayBuffer
+  const PHOTO = [0, 1, 2, 253, 254, 255, 128, 7]
+  const photo = (type = 'image/jpeg') => new Blob([new Uint8Array(PHOTO)], { type })
 
   it('exports photos base64-encoded', async () => {
     const { g, ex } = await seed()
-    await addPhoto(g, ex, photoBytes(), 'image/jpeg', 1600, 1200, d)
+    await addPhoto(g, ex, photo(), 1600, 1200, d)
 
     const doc = await exportBackup(d)
     expect(doc.exercisePhotos).toHaveLength(1)
@@ -359,7 +364,7 @@ describe('exercise photos are part of the backup', () => {
 
   it('round-trips a photo byte-for-byte through export -> wipe -> import', async () => {
     const { g, ex } = await seed()
-    await addPhoto(g, ex, photoBytes(), 'image/png', 800, 600, d)
+    await addPhoto(g, ex, photo('image/png'), 800, 600, d)
 
     const doc = await exportBackup(d)
     // serialize + parse, so the base64 really goes through JSON like a real backup
@@ -369,14 +374,118 @@ describe('exercise photos are part of the backup', () => {
 
     const [back] = await d.exercisePhotos.toArray()
     expect(back).toMatchObject({ gymId: g, exerciseId: ex, type: 'image/png', width: 800, height: 600 })
-    expect([...new Uint8Array(back.bytes)]).toEqual([0, 1, 2, 253, 254, 255, 128, 7])
+    expect([...new Uint8Array(await (await readPhotoBlob(back)).arrayBuffer())]).toEqual(PHOTO)
   })
 
   it('resetAll clears photos', async () => {
     const { g, ex } = await seed()
-    await addPhoto(g, ex, photoBytes(), 'image/jpeg', 1600, 1200, d)
+    await addPhoto(g, ex, photo(), 1600, 1200, d)
     await resetAll(d)
     expect(await d.exercisePhotos.count()).toBe(0)
+  })
+
+  it('resetAll erases the image files too', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 1600, 1200, d)
+    expect(await storedPhotoFiles()).toHaveLength(1)
+
+    await resetAll(d)
+
+    expect(await storedPhotoFiles()).toEqual([])
+  })
+
+  it('exports a photo the same way wherever its image is stored', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 100, 100, d)
+    await withoutOpfs(() => addPhoto(g, ex, photo(), 100, 100, d))
+
+    const doc = await exportBackup(d)
+
+    expect(doc.exercisePhotos).toHaveLength(2)
+    for (const p of doc.exercisePhotos) {
+      expect(typeof p.bytes).toBe('string')
+      expect(p).not.toHaveProperty('file')
+    }
+    // Same image on both paths → same base64.
+    expect(doc.exercisePhotos[0].bytes).toBe(doc.exercisePhotos[1].bytes)
+    expect(doc.version).toBe(SCHEMA_VERSION)
+  })
+
+  it('skips a photo whose image file is missing instead of failing the export', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 100, 100, d)
+    const lost = await addPhoto(g, ex, photo(), 100, 100, d)
+    // The record survives, the file does not — a user who cleared site storage.
+    await removeImage((await d.exercisePhotos.get(lost))!)
+
+    const doc = await exportBackup(d)
+
+    expect(doc.exercisePhotos).toHaveLength(1)
+    expect(doc.gyms).toHaveLength(1) // the rest of the backup is intact
+    // The caller reports the gap by comparing counts (see the Backup screen).
+    expect((await d.exercisePhotos.count()) - doc.exercisePhotos.length).toBe(1)
+  })
+
+  it('restores an imported photo into file storage', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 800, 600, d)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+
+    await importBackupReplaceAll(doc, d)
+
+    const [back] = await d.exercisePhotos.toArray()
+    expect(back.file).toBeTruthy()
+    expect(back.bytes).toBeUndefined()
+    expect(back.size).toBe(PHOTO.length)
+    expect(await storedPhotoFiles()).toEqual([back.file])
+    expect([...new Uint8Array(await (await readPhotoBlob(back)).arrayBuffer())]).toEqual(PHOTO)
+  })
+
+  it('an import replaces the previous device photos, files included', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 100, 100, d)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    // A different photo now sits on the device — the import must not leave its
+    // file behind, unreachable and taking up space.
+    await resetAll(d)
+    const { g: g2, ex: g2ex } = await seed()
+    await addPhoto(g2, g2ex, new Blob(['outra'], { type: 'image/jpeg' }), 100, 100, d)
+
+    await importBackupReplaceAll(doc, d)
+
+    const [back] = await d.exercisePhotos.toArray()
+    expect(await storedPhotoFiles()).toEqual([back.file])
+    expect([...new Uint8Array(await (await readPhotoBlob(back)).arrayBuffer())]).toEqual(PHOTO)
+  })
+
+  it('imports a backup written before photos knew about files', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 100, 100, d)
+    const legacy = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    // Exactly what an older version wrote: base64 bytes, no `size`.
+    for (const p of legacy.exercisePhotos as Record<string, unknown>[]) delete p.size
+    await resetAll(d)
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
+
+    const [back] = await d.exercisePhotos.toArray()
+    expect(back.file).toBeTruthy()
+    expect(back.size).toBe(PHOTO.length)
+    expect([...new Uint8Array(await (await readPhotoBlob(back)).arrayBuffer())]).toEqual(PHOTO)
+  })
+
+  it('keeps imported photos in the record where there is no OPFS', async () => {
+    const { g, ex } = await seed()
+    await addPhoto(g, ex, photo(), 100, 100, d)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+
+    await withoutOpfs(() => importBackupReplaceAll(doc, d))
+
+    const [back] = await d.exercisePhotos.toArray()
+    expect(back.file).toBeUndefined()
+    expect([...new Uint8Array(await (await readPhotoBlob(back)).arrayBuffer())]).toEqual(PHOTO)
   })
 })
 

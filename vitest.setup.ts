@@ -2,6 +2,15 @@ import '@testing-library/jest-dom/vitest'
 import 'fake-indexeddb/auto'
 import { beforeEach } from 'vitest'
 import { clearQueryCache } from './src/lib/hooks'
+import { installMemoryOpfs } from './src/test/memoryOpfs'
+
+// jsdom has no storage API, so exercise photos would silently take their
+// bytes-in-the-record fallback in every test. The shim gives them a real (if
+// in-memory) file system, and resetting it per test keeps one test's files from
+// showing up in the next one's orphan sweep.
+beforeEach(() => {
+  installMemoryOpfs()
+})
 
 // The read hooks keep each query's last resolved value in module state, so a
 // revisited screen can paint before IndexedDB answers (see src/lib/hooks.ts).

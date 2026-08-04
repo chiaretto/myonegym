@@ -3,6 +3,8 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../../App'
+import { removeImage } from '../../../data/photoStore'
+import { storedPhotoFiles } from '../../../test/memoryOpfs'
 import { db } from '../../../db/db'
 import {
   addPhoto,
@@ -20,10 +22,9 @@ import { useActiveGym } from '../../../state/activeGym'
 // suite is the wiring: pick → store → render → delete.
 const downscalePhoto = vi.hoisted(() =>
   vi.fn(async (_file: unknown) => ({
-    bytes: new TextEncoder().encode('fake-jpeg').buffer as ArrayBuffer,
-    type: 'image/jpeg',
-    width: 1600,
-    height: 1200,
+    blob: new Blob(['fake-jpeg'], { type: 'image/jpeg' }),
+    width: 1280,
+    height: 960,
   })),
 )
 vi.mock('./downscale', async (orig) => ({
@@ -138,7 +139,7 @@ describe('Exercise photos', () => {
 
   it('views a photo full-size and deletes it after confirming', async () => {
     const { gym, ex } = await seed()
-    await addPhoto(gym, ex, new TextEncoder().encode('a').buffer as ArrayBuffer, 'image/jpeg', 800, 600, db)
+    await addPhoto(gym, ex, new Blob(['a'], { type: 'image/jpeg' }), 800, 600, db)
     const user = userEvent.setup()
     renderAt(`/exercise/${ex}`)
 
@@ -155,6 +156,41 @@ describe('Exercise photos', () => {
 
     expect(await screen.findByText('Foto excluída.')).toBeInTheDocument()
     await waitFor(async () => expect(await db.exercisePhotos.count()).toBe(0))
+  })
+
+  it('stores the image as a file, not inside the record', async () => {
+    const { gym, ex } = await seed()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${ex}`)
+
+    await openFotoTab(user)
+    await user.upload(screen.getByTestId('photo-gallery-input'), file())
+    expect(await screen.findByText('Foto anexada.')).toBeInTheDocument()
+
+    await waitFor(async () => expect(await db.exercisePhotos.count()).toBe(1))
+    const [photo] = await db.exercisePhotos.where({ gymId: gym, exerciseId: ex }).toArray()
+    expect(photo.file).toBeTruthy()
+    expect(photo.bytes).toBeUndefined()
+    expect(await storedPhotoFiles()).toEqual([photo.file])
+    expect(await screen.findByRole('button', { name: 'Ver foto' })).toBeInTheDocument()
+  })
+
+  it('says so when a photo image is gone, and keeps the record', async () => {
+    const { gym, ex } = await seed()
+    const id = await addPhoto(gym, ex, new Blob(['a'], { type: 'image/jpeg' }), 800, 600, db)
+    // The user cleared the site's storage: the record is here, the file is not.
+    await removeImage((await db.exercisePhotos.get(id))!)
+    const user = userEvent.setup()
+    renderAt(`/exercise/${ex}`)
+
+    await openFotoTab(user)
+
+    const thumb = await screen.findByRole('button', { name: 'Foto indisponível' })
+    await user.click(thumb)
+    const viewer = await screen.findByRole('dialog', { name: 'Foto' })
+    expect(within(viewer).getByText(/não está mais no dispositivo/)).toBeInTheDocument()
+    // Nothing deleted itself over a missing image.
+    expect(await db.exercisePhotos.count()).toBe(1)
   })
 
   it('reports a failure instead of storing a broken photo', async () => {

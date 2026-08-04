@@ -1,6 +1,7 @@
 import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from './db'
+import { migrateLegacyPhotos, readPhotoBlob } from './repos'
 
 /**
  * v6 migration: an exercise's single `categoryId` becomes a `categoryIds` list,
@@ -150,5 +151,79 @@ describe('v7 migration: exercises gain alternativeIds', () => {
       db.close()
     }
   })
+})
 
+/**
+ * v8: a photo's image moves out of its record and into a file. The upgrade
+ * itself must do **nothing** to existing photos — OPFS cannot join an IndexedDB
+ * transaction — so they have to come through it untouched and still readable,
+ * and only then be moved by `migrateLegacyPhotos`.
+ */
+describe('v8 migration: photos survive the upgrade untouched', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig8-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  /** Open a Dexie declaring only up to v7 — photos with bytes and no size. */
+  async function openV7() {
+    const db = new Dexie(name)
+    db.version(1).stores({
+      gyms: '++id, name, createdAt',
+      categories: '++id, &name',
+      exercises: '++id, name, categoryId',
+      days: '++id, name',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
+    })
+    db.version(2).stores({
+      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
+    })
+    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
+    db.version(4).stores({})
+    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
+    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
+    db.version(7).stores({})
+    await db.open()
+    return db
+  }
+
+  it('leaves the image in the record, readable, and moves it only afterwards', async () => {
+    const v7 = await openV7()
+    const bytes = new TextEncoder().encode('imagem antiga').buffer
+    const id = (await v7.table('exercisePhotos').add({
+      gymId: 1,
+      exerciseId: 2,
+      bytes,
+      type: 'image/jpeg',
+      width: 1600,
+      height: 1200,
+      createdAt: 1_000,
+    })) as number
+    v7.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      const photo = await db.exercisePhotos.get(id)
+      expect(photo?.file).toBeUndefined()
+      // Still readable: the upgrade moves no bytes anywhere.
+      expect(await (await readPhotoBlob(photo!)).text()).toBe('imagem antiga')
+      expect(photo).toMatchObject({ gymId: 1, exerciseId: 2, width: 1600, height: 1200 })
+
+      // The move is the background pass's job, and it fills in the size.
+      expect(await migrateLegacyPhotos(db)).toBe(1)
+      const moved = await db.exercisePhotos.get(id)
+      expect(moved?.file).toBeTruthy()
+      expect(moved?.bytes).toBeUndefined()
+      expect(moved?.size).toBe(13)
+      expect(await (await readPhotoBlob(moved!)).text()).toBe('imagem antiga')
+    } finally {
+      db.close()
+    }
+  })
 })

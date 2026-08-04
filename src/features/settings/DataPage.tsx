@@ -53,8 +53,17 @@ export function DataPage() {
     setBusy(true)
     try {
       // A full backup with photos can take a moment to build and serialize.
-      download(`myonegym-backup-${stamp()}.json`, await exportBackup(db))
-      toast('Backup exportado.')
+      const doc = await exportBackup(db)
+      download(`myonegym-backup-${stamp()}.json`, doc)
+      // A photo whose image file is missing is skipped rather than aborting the
+      // export — but silently dropping it would let the user believe the backup
+      // is complete when it isn't.
+      const missing = (await db.exercisePhotos.count()) - doc.exercisePhotos.length
+      toast(
+        missing > 0
+          ? `Backup exportado — ${missing} foto(s) sem imagem ficaram de fora.`
+          : 'Backup exportado.',
+      )
     } finally {
       setBusy(false)
     }
@@ -83,7 +92,7 @@ export function DataPage() {
     const ok = await confirm({
       title: 'Resetar app?',
       message:
-        'Isto apaga TODOS os dados cadastrados deste dispositivo — academias, categorias, exercícios, dias, pesos, histórico e treinos. Não pode ser desfeito.',
+        'Isto apaga TODOS os dados cadastrados deste dispositivo — academias, categorias, exercícios, dias, pesos, histórico, treinos e fotos. Não pode ser desfeito.',
       confirmLabel: 'Apagar tudo',
       danger: true,
     })

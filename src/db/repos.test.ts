@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
 import { MyOneGymDB } from './db'
+import type { ExercisePhoto } from './types'
 import {
   ValidationError,
   addPhoto,
@@ -26,6 +28,9 @@ import {
   listPhotos,
   listSessionEntries,
   listSessionSummaries,
+  maintainPhotoStorage,
+  migrateLegacyPhotos,
+  readPhotoBlob,
   renameCategory,
   saveNote,
   saveWeight,
@@ -33,6 +38,7 @@ import {
   setEntryDone,
   startSession,
   swapEntryExercise,
+  sweepPhotoOrphans,
   updateExercise,
   validateMediaUrl,
 } from './repos'
@@ -41,8 +47,8 @@ let d: MyOneGymDB
 let n = 0
 
 /** Stand-in for an already-downscaled JPEG — this layer stores what it's given. */
-const jpeg = (body = 'x') => new TextEncoder().encode(body).buffer as ArrayBuffer
-const readBack = (bytes: ArrayBuffer) => new TextDecoder().decode(new Uint8Array(bytes))
+const jpeg = (body = 'x') => new Blob([body], { type: 'image/jpeg' })
+const readBack = async (photo: ExercisePhoto) => (await readPhotoBlob(photo)).text()
 
 beforeEach(async () => {
   d = new MyOneGymDB(`test-${Date.now()}-${n++}`)
@@ -145,7 +151,7 @@ describe('exercises', () => {
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 20, 'KG', d)
     await saveNote(g, ex, 'manter cotovelo fixo', d)
-    await addPhoto(g, ex, jpeg(), 'image/jpeg', 800, 600, d)
+    await addPhoto(g, ex, jpeg(), 800, 600, d)
     await deleteExercise(ex, d)
     expect((await d.days.get(day))?.exerciseIds).toEqual([])
     expect(await getWeight(g, ex, d)).toBeUndefined()
@@ -319,16 +325,61 @@ describe('exercise notes', () => {
 })
 
 describe('exercise photos', () => {
-  it('attaches a photo and reads the bytes back', async () => {
+  it('attaches a photo and reads the image back', async () => {
     const g = await createGym('A', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await addPhoto(g, ex, jpeg('abc'), 'image/jpeg', 1600, 1200, d)
+    await addPhoto(g, ex, jpeg('abc'), 1600, 1200, d)
 
     const [photo] = await listPhotos(g, ex, d)
     expect(photo).toMatchObject({ gymId: g, exerciseId: ex, width: 1600, height: 1200 })
     expect(photo.type).toBe('image/jpeg')
-    expect(photo.bytes.byteLength).toBe(3)
-    expect(readBack(photo.bytes)).toBe('abc')
+    expect(photo.size).toBe(3)
+    expect(await readBack(photo)).toBe('abc')
+  })
+
+  it('stores the image as a file and keeps it out of the record', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(g, ex, jpeg('abc'), 1600, 1200, d)
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo.file).toBeTruthy()
+    expect(photo.bytes).toBeUndefined()
+    expect(await storedPhotoFiles()).toEqual([photo.file])
+  })
+
+  it('keeps the image in the record where there is no OPFS', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await withoutOpfs(() => addPhoto(g, ex, jpeg('abc'), 100, 100, d))
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo.file).toBeUndefined()
+    expect(photo.bytes).toBeDefined()
+    expect(await readBack(photo)).toBe('abc')
+  })
+
+  it('reads both kinds of record side by side', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(g, ex, jpeg('as-file'), 100, 100, d)
+    await withoutOpfs(() => addPhoto(g, ex, jpeg('in-record'), 100, 100, d))
+
+    const photos = await listPhotos(g, ex, d)
+    expect(await Promise.all(photos.map(readBack))).toEqual(['in-record', 'as-file'])
+  })
+
+  it('leaves no file behind when the record cannot be written', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    // A database whose insert fails: the file is written first, so this is the
+    // moment an orphan would be created.
+    const failing = {
+      exercisePhotos: { add: () => Promise.reject(new Error('nope')) },
+    } as unknown as MyOneGymDB
+
+    await expect(addPhoto(g, ex, jpeg('abc'), 100, 100, failing)).rejects.toThrow('nope')
+    expect(await storedPhotoFiles()).toEqual([])
   })
 
   it('keeps many photos per (gym, exercise), newest first', async () => {
@@ -336,13 +387,13 @@ describe('exercise photos', () => {
     const ex = await createExercise({ name: 'Leg Press' }, d)
     // Both land in the same millisecond here — the id tie-break is what makes
     // the order deterministic (fake timers would deadlock Dexie's scheduler).
-    await addPhoto(g, ex, jpeg('old'), 'image/jpeg', 100, 100, d)
-    await addPhoto(g, ex, jpeg('new'), 'image/jpeg', 100, 100, d)
+    await addPhoto(g, ex, jpeg('old'), 100, 100, d)
+    await addPhoto(g, ex, jpeg('new'), 100, 100, d)
 
     const photos = await listPhotos(g, ex, d)
     expect(photos).toHaveLength(2)
-    expect(readBack(photos[0].bytes)).toBe('new')
-    expect(readBack(photos[1].bytes)).toBe('old')
+    expect(await readBack(photos[0])).toBe('new')
+    expect(await readBack(photos[1])).toBe('old')
   })
 
   it('orders by createdAt when the timestamps differ', async () => {
@@ -354,25 +405,26 @@ describe('exercise photos', () => {
     const row = (body: string, createdAt: number) => ({
       gymId: g,
       exerciseId: ex,
-      bytes: jpeg(body),
+      bytes: new TextEncoder().encode(body).buffer as ArrayBuffer,
       type: 'image/jpeg',
       width: 100,
       height: 100,
+      size: body.length,
       createdAt,
     })
     await d.exercisePhotos.add(row('old', 1_000))
     await d.exercisePhotos.add(row('new', 9_000))
 
     const photos = await listPhotos(g, ex, d)
-    expect(readBack(photos[0].bytes)).toBe('new')
-    expect(readBack(photos[1].bytes)).toBe('old')
+    expect(await readBack(photos[0])).toBe('new')
+    expect(await readBack(photos[1])).toBe('old')
   })
 
   it('is isolated per gym', async () => {
     const a = await createGym('A', undefined, d)
     const b = await createGym('B', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await addPhoto(a, ex, jpeg(), 100, 100, d)
     expect(await listPhotos(a, ex, d)).toHaveLength(1)
     expect(await listPhotos(b, ex, d)).toHaveLength(0)
   })
@@ -380,13 +432,13 @@ describe('exercise photos', () => {
   it('deletes a single photo without touching the others', async () => {
     const g = await createGym('A', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    const first = await addPhoto(g, ex, jpeg('one'), 'image/jpeg', 100, 100, d)
-    await addPhoto(g, ex, jpeg('two'), 'image/jpeg', 100, 100, d)
+    const first = await addPhoto(g, ex, jpeg('one'), 100, 100, d)
+    await addPhoto(g, ex, jpeg('two'), 100, 100, d)
     await deletePhoto(first, d)
 
     const photos = await listPhotos(g, ex, d)
     expect(photos).toHaveLength(1)
-    expect(readBack(photos[0].bytes)).toBe('two')
+    expect(await readBack(photos[0])).toBe('two')
   })
 
   it('deleting a photo leaves the weight and note alone', async () => {
@@ -394,7 +446,7 @@ describe('exercise photos', () => {
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveWeight(g, ex, 20, 'KG', d)
     await saveNote(g, ex, 'cotovelo fixo', d)
-    const id = await addPhoto(g, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    const id = await addPhoto(g, ex, jpeg(), 100, 100, d)
     await deletePhoto(id, d)
 
     expect((await getWeight(g, ex, d))?.value).toBe(20)
@@ -405,8 +457,8 @@ describe('exercise photos', () => {
     const a = await createGym('A', undefined, d)
     const b = await createGym('B', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
-    await addPhoto(b, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await addPhoto(a, ex, jpeg(), 100, 100, d)
+    await addPhoto(b, ex, jpeg(), 100, 100, d)
     await deleteGym(a, d)
 
     expect(await listPhotos(a, ex, d)).toHaveLength(0)
@@ -417,11 +469,170 @@ describe('exercise photos', () => {
     const a = await createGym('A', undefined, d)
     const b = await createGym('B', undefined, d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await addPhoto(a, ex, jpeg(), 'image/jpeg', 100, 100, d)
-    await addPhoto(b, ex, jpeg(), 'image/jpeg', 100, 100, d)
+    await addPhoto(a, ex, jpeg(), 100, 100, d)
+    await addPhoto(b, ex, jpeg(), 100, 100, d)
     await deleteExercise(ex, d)
 
     expect(await d.exercisePhotos.count()).toBe(0)
+  })
+})
+
+describe('photo image files', () => {
+  it('deleting a photo frees its file and leaves the others alone', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    const first = await addPhoto(g, ex, jpeg('one'), 100, 100, d)
+    await addPhoto(g, ex, jpeg('two'), 100, 100, d)
+
+    await deletePhoto(first, d)
+
+    const [kept] = await listPhotos(g, ex, d)
+    expect(await storedPhotoFiles()).toEqual([kept.file])
+  })
+
+  it('deleting a gym frees its files and leaves the other gym intact', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(a, ex, jpeg('a1'), 100, 100, d)
+    await addPhoto(a, ex, jpeg('a2'), 100, 100, d)
+    await addPhoto(b, ex, jpeg('b1'), 100, 100, d)
+
+    await deleteGym(a, d)
+
+    const [kept] = await listPhotos(b, ex, d)
+    expect(await storedPhotoFiles()).toEqual([kept.file])
+    expect(await readBack(kept)).toBe('b1')
+  })
+
+  it('deleting an exercise frees its files in every gym', async () => {
+    const a = await createGym('A', undefined, d)
+    const b = await createGym('B', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    const other = await createExercise({ name: 'Supino' }, d)
+    await addPhoto(a, ex, jpeg('a'), 100, 100, d)
+    await addPhoto(b, ex, jpeg('b'), 100, 100, d)
+    await addPhoto(a, other, jpeg('keep'), 100, 100, d)
+
+    await deleteExercise(ex, d)
+
+    const [kept] = await listPhotos(a, other, d)
+    expect(await storedPhotoFiles()).toEqual([kept.file])
+  })
+
+  it('sweeps a file no record points at', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    const id = await addPhoto(g, ex, jpeg('orphan'), 100, 100, d)
+    await addPhoto(g, ex, jpeg('kept'), 100, 100, d)
+    // Exactly the state a crash between the two deletion steps leaves behind.
+    await d.exercisePhotos.delete(id)
+
+    expect(await sweepPhotoOrphans(d)).toBe(1)
+
+    const [kept] = await listPhotos(g, ex, d)
+    expect(await storedPhotoFiles()).toEqual([kept.file])
+  })
+
+  it('never sweeps a file a record still points at', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await addPhoto(g, ex, jpeg('a'), 100, 100, d)
+    await addPhoto(g, ex, jpeg('b'), 100, 100, d)
+
+    expect(await sweepPhotoOrphans(d)).toBe(0)
+    expect(await d.exercisePhotos.count()).toBe(2)
+    expect(await storedPhotoFiles()).toHaveLength(2)
+  })
+})
+
+describe('migrating photos that predate file storage', () => {
+  /** A record in the pre-OPFS shape: the image lives in the row itself. */
+  const legacy = async (gymId: number, exerciseId: number, body: string) =>
+    d.exercisePhotos.add({
+      gymId,
+      exerciseId,
+      bytes: new TextEncoder().encode(body).buffer as ArrayBuffer,
+      type: 'image/jpeg',
+      width: 100,
+      height: 100,
+      size: body.length,
+      createdAt: Date.now(),
+    })
+
+  it('moves the image to a file and drops it from the record', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'antiga')
+
+    expect(await migrateLegacyPhotos(d)).toBe(1)
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo.file).toBeTruthy()
+    expect(photo.bytes).toBeUndefined()
+    expect(photo.size).toBe(6)
+    expect(await readBack(photo)).toBe('antiga')
+  })
+
+  it('displays a legacy photo even before it is migrated', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'antiga')
+
+    expect(await readBack((await listPhotos(g, ex, d))[0])).toBe('antiga')
+  })
+
+  it('is idempotent and leaves migrated photos alone', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'uma')
+    await legacy(g, ex, 'outra')
+
+    expect(await migrateLegacyPhotos(d)).toBe(2)
+    expect(await migrateLegacyPhotos(d)).toBe(0)
+
+    const photos = await listPhotos(g, ex, d)
+    expect(await Promise.all(photos.map(readBack))).toEqual(['outra', 'uma'])
+    expect(await storedPhotoFiles()).toHaveLength(2)
+  })
+
+  it('picks up where it stopped when it was interrupted', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'uma')
+    await withoutOpfs(() => migrateLegacyPhotos(d)) // interrupted: nothing moved
+    await legacy(g, ex, 'outra')
+
+    expect(await migrateLegacyPhotos(d)).toBe(2)
+    expect((await listPhotos(g, ex, d)).every((p) => p.file && !p.bytes)).toBe(true)
+  })
+
+  it('keeps a legacy record readable when there is nowhere to move it', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'antiga')
+
+    expect(await withoutOpfs(() => migrateLegacyPhotos(d))).toBe(0)
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo.bytes).toBeDefined()
+    expect(await readBack(photo)).toBe('antiga')
+  })
+
+  it('migrates and sweeps in one pass at launch', async () => {
+    const g = await createGym('A', undefined, d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await legacy(g, ex, 'antiga')
+    const orphan = await addPhoto(g, ex, jpeg('orphan'), 100, 100, d)
+    await d.exercisePhotos.delete(orphan)
+
+    await maintainPhotoStorage(d)
+
+    const [photo] = await listPhotos(g, ex, d)
+    expect(photo.file).toBeTruthy()
+    // The migrated file survives the sweep that runs right after it.
+    expect(await storedPhotoFiles()).toEqual([photo.file])
+    expect(await readBack(photo)).toBe('antiga')
   })
 })
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { db } from '../../../db/db'
-import { addPhoto, deletePhoto } from '../../../db/repos'
+import { addPhoto, deletePhoto, readPhotoBlob } from '../../../db/repos'
 import type { ExercisePhoto } from '../../../db/types'
 import { usePhotos } from '../../../lib/hooks'
 import { useConfirm, useToast } from '../../../ui/Feedback'
@@ -11,27 +11,53 @@ import { PhotoError, downscalePhoto } from './downscale'
 /**
  * Object URL for a stored photo, revoked on unmount / id change.
  *
+ * Asynchronous because the image is a file now, not a field of the record. Two
+ * things follow: the URL is empty for a frame or two (hence no `<img>` until it
+ * arrives), and a late answer for a photo the user already scrolled past must be
+ * dropped — `cancelled` does that, and also stops a URL from being created after
+ * the cleanup that would have revoked it.
+ *
  * Creating the URL inline during render would leak one per render — a long
  * session would pin every photo it ever showed in memory.
  */
-function usePhotoUrl(photo: ExercisePhoto): string {
-  const [url, setUrl] = useState('')
-  // The bytes are immutable once stored, so the record id identifies them.
+function usePhotoUrl(photo: ExercisePhoto): { url: string; failed: boolean } {
+  const [state, setState] = useState({ url: '', failed: false })
+  // The image is immutable once stored, so the record id identifies it.
   const key = photo.id
   useEffect(() => {
-    const next = URL.createObjectURL(new Blob([photo.bytes], { type: photo.type }))
-    setUrl(next)
-    return () => URL.revokeObjectURL(next)
+    let cancelled = false
+    let created = ''
+    setState({ url: '', failed: false })
+    readPhotoBlob(photo)
+      .then((blob) => {
+        if (cancelled) return
+        created = URL.createObjectURL(blob)
+        setState({ url: created, failed: false })
+      })
+      .catch(() => {
+        if (!cancelled) setState({ url: '', failed: true })
+      })
+    return () => {
+      cancelled = true
+      if (created) URL.revokeObjectURL(created)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key])
-  return url
+  return state
 }
 
 function Thumb({ photo, onOpen }: { photo: ExercisePhoto; onOpen: () => void }) {
-  const url = usePhotoUrl(photo)
+  const { url, failed } = usePhotoUrl(photo)
   return (
-    <button className="photo-thumb" onClick={onOpen} aria-label="Ver foto">
+    <button
+      className="photo-thumb"
+      onClick={onOpen}
+      aria-label={failed ? 'Foto indisponível' : 'Ver foto'}
+    >
       {url && <img src={url} alt="" loading="lazy" />}
+      {/* The record survives a missing file on purpose — losing the image is
+          bad enough without the app quietly deleting the record too. */}
+      {failed && <Icon name="photo-off" className="photo-broken" />}
     </button>
   )
 }
@@ -45,10 +71,13 @@ function Viewer({
   onClose: () => void
   onDelete: () => void
 }) {
-  const url = usePhotoUrl(photo)
+  const { url, failed } = usePhotoUrl(photo)
   return (
     <Sheet title="Foto" onClose={onClose}>
-      <div className="photo-viewer">{url && <img src={url} alt="Foto do exercício" />}</div>
+      <div className="photo-viewer">
+        {url && <img src={url} alt="Foto do exercício" />}
+        {failed && <p className="note-empty">A imagem desta foto não está mais no dispositivo.</p>}
+      </div>
       <div className="sheet-actions">
         <button className="btn danger" onClick={onDelete}>
           <Icon name="trash" /> Excluir
@@ -99,8 +128,8 @@ export function PhotoTab({ gymId, exerciseId }: { gymId: number | null; exercise
 
     setBusy(true)
     try {
-      const { bytes, type, width, height } = await downscalePhoto(file)
-      await addPhoto(gymId, exerciseId, bytes, type, width, height, db)
+      const { blob, width, height } = await downscalePhoto(file)
+      await addPhoto(gymId, exerciseId, blob, width, height, db)
       toast('Foto anexada.')
     } catch (err) {
       // A photo that looks attached but was never stored must not be possible —

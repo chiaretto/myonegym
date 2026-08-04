@@ -3,15 +3,15 @@ import { MAX_EDGE, fitDimensions } from './fitDimensions'
 
 describe('fitDimensions', () => {
   it('caps a landscape photo on its width', () => {
-    expect(fitDimensions(4000, 3000)).toEqual({ width: 1600, height: 1200 })
+    expect(fitDimensions(4000, 3000)).toEqual({ width: 1280, height: 960 })
   })
 
   it('caps a portrait photo on its height', () => {
-    expect(fitDimensions(3000, 4000)).toEqual({ width: 1200, height: 1600 })
+    expect(fitDimensions(3000, 4000)).toEqual({ width: 960, height: 1280 })
   })
 
   it('caps a square photo on both sides', () => {
-    expect(fitDimensions(3000, 3000)).toEqual({ width: 1600, height: 1600 })
+    expect(fitDimensions(3000, 3000)).toEqual({ width: 1280, height: 1280 })
   })
 
   it('never upscales a photo that is already small', () => {
@@ -19,18 +19,18 @@ describe('fitDimensions', () => {
   })
 
   it('leaves a photo exactly at the bound alone', () => {
-    expect(fitDimensions(MAX_EDGE, 900)).toEqual({ width: 1600, height: 900 })
+    expect(fitDimensions(MAX_EDGE, 900)).toEqual({ width: 1280, height: 900 })
   })
 
   it('preserves the aspect ratio', () => {
     const { width, height } = fitDimensions(4032, 3024) // a real iPhone 12 MP frame
-    expect(width).toBe(1600)
+    expect(width).toBe(1280)
     expect(width / height).toBeCloseTo(4032 / 3024, 2)
   })
 
   it('keeps an extreme panorama at least 1px on the short edge', () => {
     const { width, height } = fitDimensions(20000, 10)
-    expect(width).toBe(1600)
+    expect(width).toBe(1280)
     expect(height).toBeGreaterThanOrEqual(1)
   })
 

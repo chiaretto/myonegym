@@ -62,6 +62,13 @@ server** — all data lives in the browser.
    It is opt-in (needs a token the user supplies), it never sends gyms, weights,
    notes, photos or sessions, and its client is loaded on demand so the offline
    bundle does not carry it. Everything else in the app remains local-only.
+9. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
+   are a file in the origin's private file system (`src/data/photoStore.ts`);
+   the `exercisePhotos` row keeps only metadata plus the file name. Two
+   consequences to respect: no transaction spans a record and its file (write
+   the file first, delete the record first), and a browser with no writable
+   OPFS still stores the bytes in the record — every read goes through the
+   store, never through `photo.bytes` directly.
 
 ## Conventions
 

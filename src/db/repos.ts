@@ -1,3 +1,4 @@
+import { readImage, removeImage, sweepOrphans, writeImage } from '../data/photoStore'
 import { db, type MyOneGymDB } from './db'
 import {
   type Category,
@@ -77,8 +78,11 @@ export async function renameGym(id: number, name: string, d: MyOneGymDB = db): P
   await d.gyms.update(id, { name: requireName(name, 'nome da academia') })
 }
 
-/** Delete a gym and cascade to its weights, history, and exercise notes. */
+/** Delete a gym and cascade to its weights, history, exercise notes and photos. */
 export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
+  // Note the file names before the records go: after the transaction there is
+  // nothing left to say which images belonged to this gym.
+  const files = await photoFilesWhere('gymId', id, d)
   await d.transaction(
     'rw',
     d.gyms,
@@ -94,6 +98,7 @@ export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
       await d.gyms.delete(id)
     },
   )
+  await removePhotoFiles(files)
 }
 
 /* ------------------------------------------------------------ categories */
@@ -256,6 +261,7 @@ export async function setAlternatives(
  * and drop its weights, history, per-gym notes, and per-gym photos.
  */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
+  const files = await photoFilesWhere('exerciseId', id, d)
   // Array form: Dexie's typed overloads stop at 5 tables.
   await d.transaction(
     'rw',
@@ -287,6 +293,7 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
       await d.exercises.delete(id)
     },
   )
+  await removePhotoFiles(files)
 }
 
 /* ------------------------------------------------------------------ days */
@@ -474,6 +481,31 @@ export async function saveNote(
 /* -------------------------------------------------------- exercise photos */
 
 /**
+ * File names of the photos matching an indexed field, collected **before** the
+ * records are deleted. A cascade has to know what to unlink from disk, and once
+ * the rows are gone nothing can tell which files were theirs.
+ */
+async function photoFilesWhere(
+  field: 'gymId' | 'exerciseId',
+  value: number,
+  d: MyOneGymDB,
+): Promise<string[]> {
+  const files: string[] = []
+  await d.exercisePhotos
+    .where(field)
+    .equals(value)
+    .each((p) => {
+      if (p.file) files.push(p.file)
+    })
+  return files
+}
+
+/** Best-effort: a file left behind is garbage the orphan sweep collects. */
+async function removePhotoFiles(files: string[]): Promise<void> {
+  for (const file of files) await removeImage({ file })
+}
+
+/**
  * Photos for (gym, exercise), newest first. Many per pair (unlike notes).
  * Ties on `createdAt` break by id — two photos attached within the same
  * millisecond would otherwise come back in an unstable order.
@@ -490,33 +522,109 @@ export async function listPhotos(
   return rows.sort((a, b) => b.createdAt - a.createdAt || (b.id ?? 0) - (a.id ?? 0))
 }
 
+/** A photo's image as a Blob, wherever it is stored. Throws `PhotoImageError`
+ *  when the image is gone (see data/photoStore). */
+export async function readPhotoBlob(photo: ExercisePhoto): Promise<Blob> {
+  return readImage(photo)
+}
+
 /**
- * Attach a photo to (gym, exercise). The bytes are expected to be **already
+ * Attach a photo to (gym, exercise). The image is expected to be **already
  * downscaled** (see downscalePhoto) — this layer stores what it is given.
  * Returns the new id.
+ *
+ * The image is written **before** the record, and removed again if the record
+ * fails: no transaction spans a file and a table, so the order has to be the one
+ * where a crash leaves collectable garbage instead of a photo pointing at
+ * nothing.
  */
 export async function addPhoto(
   gymId: number,
   exerciseId: number,
-  bytes: ArrayBuffer,
-  type: string,
+  image: Blob,
   width: number,
   height: number,
   d: MyOneGymDB = db,
 ): Promise<number> {
-  return d.exercisePhotos.add({
-    gymId,
-    exerciseId,
-    bytes,
-    type,
-    width,
-    height,
-    createdAt: Date.now(),
-  })
+  const stored = await writeImage(image)
+  try {
+    return await d.exercisePhotos.add({
+      gymId,
+      exerciseId,
+      file: stored.file,
+      bytes: stored.bytes,
+      type: image.type,
+      width,
+      height,
+      size: stored.size,
+      createdAt: Date.now(),
+    })
+  } catch (err) {
+    await removeImage(stored)
+    throw err
+  }
 }
 
+/** Delete a photo, record first and image after (see `addPhoto` for the why). */
 export async function deletePhoto(id: number, d: MyOneGymDB = db): Promise<void> {
+  const photo = await d.exercisePhotos.get(id)
   await d.exercisePhotos.delete(id)
+  if (photo) await removeImage(photo)
+}
+
+/**
+ * Move photos still carrying their image in the record into file storage.
+ *
+ * Runs at launch, in the background: nobody is asked to migrate their own
+ * photos, and nothing waits on it. Idempotent and per photo — an interruption
+ * leaves every other photo untouched, and a photo that fails stays exactly as
+ * it was, which is to say still readable. The bytes are moved, never
+ * re-encoded. Returns how many moved.
+ */
+export async function migrateLegacyPhotos(d: MyOneGymDB = db): Promise<number> {
+  const ids = await d.exercisePhotos.toCollection().primaryKeys()
+  let moved = 0
+  for (const id of ids) {
+    const photo = await d.exercisePhotos.get(id)
+    if (!photo?.bytes || photo.file) continue
+    try {
+      const stored = await writeImage(new Blob([photo.bytes], { type: photo.type }))
+      // No OPFS on this device: leave the record as it is, it works.
+      if (!stored.file) continue
+      await d.exercisePhotos
+        .where(':id')
+        .equals(id)
+        .modify((p) => {
+          p.file = stored.file
+          p.size = stored.size
+          delete p.bytes
+        })
+      moved++
+    } catch {
+      // Quota, a failed write, anything: the record still holds the image, so
+      // the photo keeps displaying and the next launch tries again.
+    }
+  }
+  return moved
+}
+
+/** Delete every image file no record references. Returns how many went. */
+export async function sweepPhotoOrphans(d: MyOneGymDB = db): Promise<number> {
+  const keep = new Set<string>()
+  await d.exercisePhotos.toCollection().each((p) => {
+    if (p.file) keep.add(p.file)
+  })
+  return sweepOrphans(keep)
+}
+
+/**
+ * Launch-time upkeep of the photo storage: migrate what predates it, then drop
+ * files nothing points at. In this order — sweeping first would race the
+ * migration's own writes.
+ */
+export async function maintainPhotoStorage(d: MyOneGymDB = db): Promise<void> {
+  await migrateLegacyPhotos(d)
+  await sweepPhotoOrphans(d)
 }
 
 /* ------------------------------------------------------------- sessions */
