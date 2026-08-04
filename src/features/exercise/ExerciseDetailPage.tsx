@@ -5,8 +5,8 @@ import { db } from '../../db/db'
 import { useCategoryMap, useDays } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
 import { AlternativesSection } from './AlternativesSection'
+import { CategoryChips } from './CategoryChips'
 import { exerciseCategoryNames } from '../../lib/days'
-import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { BackBar } from '../../ui/Chrome'
 import { StepperBar } from '../../ui/StepperBar'
@@ -76,24 +76,11 @@ export function ExerciseDetailPage() {
     <>
       <BackBar title={exercise.name} to={backTo} />
       <main className={`screen${fromDay ? ' has-action-bar' : ''}`}>
-        <div className="hero">
-          <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
-        </div>
-
-        {/* No title here: the name already sits in the top bar, and the training
-            day the user just came from is context they do not need repeated. */}
-        {catNames.length > 0 && (
-          <div className="ex-head">
-            <div className="ex-chips">
-              {catNames.map((name) => (
-                <span key={name} className="chip">
-                  <Icon name="tag" size={12} /> {name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
+        {/* Tabs first, meeting the top bar: which of the three things the user
+            came to look at is the first decision on this screen. No title (the
+            name is in the top bar), no training day, and no categories — those
+            now read with the note, inside "Observações". Same arrangement as
+            the in-session detail; only this tab's label differs. */}
         <Tabs<DetailTab>
           tabs={[
             { id: 'detail', label: 'Detalhe' },
@@ -107,9 +94,15 @@ export function ExerciseDetailPage() {
         {tab === 'photo' ? (
           <PhotoTab gymId={activeGymId ?? null} exerciseId={exerciseId} />
         ) : tab === 'notes' ? (
-          <NoteEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+          <>
+            <CategoryChips names={catNames} />
+            <NoteEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+          </>
         ) : (
           <>
+            <div className="hero">
+              <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
+            </div>
             <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
             {/* Under the weight, not in the header: this is a place to go, not
                 a label, and it can be several rows tall. */}

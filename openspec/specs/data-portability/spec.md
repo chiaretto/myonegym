@@ -270,7 +270,6 @@ font-size setting) are unaffected by a reset.
 - THEN all of it is erased, including the photos' image files
 - AND the app behaves like a fresh install
 
----
 
 #### Scenario: Declining keeps data intact
 - GIVEN the reset confirmation is shown

@@ -3,6 +3,7 @@
 ## Purpose
 TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
 ## Requirements
+
 ### Requirement: Register an Exercise
 
 The user MUST be able to create an exercise with a name (e.g. "Rosca Direta"), a
@@ -368,18 +369,39 @@ pendente sobreviva à exclusão.
 ### Requirement: Exercise Note and Photos on the Catalog Detail
 
 The **exercise detail page** (catalog, `/exercise/:id`) MUST present its content
-in **tabs**: a **"Detalhe"** tab with the existing content (the per-gym target
-weight editor and its history), an **"Observações"** tab that shows and edits the
-**per-gym exercise note** for `(active gym, exerciseId)` (see the
-`exercise-notes` capability), and a **"Foto"** tab that shows and manages the
-**per-gym exercise photos** for the same pair (see the `exercise-photos`
-capability). The Observações tab provides an editable text field with an explicit
-save; the Foto tab lists the pair's photos and lets the user attach one (camera or
-gallery) or delete one. Both reflect the **same** data edited from the in-session
-exercise detail (notes and photos are per `(gym, exercise)`, not per session).
-When **no gym is active**, the Observações **and Foto** tabs MUST prompt the user
-to create/select a gym first — the same treatment as the target-weight editor —
-and nothing can be saved.
+in **tabs**, and those tabs MUST be the **first control below the top bar** —
+before the media and before the target weight. The screen is opened to look
+something up, and which of the three things the user wants is the first decision
+they make on it.
+
+Each tab MUST carry what belongs to it:
+
+- **"Detalhe"** — the exercise's **media**, the per-gym **target weight** editor
+  and its **history**, and the **Alternativas** section (see *Alternatives
+  Section on the Exercise Detail*), in that order.
+- **"Observações"** — the exercise's **categories**, shown as labels, and the
+  **per-gym exercise note** for `(active gym, exerciseId)` (see the
+  `exercise-notes` capability), with an editable text field and an explicit save.
+- **"Foto"** — the **per-gym exercise photos** for the same pair (see the
+  `exercise-photos` capability): listing them, attaching one (camera or gallery)
+  and deleting one.
+
+The media MUST NOT be rendered outside the "Detalhe" tab, and the categories
+MUST NOT be rendered above the tabs — that is the vertical space this
+arrangement exists to free.
+
+This MUST match the in-session exercise detail's arrangement (see the
+`workout-sessions` capability, *Session Exercise Detail*), down to which tab
+holds the media and the categories. The two screens are the same view in two
+contexts and the user moves between them constantly; only their first tab's
+**label** differs ("Detalhe" here, "Execução" in a session), because only one of
+them is about executing something right now.
+
+Both the note and the photos reflect the **same** data edited from the
+in-session exercise detail (notes and photos are per `(gym, exercise)`, not per
+session). When **no gym is active**, the Observações **and Foto** tabs MUST
+prompt the user to create/select a gym first — the same treatment as the
+target-weight editor — and nothing can be saved.
 
 #### Scenario: Edit a note from the catalog detail
 - GIVEN gym "A" is active and "Rosca Direta" has no note in "A"
@@ -414,6 +436,25 @@ and nothing can be saved.
 - WHEN the user opens an exercise detail and switches to "Foto"
 - THEN the tab prompts the user to create/select a gym first
 - AND no photo can be attached until a gym is active
+
+#### Scenario: The tabs come before everything else
+- GIVEN the user opens an exercise from the catalog
+- WHEN the detail renders
+- THEN the "Detalhe", "Observações" and "Foto" tabs appear directly below the top
+  bar, above the media and the target weight
+- AND reaching them requires no scrolling
+
+#### Scenario: The media belongs to the first tab
+- GIVEN an exercise with a media URL
+- WHEN the user opens its detail and switches to "Observações"
+- THEN no media is shown
+- AND switching back to "Detalhe" shows it again, above the target weight
+
+#### Scenario: Categories live in "Observações"
+- GIVEN "Supino Reto" carries the categories "Peito" and "Tríceps"
+- WHEN the user opens its catalog detail
+- THEN no category label is shown above the tabs
+- AND switching to "Observações" shows "Peito" and "Tríceps" above the note field
 
 ### Requirement: Exercise Media Display on Detail Views
 
@@ -453,15 +494,14 @@ presentation).
 - WHEN it is viewed on the exercise detail page, the in-session detail, and the day-form preview
 - THEN its media is presented the same way (full, proportional) in all three
 
-
 ### Requirement: Single Exercise Title on Detail Views
 
-Every **exercise detail view** (the catalog exercise detail and the in-session
-exercise detail) MUST show the exercise's **name exactly once**, in the screen's
-**top bar** — the same bar that carries the back control. The body of the screen
+Every **exercise detail view** MUST show the exercise's **name exactly once**, in
+the screen's **top bar** — the same bar that carries the back control. This holds
+for both the catalog exercise detail and the in-session one. The body of the screen
 MUST NOT repeat the name as a heading: a duplicated title reads as a layout
-defect and pushes the useful content (media, tabs, target weight) further down a
-screen that is used mid-workout.
+defect and pushes the useful content (the tabs, the media, the target weight)
+further down a screen that is used mid-workout.
 
 These views MUST NOT show **training-day information** (neither the day the
 detail was opened from, nor the count of days the exercise belongs to, nor the
@@ -471,9 +511,13 @@ does **not** affect the **exercises list** (Settings → Exercícios), which MUS
 keep showing each exercise's days — see *Show Training Days on the Exercises
 List*.
 
-The header MAY still carry **contextual labels that are not the name and not the
-day** — the exercise's **categories**, and (in a session) the entry's
-**"Concluído"** status indicator.
+Above the tabs, the header MAY carry only the entry's **status** labels — in a
+session, the **"Concluído"** indicator and the **"Alternativa de X"** label.
+Everything else that once sat there, the exercise's **categories** included,
+belongs to a tab: status is about the screen as a whole and stays visible on all
+of them, whereas a category is a description of the exercise and reads with the
+note (see *Exercise Note and Photos on the Catalog Detail*). On the catalog
+detail there is no status at all, so the tabs meet the top bar directly.
 
 Removing the day from the header MUST NOT change **navigation**: the catalog
 detail still carries its day context in the address, still offers Voltar /
@@ -484,7 +528,7 @@ that day expanded (see the `home-navigation` capability).
 - GIVEN the user opens "Rosca Direta" from "Dia 2"
 - WHEN the detail renders
 - THEN "Rosca Direta" appears exactly once on the screen, in the top bar
-- AND no heading below the media repeats it
+- AND no heading below the tabs repeats it
 
 #### Scenario: In-session detail shows the name once
 - GIVEN the user opens an entry's detail during a session
@@ -505,8 +549,8 @@ that day expanded (see the `home-navigation` capability).
 - GIVEN "Supino Reto" carries the categories "Peito" and "Tríceps", and its
   session entry is already done
 - WHEN the user opens the in-session detail
-- THEN "Peito" and "Tríceps" are shown as labels
-- AND the "Concluído" indicator is still shown
+- THEN the "Concluído" indicator is shown above the tabs
+- AND "Peito" and "Tríceps" are shown as labels inside the "Observações" tab
 
 #### Scenario: Navigation is unaffected
 - GIVEN the user opened "Supino" from "Dia 4" on the catalog detail
@@ -514,11 +558,11 @@ that day expanded (see the `home-navigation` capability).
 - THEN stepping still follows "Dia 4"'s order
 - AND going back returns to Home with "Dia 4" still expanded
 
+
 #### Scenario: The exercises list still shows days
 - GIVEN "Rosca Direta" is in "Dia 2" and "Dia 5"
 - WHEN the user views Settings → Exercícios
 - THEN the "Rosca Direta" item still shows both day labels
-
 
 ### Requirement: Show Training Days on the Exercises List
 

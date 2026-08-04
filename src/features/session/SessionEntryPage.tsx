@@ -10,6 +10,7 @@ import {
   useSessionEntry,
 } from '../../lib/hooks'
 import { AlternativesSection } from '../exercise/AlternativesSection'
+import { CategoryChips } from '../exercise/CategoryChips'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { exerciseCategoryNames } from '../../lib/days'
@@ -128,15 +129,12 @@ export function SessionEntryPage() {
           runner — the user is one level deeper, not somewhere else. */}
       <BackBar title={shownName} to={previewing ? entryUrl : backTo} />
       <main className="screen has-action-bar">
-        <div className="hero">
-          <Media url={exercise?.mediaUrl} alt={shownName} className="hero-media" />
-        </div>
-
-        {/* No title here: the name already sits in the top bar. The session's day
-            is not repeated either — it was chosen moments ago in the runner.
-            "Concluído" stays: it is status, not navigation context — and it is
-            the ENTRY's status, so a previewed alternative doesn't claim it. */}
-        {((entry.done && !previewing) || catNames.length > 0 || previewing) && (
+        {/* Above the tabs: the ENTRY's status only — it is true on every tab,
+            like the fixed bar at the bottom. No title (the name is in the top
+            bar), no training day (chosen moments ago in the runner) and no
+            categories: those describe the exercise and now read with the note.
+            A previewed alternative doesn't claim the entry's "Concluído". */}
+        {((entry.done && !previewing) || previewing) && (
           <div className="ex-head">
             <div className="ex-chips">
               {entry.done && !previewing && (
@@ -150,15 +148,12 @@ export function SessionEntryPage() {
                   {entryExercise?.name ?? entry.exerciseName}
                 </span>
               )}
-              {catNames.map((name) => (
-                <span key={name} className="chip">
-                  <Icon name="tag" size={12} /> {name}
-                </span>
-              ))}
             </div>
           </div>
         )}
 
+        {/* First control on the screen: mid-workout, choosing between execution,
+            note and photos must never require scrolling. */}
         <Tabs<EntryTab>
           tabs={[
             { id: 'exec', label: 'Execução' },
@@ -177,9 +172,18 @@ export function SessionEntryPage() {
              photo describes the exercise in this gym, not this session. */
           <PhotoTab gymId={session.gymId} exerciseId={shownId} />
         ) : tab === 'notes' ? (
-          <NoteEditor gymId={session.gymId} exerciseId={shownId} />
+          <>
+            <CategoryChips names={catNames} />
+            <NoteEditor gymId={session.gymId} exerciseId={shownId} />
+          </>
         ) : (
           <>
+            {/* The media lives here, not above the tabs: it answers "how is this
+                executed", a question the other two tabs never ask, and it is
+                tall enough to push their content off the fold from up there. */}
+            <div className="hero">
+              <Media url={exercise?.mediaUrl} alt={shownName} className="hero-media" />
+            </div>
             {/* Per-gym target weight (same editor as the catalog); read-only once completed */}
             <WeightEditor gymId={session.gymId} exerciseId={shownId} readOnly={readOnly} />
             {/* Not while previewing: nesting alternatives-of-alternatives would

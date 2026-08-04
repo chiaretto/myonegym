@@ -2,8 +2,13 @@
    Drop-in replacement for src/features/exercise/exercise.css.
    .hero / .hero-media live in css/global.css (shared with the exercise form). */
 
+/* Status labels above the tabs ("Concluído", "Alternativa de X"). Absent on the
+   catalog detail, where the tabs meet the top bar directly. */
 .ex-head { margin-bottom: 16px; }
 .ex-chips { display: flex; gap: 7px; flex-wrap: wrap; }
+/* Category labels at the top of the "Observações" panel — same chips, but they
+   need their own gap to the note card below (the header supplied it before). */
+.ex-chips-tab { margin-bottom: 16px; }
 
 .weight-card { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
   padding: 18px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 18px; }
