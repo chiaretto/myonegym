@@ -1,42 +1,12 @@
-# data-portability Specification
+# Delta: data-portability
 
-## Purpose
-TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
-## Requirements
+**Change ID:** `store-photos-in-opfs`
+**Affects:** de onde o backup lê as fotos e para onde a importação as grava —
+o **formato do arquivo não muda**
 
-### Requirement: Generate Example Data
+---
 
-From Settings, the user MUST be able to **generate a realistic sample routine**
-to explore the app quickly. The sample is a **bundled dataset** (a predefined
-gym, muscle **categories**, **exercises** with media, several named **training
-days**, and per-gym **weights**). Generation MUST be **additive and safe** —
-inserted with **remapped ids** so existing data is never overwritten and
-references (exercise→category, day→exercises, weight→gym+exercise) stay intact.
-Day categories are **derived from the day's exercises** (the dataset's per-day
-category is ignored). The example **gym and its weights** MUST be seeded **only
-when no gym exists yet**; the categories/exercises/days are always added.
-
-#### Scenario: Generate the sample routine
-- GIVEN the app has little or no data
-- WHEN the user taps "Gerar exemplo"
-- THEN the bundled categories, exercises (with media), and named training days are created and visible
-
-#### Scenario: Fresh app also gets a gym and weights
-- GIVEN no gym exists yet
-- WHEN the user taps "Gerar exemplo"
-- THEN the example gym is created with per-gym weights for the sample exercises
-- AND the exercises' current weights are visible on Home
-
-#### Scenario: Days show derived categories
-- GIVEN the sample was generated
-- WHEN the user views Home
-- THEN each day shows the categories derived from its exercises (not a stored day category)
-
-#### Scenario: Additive and safe with existing data
-- GIVEN the user already has some categories and a gym
-- WHEN the user taps "Gerar exemplo"
-- THEN the sample content is added without overwriting existing data
-- AND references remain valid (no id collisions)
+## MODIFIED Requirements
 
 ### Requirement: Export Full Backup JSON
 
@@ -74,42 +44,10 @@ told how many photos could not be included.
 Device-local **UI preferences** — the font-size setting and the first-launch
 "already asked" flag — are NOT user data and MUST remain outside the backup.
 
-#### Scenario: Export the whole database
-- GIVEN the user has gyms, exercises, days, weights, weight history, notes, workout sessions, and photos
-- WHEN the user taps "Exportar backup"
-- THEN a single versioned JSON document is produced containing all of them
-
-#### Scenario: Weight history IS exported
-- GIVEN "Rosca Direta" in gym "A" has 5 weight-history entries and a current weight of 25 KG
-- WHEN the user exports the backup
-- THEN the JSON contains the current weight AND all 5 history entries
-
-#### Scenario: Sessions ARE exported
-- GIVEN gym "A" has a completed workout session with entries and their done states
-- WHEN the user exports the backup
-- THEN the JSON contains the session and its entries, done states preserved
-
 #### Scenario: Photos ARE exported, as base64
 - GIVEN an exercise in gym "A" has a photo attached
 - WHEN the user exports the backup
 - THEN the JSON contains the photo record with its image bytes base64-encoded and its mime type
-
-#### Scenario: Alternativas SÃO exportadas
-- GIVEN "Supino Reto" e "Supino Máquina" são alternativas entre si
-- WHEN o usuário exporta o backup
-- THEN o JSON registra a relação nos dois exercícios
-
-#### Scenario: A troca feita na sessão É exportada
-- GIVEN uma sessão concluída em que a linha começou como "Supino Reto" e o
-  usuário registrou que fez "Supino Máquina" no lugar
-- WHEN o usuário exporta o backup
-- THEN o JSON contém a entrada registrando "Supino Máquina"
-
-#### Scenario: The Backup screen states the backup is complete
-- GIVEN the user opens Configurações → Backup
-- WHEN they read the export section
-- THEN it states the backup includes everything (weights, notes, sessions, history, and photos)
-- AND it no longer claims photos are excluded
 
 #### Scenario: The document does not reveal where the image was stored
 - GIVEN one photo whose image is a file and another whose bytes are in its record
@@ -168,11 +106,12 @@ A backup produced by an **older version** that lacks some arrays (e.g. no
 backup documents MUST be accepted — any other file (malformed, or not a MyOneGym
 backup) MUST be rejected with a clear message **before** any data is touched.
 
-#### Scenario: Full round-trip restore
-- GIVEN the user exported a complete backup and then cleared local storage
-- WHEN the user imports that backup
-- THEN all gyms, categories, exercises, days, weights, weight history, notes, sessions and entries, and photos are restored identically
-- AND a restored photo displays correctly (its bytes and mime type are intact)
+#### Scenario: An imported photo lands in file storage
+- GIVEN a backup containing a photo
+- WHEN the user imports it
+- THEN the photo's bytes are decoded and written as an image file
+- AND its record references that file and carries no bytes of its own
+- AND opening the exercise shows the photo, byte-for-byte identical to the source
 
 #### Scenario: Restore replaces existing data, including photos
 - GIVEN the device currently has gym "A" with its own exercises and photos
@@ -180,62 +119,6 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - THEN local data contains only the imported content (gym "B" and its photos)
 - AND gym "A", its data, and its photos are gone
 - AND gym "A"'s image files are gone from storage as well
-
-#### Scenario: References survive the restore
-- GIVEN a backup with a completed session whose entries reference exercises, and photos attached to those exercises
-- WHEN the user imports it
-- THEN opening the restored session shows its entries
-- AND opening the restored exercises shows their photos (ids line up)
-
-#### Scenario: A backup with single-category exercises imports
-- GIVEN a backup produced before exercises had multiple categories (each exercise has a singular `categoryId`)
-- WHEN the user imports it
-- THEN each exercise is restored with that category as a one-element category list
-- AND if the backup contains a reserved "Sem categoria" category, it is dropped and its references become uncategorized
-
-#### Scenario: Older backup without the new tables imports cleanly
-- GIVEN a backup JSON produced before sessions/history/photos were exported (those keys absent)
-- WHEN the user imports it
-- THEN the import succeeds, those tables are empty, and gyms/exercises/days/weights/notes are restored
-
-#### Scenario: Round-trip preserva os tipos de variação separados
-- GIVEN um backup em que "Supino Reto" tem "Supino Máquina" e "Crucifixo" como
-  alternativas, e esses dois não são alternativas entre si
-- WHEN o usuário importa esse backup
-- THEN "Supino Reto" volta com as duas
-- AND "Supino Máquina" e "Crucifixo" voltam listando apenas "Supino Reto"
-
-#### Scenario: Backup anterior às alternativas
-- GIVEN um backup produzido antes desta mudança (exercícios sem o campo)
-- WHEN o usuário o importa
-- THEN todos os exercícios são restaurados sem alternativas
-- AND nada mais na importação é afetado
-
-#### Scenario: Referência pendente é descartada
-- GIVEN um backup em que "Supino Reto" lista como alternativa um exercício que
-  não existe no documento
-- WHEN o usuário o importa
-- THEN "Supino Reto" é restaurado sem essa referência
-- AND a importação não é rejeitada
-
-#### Scenario: Vínculo de um lado só é corrigido
-- GIVEN um backup em que "Supino Reto" lista "Supino Máquina", mas "Supino
-  Máquina" não lista ninguém
-- WHEN o usuário o importa
-- THEN os dois ficam alternativas entre si
-
-#### Scenario: Reject a non-backup file
-- GIVEN a file that is not a MyOneGym backup (malformed, or some other document)
-- WHEN the user imports it
-- THEN import is rejected with a clear error before any replacement occurs
-- AND existing local data is left unchanged
-
-#### Scenario: An imported photo lands in file storage
-- GIVEN a backup containing a photo
-- WHEN the user imports it
-- THEN the photo's bytes are decoded and written as an image file
-- AND its record references that file and carries no bytes of its own
-- AND opening the exercise shows the photo, byte-for-byte identical to the source
 
 #### Scenario: A backup taken before this change imports cleanly
 - GIVEN a backup exported by a previous version (photos as base64, no notion of files)
@@ -259,11 +142,6 @@ sample-data prompt (see app-foundation) so the user may choose to reload the
 sample data again. Device-local **presentation** preferences (e.g. the
 font-size setting) are unaffected by a reset.
 
-#### Scenario: Reset requires confirmation and warns it is irreversible
-- GIVEN the user has gyms, exercises, days, and weights registered
-- WHEN the user taps "Resetar app" in Settings → Backup
-- THEN a confirmation is shown stating that all data will be erased and the action cannot be undone
-
 #### Scenario: Confirming erases all registered data
 - GIVEN the user has gyms, exercises, days, weights, notes, sessions and photos
 - WHEN the user confirms the reset
@@ -272,17 +150,6 @@ font-size setting) are unaffected by a reset.
 
 ---
 
-#### Scenario: Declining keeps data intact
-- GIVEN the reset confirmation is shown
-- WHEN the user cancels/dismisses it
-- THEN no data is erased and the app is unchanged
+## REMOVED
 
-#### Scenario: Reset re-arms the first-launch prompt
-- GIVEN the user has already been asked about the sample data on this device (see app-foundation)
-- WHEN the user resets the app
-- THEN the first-launch sample-data prompt is shown again the next time the app loads
-
-#### Scenario: Reset does not affect presentation preferences
-- GIVEN the user has set a custom font size
-- WHEN the user resets the app
-- THEN the font-size preference is unchanged after the reset
+(None)

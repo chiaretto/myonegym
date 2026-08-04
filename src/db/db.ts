@@ -105,6 +105,22 @@ export class MyOneGymDB extends Dexie {
             e.alternativeIds = []
           })
       })
+    // v8 — a photo's image moves OUT of its record and into a file (OPFS); the
+    // record keeps the metadata plus the file's name. Additive and unindexed:
+    // nothing ever queries photos by file name, the record is always reached by
+    // `(gymId, exerciseId)` first.
+    //
+    // Deliberately a no-op upgrade. Two things could have gone here and both are
+    // wrong: moving the **binary** (OPFS I/O cannot join an IndexedDB
+    // transaction, so awaiting it would hold the version-change transaction open
+    // on a promise Dexie does not control), and backfilling `size` (a
+    // read-modify-write of every photo row, i.e. rewriting every image on disk,
+    // to compute a number nothing needs until the photo is touched anyway).
+    //
+    // Existing photos are therefore left exactly as they are — still readable —
+    // and are moved afterwards, one at a time and idempotently, by
+    // `migrateLegacyPhotos` in db/repos, which fills `size` as it goes.
+    this.version(8).stores({})
   }
 }
 
@@ -122,8 +138,9 @@ export function allTables(database: MyOneGymDB = db) {
     database.sessions,
     database.sessionEntries,
     database.exerciseNotes,
-    // Device-local, like sessions: an import/reset clears photos (they are not
-    // in the backup, so there is nothing to restore them from).
+    // Clearing the photo records is only half the job — their image files live
+    // outside the database, so an import/reset must drop those too (see
+    // `clearImages` in data/photoStore).
     database.exercisePhotos,
   ]
 }

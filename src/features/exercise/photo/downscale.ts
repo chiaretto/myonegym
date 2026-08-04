@@ -2,11 +2,18 @@ import { MAX_EDGE, fitDimensions } from './fitDimensions'
 
 /** JPEG quality for stored photos — plenty to read a seat number off a machine. */
 const QUALITY = 0.8
+/**
+ * JPEG, deliberately. WebP would be smaller, but `toBlob` does not fail when the
+ * browser cannot encode the type it was asked for — it quietly returns PNG,
+ * which is *larger* than the JPEG it would replace, and catching that costs a
+ * type check plus a second encode on every capture. Every target browser encodes
+ * JPEG, and the size target is already met by the 1280px bound.
+ */
 const TYPE = 'image/jpeg'
 
 export interface DownscaledPhoto {
-  bytes: ArrayBuffer
-  type: string
+  /** The re-encoded image, ready to be stored as a file (see data/photoStore). */
+  blob: Blob
   width: number
   height: number
 }
@@ -96,7 +103,7 @@ export async function downscalePhoto(file: File | Blob): Promise<DownscaledPhoto
     )
     if (!blob) throw new PhotoError('Não foi possível processar a imagem.')
 
-    return { bytes: await blob.arrayBuffer(), type: TYPE, width: size.width, height: size.height }
+    return { blob, width: size.width, height: size.height }
   } finally {
     release()
   }

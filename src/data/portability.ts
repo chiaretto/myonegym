@@ -15,6 +15,7 @@ import type {
 } from '../db/types'
 import { mirrorSymmetric } from './alternativesRepair'
 import { base64ToBytes, bytesToBase64 } from './base64'
+import { clearImages, readImage, removeImage, writeImage, type StoredImage } from './photoStore'
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
@@ -39,11 +40,20 @@ const EXAMPLE_DATA = exampleBackup as unknown as {
 export class PortabilityError extends Error {}
 
 /**
- * On-disk form of a photo: identical to `ExercisePhoto` except the binary
- * `bytes` (`ArrayBuffer`) is base64-encoded to a string, since JSON can't carry
- * binary. Rebuilt into an `ExercisePhoto` on import.
+ * On-disk form of a photo: the record's metadata plus its image, base64-encoded
+ * into `bytes` because JSON cannot carry binary. Rebuilt into an
+ * `ExercisePhoto` on import.
+ *
+ * `file` is dropped: a file name inside *this* device's private file system
+ * means nothing anywhere else, and the point of the document is that a photo
+ * looks the same in it whether the image was stored as a file or in the record.
+ * The shape is therefore exactly what previous versions wrote and read.
  */
-export type SerializedPhoto = Omit<ExercisePhoto, 'bytes'> & { bytes: string }
+export type SerializedPhoto = Omit<ExercisePhoto, 'bytes' | 'file' | 'size'> & {
+  bytes: string
+  /** Absent in backups written before photos knew their own size. */
+  size?: number
+}
 
 /**
  * Full backup document — a **complete** snapshot of the database, so an import can
@@ -109,9 +119,31 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessions,
     sessionEntries,
     exerciseNotes,
-    // Photo bytes → base64 so they survive JSON. Everything else verbatim.
-    exercisePhotos: exercisePhotos.map((p) => ({ ...p, bytes: bytesToBase64(p.bytes) })),
+    exercisePhotos: await serializePhotos(exercisePhotos),
   }
+}
+
+/**
+ * Photo records → their on-disk form, reading each image from wherever it lives
+ * and base64-encoding it so it survives JSON.
+ *
+ * A photo whose image cannot be read is **skipped**, not fatal: the rest of the
+ * backup is worth far more than one lost image, and the caller reports how many
+ * were left out by comparing counts (see the Backup screen).
+ */
+async function serializePhotos(photos: ExercisePhoto[]): Promise<SerializedPhoto[]> {
+  const out: SerializedPhoto[] = []
+  for (const photo of photos) {
+    let bytes: ArrayBuffer
+    try {
+      bytes = await (await readImage(photo)).arrayBuffer()
+    } catch {
+      continue
+    }
+    const { file: _file, bytes: _bytes, ...meta } = photo
+    out.push({ ...meta, size: meta.size ?? bytes.byteLength, bytes: bytesToBase64(bytes) })
+  }
+  return out
 }
 
 /* ------------------------------------------------------------------ parse */
@@ -232,13 +264,37 @@ function normalizeCategories(obj: Record<string, unknown>): void {
  * failure the store is left untouched. Every table is cleared and repopulated
  * **with the backup's original ids**, so cross-references (a session's entries, a
  * photo's exercise, a weight's gym) all line up and the device becomes an exact
- * copy of the source. Photo bytes are decoded from base64 back to binary.
+ * copy of the source. Photo bytes are decoded from base64 back to binary and
+ * written to image storage, so a restored photo is indistinguishable from one
+ * taken on this device.
+ *
+ * The images are written **before** the database is touched: a failure there
+ * must leave the device exactly as it was, and the files written so far are
+ * removed on the way out. The replaced device's own images are dropped only
+ * after the transaction commits — by name, never by clearing the directory,
+ * which at that point also holds the incoming ones.
  */
 export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db): Promise<void> {
-  const photos: ExercisePhoto[] = (doc.exercisePhotos ?? []).map((p) => ({
-    ...p,
-    bytes: base64ToBytes(p.bytes),
-  }))
+  const replaced: string[] = []
+  await d.exercisePhotos.toCollection().each((p) => {
+    if (p.file) replaced.push(p.file)
+  })
+
+  const written: StoredImage[] = []
+  const photos: ExercisePhoto[] = []
+  try {
+    for (const p of doc.exercisePhotos ?? []) {
+      const bytes = base64ToBytes(p.bytes)
+      const stored = await writeImage(new Blob([bytes], { type: p.type }))
+      written.push(stored)
+      const { bytes: _encoded, size: _size, ...meta } = p
+      photos.push({ ...meta, file: stored.file, bytes: stored.bytes, size: stored.size })
+    }
+  } catch (err) {
+    for (const image of written) await removeImage(image)
+    throw err
+  }
+
   await d.transaction('rw', allTables(d), async () => {
     await Promise.all(allTables(d).map((t) => t.clear()))
     await d.gyms.bulkAdd(doc.gyms)
@@ -252,19 +308,24 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     if (doc.exerciseNotes?.length) await d.exerciseNotes.bulkAdd(doc.exerciseNotes)
     if (photos.length) await d.exercisePhotos.bulkAdd(photos)
   })
+
+  for (const file of replaced) await removeImage({ file })
 }
 
 /* ----------------------------------------------------------------- reset */
 
 /**
- * Erase all registered data (every table from `allTables`), leaving the app
- * equivalent to a fresh install. Same clearing step `importBackupReplaceAll`
- * performs before restoring, without the subsequent insert.
+ * Erase all registered data (every table from `allTables`) **and the photos'
+ * image files**, leaving the app equivalent to a fresh install. Same clearing
+ * step `importBackupReplaceAll` performs before restoring, without the
+ * subsequent insert — and with the whole photo directory dropped, since here
+ * nothing is coming back to reference it.
  */
 export async function resetAll(d: MyOneGymDB = db): Promise<void> {
   await d.transaction('rw', allTables(d), async () => {
     await Promise.all(allTables(d).map((t) => t.clear()))
   })
+  await clearImages()
 }
 
 /* --------------------------------------------------------------- example */

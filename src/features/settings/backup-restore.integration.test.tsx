@@ -7,6 +7,7 @@ import { db } from '../../db/db'
 import {
   addPhoto,
   completeSession,
+  readPhotoBlob,
   createCategory,
   createDay,
   createExercise,
@@ -67,7 +68,7 @@ async function seedEverything() {
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   await saveWeight(gym, ex, 42.5, 'KG', db)
   await saveNote(gym, ex, 'cotovelo fixo', db)
-  await addPhoto(gym, ex, new Uint8Array([1, 2, 3, 250, 255]).buffer as ArrayBuffer, 'image/jpeg', 100, 80, db)
+  await addPhoto(gym, ex, new Blob([new Uint8Array([1, 2, 3, 250, 255])], { type: 'image/jpeg' }), 100, 80, db)
   const sid = await startSession(gym, day, db)
   await setEntryDone((await listSessionEntries(sid, db))[0].id!, true, db)
   await completeSession(sid, db)
@@ -129,7 +130,11 @@ describe('Full backup → restore through the Data screen', () => {
     expect(await db.sessions.count()).toBe(1)
     expect((await db.exerciseNotes.toArray())[0].text).toBe('cotovelo fixo')
     const [photo] = await db.exercisePhotos.toArray()
-    expect([...new Uint8Array(photo.bytes)]).toEqual([1, 2, 3, 250, 255])
+    // The image came back through base64 and into file storage, byte-for-byte.
+    expect(photo.file).toBeTruthy()
+    expect([...new Uint8Array(await (await readPhotoBlob(photo)).arrayBuffer())]).toEqual([
+      1, 2, 3, 250, 255,
+    ])
   })
 
   it('declining the restore confirmation leaves data untouched', async () => {

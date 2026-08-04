@@ -1,18 +1,12 @@
-# exercise-photos Specification
+# Delta: exercise-photos
 
-## Purpose
-Attach durable **photos** to an exercise **within a gym** — many per
-`(gymId, exerciseId)`, keyed like a target weight or a note. Photos capture what
-prose cannot: the machine's own setup in *that* gym (seat height, pin position,
-plate layout). They are distinct from `Exercise.mediaUrl`, the remote demo image
-that is identical in every gym. Photos persist across workout sessions and are
-shared between the in-session entry detail and the catalog exercise detail.
-Each image is a **file** in the origin's private file system; the database record
-holds the metadata and points at it. Photos are part of the full **backup**
-(base64-encoded into the backup JSON) and are restored by an import (see the
-`data-portability` spec).
+**Change ID:** `store-photos-in-opfs`
+**Affects:** onde o binário da foto é gravado (OPFS em vez do IndexedDB), a
+aresta máxima da imagem (1280px) e a limpeza dos arquivos
 
-## Requirements
+---
+
+## MODIFIED Requirements
 
 ### Requirement: Persist Per-Gym Exercise Photos
 
@@ -46,6 +40,12 @@ actually displayed.
   file, its mime type, dimensions and size — and **without** the image bytes
 - AND reopening "Rosca Direta" in gym "A" shows that photo
 
+#### Scenario: Listing photos does not load the images
+- GIVEN `(A, Leg Press)` has four photos
+- WHEN the app lists that pair's photos
+- THEN the records come back without their image bytes
+- AND each image is read from its file only when it is rendered
+
 #### Scenario: Photos survive across sessions
 - GIVEN `(A, Rosca Direta)` has a photo
 - WHEN the user runs a new workout session in gym "A" and opens "Rosca Direta"
@@ -60,37 +60,6 @@ actually displayed.
 - GIVEN `(A, Leg Press)` already has a photo of the seat setting
 - WHEN the user attaches a second photo of the plate layout
 - THEN both photos are kept for `(A, Leg Press)`, newest first
-
-#### Scenario: Listing photos does not load the images
-- GIVEN `(A, Leg Press)` has four photos
-- WHEN the app lists that pair's photos
-- THEN the records come back without their image bytes
-- AND each image is read from its file only when it is rendered
-
-### Requirement: Capture or Choose a Photo
-
-The user MUST be able to add a photo either by **taking one with the device
-camera** or by **choosing an existing image** from the device. Both paths MUST be
-offered explicitly, because a user setting up a machine wants the camera, while a
-user reviewing at home wants a picture they already have.
-
-Only image files MAY be accepted. A file that cannot be read as an image MUST be
-rejected with a clear message and MUST NOT create a record.
-
-#### Scenario: Take a photo
-- GIVEN the user is viewing an exercise's photos in gym "A"
-- WHEN the user chooses "Tirar foto" and captures an image
-- THEN the image is attached to `(A, exercise)` and appears immediately
-
-#### Scenario: Choose from the gallery
-- GIVEN the user is viewing an exercise's photos
-- WHEN the user chooses "Escolher da galeria" and picks an image
-- THEN the image is attached and appears immediately
-
-#### Scenario: A non-image is rejected
-- GIVEN the user picks a file that is not a readable image
-- WHEN the app tries to attach it
-- THEN a clear message is shown and no photo record is created
 
 ### Requirement: Downscale Before Storing
 
@@ -125,28 +94,35 @@ The record MUST store the image's **real** mime type.
 - WHEN it is attached
 - THEN the stored image renders upright, not sideways
 
-### Requirement: View and Delete Photos
+### Requirement: Report Storage Failures
 
-Photos MUST be presented as **thumbnails**, newest first, each openable
-**full-size**. The user MUST be able to **delete** any photo, and deletion MUST be
-**confirmed** before it takes effect. Deleting a photo MUST NOT affect the
-exercise, its target weight, its note, or any session.
+The app MUST clearly report a photo it could not store — most likely because the
+device's **storage quota** is exhausted. A photo that appears to attach but
+was never persisted MUST NOT be possible, and a failure MUST NOT leave a
+half-written file or a record pointing at nothing.
 
-#### Scenario: View a photo full-size
-- GIVEN `(A, Rosca Direta)` has photos
-- WHEN the user taps a thumbnail
-- THEN the photo is shown full-size
+Because the file and its record are written in **two steps** that no single
+transaction covers, the order MUST be: write the file first, then create the
+record. If the record cannot be created, the file MUST be removed.
 
-#### Scenario: Delete a photo
-- GIVEN `(A, Rosca Direta)` has two photos
-- WHEN the user deletes one and confirms
-- THEN only the other remains
-- AND the exercise, its target weight and its note are unaffected
+#### Scenario: Quota exceeded
+- GIVEN the device's storage quota for the app is exhausted
+- WHEN the user attaches a photo
+- THEN a clear message explains it could not be saved
+- AND no partial/broken record is left behind
 
-#### Scenario: Deletion requires confirmation
-- GIVEN the user taps delete on a photo
-- WHEN the confirmation is shown and the user declines
-- THEN the photo is kept
+#### Scenario: The record fails after the file was written
+- GIVEN the image file was written successfully
+- WHEN persisting its record fails
+- THEN a clear message is shown
+- AND the orphaned file is removed
+
+#### Scenario: A photo whose file is missing
+- GIVEN a photo record whose image file no longer exists (the user cleared the
+  site's storage)
+- WHEN the user opens that exercise's photos
+- THEN the app shows that this image could not be read
+- AND the record is NOT silently deleted, and the other photos still display
 
 ### Requirement: Photos Are Removed With Their Owner
 
@@ -179,35 +155,7 @@ left pointing at a deleted file is a visibly broken photo.
 
 ---
 
-### Requirement: Report Storage Failures
-
-The app MUST clearly report a photo it could not store — most likely because the
-device's **storage quota** is exhausted. A photo that appears to attach but
-was never persisted MUST NOT be possible, and a failure MUST NOT leave a
-half-written file or a record pointing at nothing.
-
-Because the file and its record are written in **two steps** that no single
-transaction covers, the order MUST be: write the file first, then create the
-record. If the record cannot be created, the file MUST be removed.
-
-#### Scenario: Quota exceeded
-- GIVEN the device's storage quota for the app is exhausted
-- WHEN the user attaches a photo
-- THEN a clear message explains it could not be saved
-- AND no partial/broken record is left behind
-
-#### Scenario: The record fails after the file was written
-- GIVEN the image file was written successfully
-- WHEN persisting its record fails
-- THEN a clear message is shown
-- AND the orphaned file is removed
-
-#### Scenario: A photo whose file is missing
-- GIVEN a photo record whose image file no longer exists (the user cleared the
-  site's storage)
-- WHEN the user opens that exercise's photos
-- THEN the app shows that this image could not be read
-- AND the record is NOT silently deleted, and the other photos still display
+## ADDED Requirements
 
 ### Requirement: Existing Photos Migrate to File Storage
 
@@ -298,3 +246,7 @@ Failures*) rather than silently retried into the database.
 - AND the app does NOT fall back to storing the bytes in the record
 
 ---
+
+## REMOVED
+
+(None)

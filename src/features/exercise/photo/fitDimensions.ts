@@ -1,6 +1,10 @@
 /** Longest edge a stored photo may have. Enough to read a machine's settings;
- *  small enough that a few dozen photos don't threaten the storage quota. */
-export const MAX_EDGE = 1600
+ *  small enough that a few dozen photos don't threaten the storage quota.
+ *
+ *  CHANGED 1600 → 1280: at JPEG q0.8 that is the difference between roughly
+ *  600 KB and the 200–500 KB a phone photo should cost, and a seat number is
+ *  just as legible at either size. */
+export const MAX_EDGE = 1280
 
 /**
  * Cap the long edge at `max`, preserving the aspect ratio. Never upscales — a
