@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
@@ -71,10 +72,17 @@ describe('Catalog exercise detail header', () => {
     expect(screen.queryByText(/\d+ dias/)).not.toBeInTheDocument() // "2 dias" either
   })
 
-  it('keeps the category labels', async () => {
+  it('moves the category labels into "Observações"', async () => {
     const { d1, crucifixo } = await seed()
+    const user = userEvent.setup()
     renderAt(`/exercise/${crucifixo}?day=${d1}`)
 
+    // Not in the header any more: it is a description of the exercise, and the
+    // space it cost was pushing the tabs themselves down the screen.
+    await screen.findByRole('tab', { name: 'Detalhe' })
+    expect(screen.queryByText('Peito')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('tab', { name: 'Observações' }))
     expect(await screen.findByText('Peito')).toBeInTheDocument()
   })
 })
