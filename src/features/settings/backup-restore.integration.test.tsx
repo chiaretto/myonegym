@@ -61,12 +61,12 @@ afterEach(async () => {
 })
 
 async function seedEverything() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
   const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
-  await saveWeight(gym, ex, 42.5, 'KG', db)
+  await saveWeight(gym, ex, 42.5, 'KG', 'global', db)
   await saveNote(gym, ex, 'cotovelo fixo', db)
   await addPhoto(gym, ex, new Blob([new Uint8Array([1, 2, 3, 250, 255])], { type: 'image/jpeg' }), 100, 80, db)
   const sid = await startSession(gym, day, db)
@@ -147,7 +147,7 @@ describe('Full backup → restore through the Data screen', () => {
     await waitFor(() => expect(screen.getByText('Backup exportado.')).toBeInTheDocument())
     const json = await dl.text()
 
-    await createGym('Academia B', undefined, db) // a change we must NOT lose on decline
+    await createGym('Academia B', db) // a change we must NOT lose on decline
     const file = new File([json], 'b.json', { type: 'application/json' })
     await user.upload(document.querySelector('input[type="file"]') as HTMLInputElement, file)
     await user.click(await screen.findByRole('button', { name: 'Cancelar' }))

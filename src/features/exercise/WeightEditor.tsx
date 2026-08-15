@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/db'
-import { deleteHistoryEntry, getWeight, saveWeight } from '../../db/repos'
+import { deleteHistoryEntry, resolveWeight, saveWeight } from '../../db/repos'
 import { UNITS, type Unit } from '../../db/types'
 import { fmtNumber, fmtWeight, historyDelta, relativeDate } from '../../lib/format'
 import { useGyms, useHistory } from '../../lib/hooks'
@@ -17,11 +17,18 @@ function stepValue(current: string, delta: number): string {
 }
 
 /**
- * The per-gym **target weight** editor (Peso alvo card + weight-history timeline).
+ * The **target weight** editor (Peso alvo card + weight-history timeline).
  * One editor shared by the catalog exercise detail and the in-session exercise
- * detail — both edit the same `(gymId, exerciseId)` target and its history.
- * `readOnly` (e.g. a completed session) shows the current target for reference,
- * with no edit or history delete.
+ * detail — both show the weight that applies to this gym and its history.
+ *
+ * A weight is **global** by default: saving changes it for every gym. The
+ * "Só nessa academia" checkbox turns the save into an **exception** for the
+ * active gym, and clearing it hands the pair back to the global weight. The
+ * gym's name is shown only while an exception is in effect — a label on every
+ * weight would say nothing, and here it means "this one is different".
+ *
+ * `readOnly` (e.g. a completed session) shows the weight in effect for
+ * reference, with no edit, no history delete and no checkbox.
  */
 export function WeightEditor({
   gymId,
@@ -34,11 +41,15 @@ export function WeightEditor({
 }) {
   const gyms = useGyms()
   const gym = gyms?.find((g) => g.id === gymId)
-  const current = useLiveQuery(
+  const resolved = useLiveQuery(
     async () =>
-      gymId == null || exerciseId == null ? undefined : getWeight(gymId, exerciseId, db),
+      gymId == null || exerciseId == null ? undefined : resolveWeight(gymId, exerciseId, db),
     [gymId, exerciseId],
   )
+  const current = resolved?.weight
+  // Until the lookup answers, assume global — that is the shape of every weight
+  // that has no exception, and it keeps the card from flashing a gym label.
+  const isException = resolved?.scope === 'gym'
   const history = useHistory(gymId, exerciseId)
   const toast = useToast()
   const confirm = useConfirm()
@@ -46,8 +57,11 @@ export function WeightEditor({
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
+  const [onlyHere, setOnlyHere] = useState(false)
 
-  // Seed the editor from the current weight whenever it (or gym) changes.
+  // Seed the editor from the weight in effect whenever it (or gym) changes.
+  // The checkbox starts on the CURRENT scope: unchecked on a global weight,
+  // checked wherever this gym already has an exception.
   useEffect(() => {
     if (current) {
       setValue(String(current.value))
@@ -56,8 +70,9 @@ export function WeightEditor({
       setValue('')
       setUnit('KG')
     }
+    setOnlyHere(isException)
     setEditing(false)
-  }, [current, gymId])
+  }, [current, isException, gymId])
 
   if (gymId == null) {
     return (
@@ -79,9 +94,15 @@ export function WeightEditor({
       return
     }
     if (exerciseId == null) return
-    await saveWeight(gymId, exerciseId, num, unit, db)
+    await saveWeight(gymId, exerciseId, num, unit, onlyHere ? 'gym' : 'global', db)
     setEditing(false)
-    toast('Peso salvo.')
+    toast(
+      onlyHere
+        ? 'Peso salvo só nesta academia.'
+        : isException
+          ? 'Peso salvo para todas as academias.'
+          : 'Peso salvo.',
+    )
   }
 
   const onDeleteEntry = async (entryId: number, isCurrent: boolean) => {
@@ -103,7 +124,9 @@ export function WeightEditor({
       <section className="weight-card">
         <div className="wc-head">
           <span className="wc-label">Peso alvo</span>
-          {gym && (
+          {/* Only an exception is labelled: a global weight is just the
+              exercise's weight, and naming a gym on it would be noise. */}
+          {gym && isException && (
             <span className="chip accent">
               <Icon name="building" size={12} /> {gym.name}
             </span>
@@ -162,6 +185,21 @@ export function WeightEditor({
                 </button>
               ))}
             </div>
+            <label className="wc-scope">
+              <input
+                type="checkbox"
+                checked={onlyHere}
+                onChange={(e) => setOnlyHere(e.target.checked)}
+              />
+              <span className="wc-scope-text">
+                <strong>Só nessa academia</strong>
+                <small>
+                  {onlyHere
+                    ? `Vale apenas ${gym ? `na ${gym.name}` : 'aqui'}; as outras seguem o peso geral.`
+                    : 'Salva o peso do exercício para todas as academias.'}
+                </small>
+              </span>
+            </label>
             <div className="sheet-actions">
               <button className="btn subtle" onClick={() => setEditing(false)}>
                 Cancelar
@@ -179,7 +217,7 @@ export function WeightEditor({
           <div className="section-head">
             <h3>
               <Icon name="history" size={16} /> Histórico
-              <span className="count"> · nesta academia</span>
+              {isException && <span className="count"> · nesta academia</span>}
             </h3>
           </div>
           <Sparkline history={history} />

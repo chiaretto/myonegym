@@ -61,7 +61,7 @@ afterEach(async () => {
 })
 
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
   const ex = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
@@ -119,7 +119,7 @@ describe('Exercise photos', () => {
 
   it('keeps photos isolated per gym', async () => {
     const { ex } = await seed()
-    const other = await createGym('Academia B', undefined, db)
+    const other = await createGym('Academia B', db)
     const user = userEvent.setup()
     renderAt(`/exercise/${ex}`)
 

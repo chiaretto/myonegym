@@ -35,7 +35,7 @@ function Back() {
 }
 
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
@@ -43,7 +43,7 @@ async function seed() {
   const rosca = await createExercise({ name: 'Rosca Direta', categoryIds: [cat] }, db)
   const d1 = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, rosca] }, db)
   const d2 = await createDay({ name: 'Dia 2', exerciseIds: [rosca, supino] }, db)
-  await saveWeight(gym, supino, 40, 'KG', db)
+  await saveWeight(gym, supino, 40, 'KG', 'global', db)
   return { d1, d2, supino, crucifixo, rosca }
 }
 

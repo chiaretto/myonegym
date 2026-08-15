@@ -3,6 +3,29 @@ export const UNITS: Unit[] = ['KG', 'LB', '#']
 
 export const UNCATEGORIZED = 'Sem categoria'
 
+/**
+ * The gym id that means "every gym" — the key of an exercise's **global**
+ * target weight and of its global weight history.
+ *
+ * `0` is safe as a sentinel because gym ids come from Dexie's `++id`, which
+ * starts at 1: no real gym can ever collide with it. Reserving an id instead of
+ * making `Weight.gymId` optional is what keeps `&[gymId+exerciseId]` a working
+ * unique index — IndexedDB compound keys cannot hold `undefined` — so a global
+ * weight is read, written and cascaded by exactly the same queries as a
+ * per-gym one.
+ *
+ * It is a **storage** detail: no screen ever receives it as a gym. Reads go
+ * through `resolveWeight`/`weightsForGym`, which hand back the value already
+ * resolved plus the scope it came from (see `WeightScope`).
+ */
+export const GLOBAL_GYM_ID = 0
+
+/**
+ * Where the weight that applies to a `(gym, exercise)` pair actually lives:
+ * `'gym'` when that gym has an exception of its own, `'global'` otherwise.
+ */
+export type WeightScope = 'global' | 'gym'
+
 export interface Gym {
   id?: number
   name: string
@@ -56,7 +79,15 @@ export interface Day {
   order?: number
 }
 
-/** Current target weight for an exercise within a gym — one per (gymId, exerciseId). */
+/**
+ * Current target weight for an exercise — one row per `(gymId, exerciseId)`.
+ *
+ * The weight of an exercise is a property of the person lifting it, not of the
+ * building, so the normal row is the **global** one: `gymId === GLOBAL_GYM_ID`,
+ * valid in every gym. A row keyed by a real gym id is an **exception** — that
+ * gym's machine is calibrated differently, or only it has that dumbbell — and
+ * it wins over the global row in that gym alone.
+ */
 export interface Weight {
   id?: number
   gymId: number
@@ -121,7 +152,15 @@ export interface ExercisePhoto {
 
 export type HistoryKind = 'first' | 'value' | 'unit'
 
-/** Append-only change log for weights. Device-local; never exported. */
+/**
+ * Append-only change log for weights, keyed like the weight it records: the
+ * global timeline under `GLOBAL_GYM_ID`, a gym's own timeline under its id.
+ *
+ * Entries are written to whichever scope the save landed in, and are **never**
+ * moved between scopes. Dropping a gym's exception therefore leaves that gym's
+ * entries in place — invisible while the pair resolves globally, and back in
+ * view if the exception is recreated. Device-local.
+ */
 export interface WeightHistory {
   id?: number
   gymId: number

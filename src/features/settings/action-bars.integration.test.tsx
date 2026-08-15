@@ -80,7 +80,7 @@ describe('Floating action bars on the create-screens', () => {
 
 describe('Floating action bar on the session runner', () => {
   async function seedRunner() {
-    const gym = await createGym('Academia A', undefined, db)
+    const gym = await createGym('Academia A', db)
     useActiveGym.setState({ activeGymId: gym })
     const ex = await createExercise({ name: 'Supino' }, db)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)

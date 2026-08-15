@@ -118,7 +118,6 @@ function GymForm({ gym }: { gym: Gym | null }) {
   const toast = useToast()
   const nav = useNavigate()
   const [name, setName] = useState(gym?.name ?? '')
-  const [copyFrom, setCopyFrom] = useState<number | ''>('')
   const [err, setErr] = useState('')
 
   const back = () => nav('/settings/gyms')
@@ -130,7 +129,8 @@ function GymForm({ gym }: { gym: Gym | null }) {
         toast('Academia atualizada.')
       } else {
         const wasFirst = (gyms?.length ?? 0) === 0
-        const id = await createGym(name, copyFrom === '' ? undefined : Number(copyFrom), db)
+        // Nothing to copy: weights are global, so the new gym already has them.
+        const id = await createGym(name, db)
         // The very first gym becomes the active one (same effect the list had).
         if (wasFirst && id != null) setActiveGym(id)
         await reconcile()
@@ -157,24 +157,6 @@ function GymForm({ gym }: { gym: Gym | null }) {
           />
           {err && <span className="err">{err}</span>}
         </div>
-
-        {!gym && (gyms?.length ?? 0) > 0 && (
-          <div className="field">
-            <label htmlFor="gym-copy">Copiar pesos de (opcional)</label>
-            <select
-              id="gym-copy"
-              value={copyFrom}
-              onChange={(e) => setCopyFrom(e.target.value === '' ? '' : Number(e.target.value))}
-            >
-              <option value="">Não copiar</option>
-              {gyms?.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
       </main>
 
       <ActionBar>

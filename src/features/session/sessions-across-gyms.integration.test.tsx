@@ -50,8 +50,8 @@ afterEach(async () => {
 
 /** Two gyms, one shared day (days are global), gym A active. */
 async function seedTwoGyms() {
-  const a = await createGym('Smart Fit', undefined, db)
-  const b = await createGym('Bio Ritmo', undefined, db)
+  const a = await createGym('Smart Fit', db)
+  const b = await createGym('Bio Ritmo', db)
   const ex = await createExercise({ name: 'Supino' }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   useActiveGym.setState({ activeGymId: a })

@@ -21,45 +21,86 @@ the active gym.
 
 ### Requirement: Select the Active Gym
 
-The user MUST be able to choose which gym is active. Weights shown across the app
-reflect the active gym.
+O usuário MUST poder escolher a academia ativa. A academia ativa determina onde
+o treino acontece, quais **exceções** de peso se aplicam e quais notas e fotos
+são exibidas — mas **não** altera o peso de um exercício que não tenha exceção.
 
-#### Scenario: Switch active gym
-- GIVEN two gyms "A" and "B" exist and "A" is active
-- WHEN the user selects "B"
-- THEN "B" becomes the active gym
-- AND exercise detail screens now show weights recorded for "B"
+#### Scenario: Switch active gym with no exceptions
+- GIVEN as academias "A" e "B" existem, "A" é a ativa, e nenhum exercício tem exceção
+- WHEN o usuário seleciona "B"
+- THEN "B" passa a ser a academia ativa
+- AND os pesos exibidos continuam os mesmos (são globais)
 
-### Requirement: Copy Weights When Creating a Gym
+#### Scenario: Switch active gym with an exception
+- GIVEN "Supino" tem peso global 40 KG e exceção de 30 KG na academia "B"
+- WHEN o usuário troca a academia ativa para "B"
+- THEN "Supino" passa a mostrar 30 KG, com o rótulo da academia "B"
 
-When creating a new gym, the user MUST be able to optionally select an existing
-gym whose weight records are duplicated into the new gym.
+### Requirement: A New Gym Inherits the Global Weights
 
-#### Scenario: Create gym copying weights from another
-- GIVEN gym "A" has weights for exercises "Rosca Direta" (20 KG) and "Supino" (40 KG)
-- WHEN the user creates gym "B" and chooses to copy weights from "A"
-- THEN gym "B" has independent weight records: "Rosca Direta" 20 KG and "Supino" 40 KG
-- AND later editing "B"'s weights does NOT change "A"'s weights
+Uma academia recém-criada MUST valer-se imediatamente dos **pesos globais** de
+todos os exercícios, sem nenhuma cópia de registros. Ela começa **sem exceção
+alguma**; exceções só passam a existir quando o usuário marca "Só nessa
+academia" ao salvar um peso.
 
-#### Scenario: Create gym without copying
-- GIVEN gym "A" has weights
-- WHEN the user creates gym "B" without selecting a source gym
-- THEN gym "B" starts with no weight records
+#### Scenario: New gym shows the existing weights right away
+- GIVEN "Rosca Direta" tem peso global 20 KG e "Supino" 40 KG
+- WHEN o usuário cria a academia "C" e a torna ativa
+- THEN "Rosca Direta" mostra 20 KG e "Supino" 40 KG em "C"
+- AND nenhum registro de peso foi criado para "C"
+
+#### Scenario: Editing from a new gym changes the global weight
+- GIVEN a academia "C" acabou de ser criada e não tem exceções
+- WHEN o usuário salva "Supino" com 45 KG e a flag desmarcada
+- THEN o peso global de "Supino" passa a 45 KG, valendo também em "A" e "B"
 
 ### Requirement: Edit and Delete Gyms
 
-The user MUST be able to rename and delete gyms. Deleting a gym removes its
-weight records and its **exercise notes**.
+O usuário MUST poder renomear e excluir academias. Excluir uma academia remove
+suas **exceções** de peso (e o histórico delas), suas **notas** e suas **fotos**
+de exercício — nunca os pesos globais.
 
-#### Scenario: Delete a gym removes its weights
-- GIVEN gym "B" exists with weight records
-- WHEN the user deletes gym "B"
-- THEN gym "B" and all of its weight records are removed
-- AND if "B" was active, another gym becomes active (or none if it was the last)
+#### Scenario: Delete a gym removes its exceptions
+- GIVEN a academia "B" existe com exceções de peso
+- WHEN o usuário exclui a academia "B"
+- THEN "B" e todas as suas exceções são removidas
+- AND se "B" era a ativa, outra academia passa a ser ativa (ou nenhuma, se era a última)
 
 #### Scenario: Delete a gym removes its notes
-- GIVEN gym "B" has exercise notes for several exercises
-- WHEN the user deletes gym "B"
-- THEN all of gym "B"'s exercise notes are removed
-- AND other gyms' notes for the same exercises are unaffected
+- GIVEN a academia "B" tem notas de exercício
+- WHEN o usuário exclui a academia "B"
+- THEN todas as notas de "B" são removidas
+- AND as notas de outras academias para os mesmos exercícios não são afetadas
 
+### Requirement: Deleting a Gym Preserves the Global Weights
+
+Excluir uma academia MUST remover apenas o que é dela — suas **exceções** de
+peso e o histórico dessas exceções, além de notas e fotos — e MUST NOT tocar nos
+pesos e no histórico **globais**.
+
+#### Scenario: Deleting a gym drops only its exceptions
+- GIVEN a academia "B" tem exceções para 3 exercícios e o app tem 12 pesos globais
+- WHEN o usuário exclui a academia "B"
+- THEN as 3 exceções e seus históricos são removidos
+- AND os 12 pesos globais e seus históricos permanecem intactos
+
+#### Scenario: Deleting the last gym keeps the global weights
+- GIVEN existe uma única academia, com pesos globais registrados
+- WHEN o usuário a exclui
+- THEN os pesos globais permanecem
+- AND ao criar uma nova academia eles voltam a ser exibidos
+
+## Deprecated
+
+### Requirement: Copy Weights When Creating a Gym (Removed: 2026-08-15)
+
+O formulário de criação de academia deixou de oferecer "Copiar pesos de
+(opcional)", e `createGym` deixou de aceitar uma academia de origem.
+
+**Motivo:** com o peso global, uma academia nova já nasce com todos os pesos do
+usuário. Copiar registros passaria a criar **exceções** para cada exercício —
+exatamente o oposto do que a opção pretendia — e deixaria a nova academia
+divergindo em silêncio do peso global a cada salvamento.
+
+Removido pela mudança `global-weights-with-gym-exception`.
+</content>

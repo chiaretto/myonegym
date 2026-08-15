@@ -99,6 +99,16 @@ describe('Create/edit forms are pages', () => {
     expect(useActiveGym.getState().activeGymId).toBe(gym.id)
   })
 
+  it('the gym form asks for a name and nothing else — weights are global now', async () => {
+    await createGym('Academia A', db)
+    renderAt('/settings/gyms/new')
+
+    await heading('Nova academia')
+    // There is nothing to copy: a new gym already has every weight the user has.
+    expect(screen.queryByLabelText(/Copiar pesos/)).toBeNull()
+    expect(screen.getAllByRole('textbox')).toHaveLength(1)
+  })
+
   it('Cancelar returns to the list without saving', async () => {
     const user = userEvent.setup()
     renderAt('/settings/categories/new')
@@ -112,7 +122,7 @@ describe('Create/edit forms are pages', () => {
   })
 
   it('is deep-linkable: reloading an edit URL shows the form with data', async () => {
-    const g = await createGym('Academia A', undefined, db)
+    const g = await createGym('Academia A', db)
     renderAt(`/settings/gyms/${g}/edit`)
 
     await heading('Editar academia')

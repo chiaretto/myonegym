@@ -6,26 +6,36 @@ TBD - created by archiving change bootstrap-myonegym. Update Purpose after archi
 
 ### Requirement: Generate Example Data
 
-From Settings, the user MUST be able to **generate a realistic sample routine**
-to explore the app quickly. The sample is a **bundled dataset** (a predefined
-gym, muscle **categories**, **exercises** with media, several named **training
-days**, and per-gym **weights**). Generation MUST be **additive and safe** —
-inserted with **remapped ids** so existing data is never overwritten and
-references (exercise→category, day→exercises, weight→gym+exercise) stay intact.
-Day categories are **derived from the day's exercises** (the dataset's per-day
-category is ignored). The example **gym and its weights** MUST be seeded **only
-when no gym exists yet**; the categories/exercises/days are always added.
+A rotina de exemplo MUST semear os pesos da amostra como **pesos globais** dos
+exercícios, e não como pesos da academia de exemplo. Todo o resto do requisito
+permanece: a partir de Configurações, o usuário MUST poder **gerar uma rotina de
+amostra realista** para explorar o app rapidamente. A amostra é um **conjunto
+embutido** (uma academia predefinida, **categorias** musculares, **exercícios**
+com mídia, vários **dias de treino** nomeados e os **pesos**). A geração MUST ser
+**aditiva e segura** — inserida com **ids remapeados**, de modo que dados
+existentes nunca sejam sobrescritos e as referências (exercício→categoria,
+dia→exercícios, peso→exercício) permaneçam íntegras. As categorias de cada dia
+são **derivadas dos exercícios do dia** (a categoria por dia do conjunto é
+ignorada). A **academia** de exemplo MUST ser criada **apenas quando nenhuma
+academia existe**; as categorias/exercícios/dias são sempre adicionados, e os
+pesos globais, por não pertencerem a academia alguma, são semeados junto dela.
 
 #### Scenario: Generate the sample routine
 - GIVEN the app has little or no data
 - WHEN the user taps "Gerar exemplo"
 - THEN the bundled categories, exercises (with media), and named training days are created and visible
 
-#### Scenario: Fresh app also gets a gym and weights
-- GIVEN no gym exists yet
-- WHEN the user taps "Gerar exemplo"
-- THEN the example gym is created with per-gym weights for the sample exercises
-- AND the exercises' current weights are visible on Home
+#### Scenario: Fresh app also gets a gym and global weights
+- GIVEN nenhuma academia existe ainda
+- WHEN o usuário toca em "Gerar exemplo"
+- THEN a academia de exemplo é criada
+- AND os pesos da amostra são registrados como **globais**, com um registro de histórico cada
+- AND eles aparecem na Home, sem rótulo de academia
+
+#### Scenario: Sample weights apply to a second gym too
+- GIVEN a amostra foi gerada
+- WHEN o usuário cria uma segunda academia e a torna ativa
+- THEN os exercícios da amostra mostram os mesmos pesos, sem nenhuma cópia de registros
 
 #### Scenario: Days show derived categories
 - GIVEN the sample was generated
@@ -47,8 +57,8 @@ data:
 
 - gyms, categories, exercises (com suas **categorias** e suas **alternativas**),
   training days;
-- the current per-gym **weight** for each exercise, and the full per-gym
-  **weight-change history**;
+- o **peso global** de cada exercício e as **exceções por academia**, mais o
+  **histórico de alterações** de cada um desses escopos;
 - the per-gym exercise **notes**;
 - every **workout session** and its **entries** (with their done states and the
   exercise each one ended up recording, swap included);
@@ -122,6 +132,32 @@ Device-local **UI preferences** — the font-size setting and the first-launch
 - WHEN the user exports the backup
 - THEN the backup is produced with all the other data and photos
 - AND the user is told that one photo could not be included
+
+#### Scenario: Export includes both scopes
+- GIVEN o app tem pesos globais e exceções
+- WHEN o usuário exporta o backup
+- THEN o arquivo contém as linhas de peso e de histórico dos dois escopos
+- AND a versão do documento indica que ele já usa o modelo global
+
+### Requirement: Backups Carry Global Weights
+
+O documento de backup MUST carregar as linhas de peso e de histórico
+**globais** junto das linhas por academia, na mesma lista — elas se distinguem
+apenas pelo id de academia reservado. A validação de importação MUST aceitar um
+peso (ou registro de histórico) cujo id de academia **não corresponde a
+nenhuma academia do documento**: essa é exatamente a forma de uma linha global,
+e rejeitá-la inutilizaria todo backup gerado a partir desta versão.
+
+#### Scenario: Round-trip preserves scopes
+- GIVEN o app tem 10 pesos globais e 3 exceções em duas academias
+- WHEN o usuário exporta o backup e o restaura em um dispositivo limpo
+- THEN os 10 pesos continuam globais e as 3 exceções continuam ligadas às mesmas academias
+- AND os históricos global e de cada exceção são restaurados separados, como estavam
+
+#### Scenario: A global row is not treated as a dangling reference
+- GIVEN um backup contendo pesos globais
+- WHEN o documento é validado na importação
+- THEN nenhuma linha global é rejeitada por não apontar para uma academia existente
 
 ### Requirement: Import JSON (Replace All)
 
@@ -242,6 +278,29 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 - WHEN the user imports it
 - THEN every photo is restored and displays
 - AND the restored photos live in file storage like any other
+
+### Requirement: Restoring a Pre-Global Backup Promotes Weights
+
+Restaurar um backup **anterior** a esta mudança — em que todo peso é de uma
+academia e nenhuma linha global existe — MUST aplicar, ao final da restauração,
+a mesma promoção da migração do banco: para cada exercício, o peso e o
+histórico da academia mais antiga que o tenha viram **globais**, e os demais
+permanecem como exceções.
+
+Assim um arquivo antigo não reintroduz o modelo só-por-academia num app já
+migrado.
+
+#### Scenario: Old backup restores into the new model
+- GIVEN um backup gerado antes desta mudança, com pesos em duas academias
+- WHEN o usuário o restaura
+- THEN cada exercício fica com um peso global (o da academia mais antiga que o tinha)
+- AND os pesos da outra academia permanecem como exceções
+- AND nenhum registro é perdido
+
+#### Scenario: A current backup is restored as-is
+- GIVEN um backup gerado por esta versão, que já contém linhas globais
+- WHEN o usuário o restaura
+- THEN nenhuma promoção adicional acontece — os escopos são restaurados exatamente como no arquivo
 
 ### Requirement: Reset App (Erase All Data)
 

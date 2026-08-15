@@ -1,7 +1,8 @@
 import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from './db'
-import { migrateLegacyPhotos, readPhotoBlob } from './repos'
+import { migrateLegacyPhotos, readPhotoBlob, resolveWeight } from './repos'
+import { GLOBAL_GYM_ID } from './types'
 
 /**
  * v6 migration: an exercise's single `categoryId` becomes a `categoryIds` list,
@@ -222,6 +223,167 @@ describe('v8 migration: photos survive the upgrade untouched', () => {
       expect(moved?.bytes).toBeUndefined()
       expect(moved?.size).toBe(13)
       expect(await (await readPhotoBlob(moved!)).text()).toBe('imagem antiga')
+    } finally {
+      db.close()
+    }
+  })
+})
+
+/**
+ * v9: a weight becomes GLOBAL by default. Everything written before it is
+ * per-gym, so the upgrade has to pick which gym speaks for each exercise — the
+ * oldest one that has a weight for it — and move that gym's history along with
+ * the weight. No row may be deleted or merged.
+ */
+describe('v9 migration: per-gym weights are promoted to global', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig9-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  /** Open a Dexie declaring only up to v8 — every weight keyed to a real gym. */
+  async function openV8() {
+    const db = new Dexie(name)
+    db.version(1).stores({
+      gyms: '++id, name, createdAt',
+      categories: '++id, &name',
+      exercises: '++id, name, categoryId',
+      days: '++id, name',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
+    })
+    db.version(2).stores({
+      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
+    })
+    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
+    db.version(4).stores({})
+    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
+    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
+    db.version(7).stores({})
+    db.version(8).stores({})
+    await db.open()
+    return db
+  }
+
+  /** Seed one weight + one history entry for a (gym, exercise) pair. */
+  async function seedWeight(
+    db: Dexie,
+    gymId: number,
+    exerciseId: number,
+    value: number,
+    unit = 'KG',
+  ) {
+    await db.table('weights').add({ gymId, exerciseId, value, unit })
+    await db
+      .table('weightHistory')
+      .add({ gymId, exerciseId, value, unit, changedAt: value, kind: 'first' })
+  }
+
+  it('a single gym comes out fully global, with no exceptions', async () => {
+    const v8 = await openV8()
+    const a = (await v8.table('gyms').add({ name: 'A', createdAt: 1_000 })) as number
+    const rosca = (await v8.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
+    const supino = (await v8.table('exercises').add({ name: 'Supino', categoryIds: [] })) as number
+    await seedWeight(v8, a, rosca, 20)
+    await seedWeight(v8, a, supino, 40)
+    v8.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      expect(await db.weights.where('gymId').equals(a).count()).toBe(0)
+      expect(await db.weightHistory.where('gymId').equals(a).count()).toBe(0)
+      expect(await resolveWeight(a, rosca, db)).toMatchObject({
+        scope: 'global',
+        weight: { value: 20 },
+      })
+      expect(await resolveWeight(a, supino, db)).toMatchObject({
+        scope: 'global',
+        weight: { value: 40 },
+      })
+    } finally {
+      db.close()
+    }
+  })
+
+  it('promotes the oldest gym that has the exercise, per exercise', async () => {
+    const v8 = await openV8()
+    const a = (await v8.table('gyms').add({ name: 'A', createdAt: 1_000 })) as number
+    const b = (await v8.table('gyms').add({ name: 'B', createdAt: 2_000 })) as number
+    const rosca = (await v8.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
+    const supino = (await v8.table('exercises').add({ name: 'Supino', categoryIds: [] })) as number
+    await seedWeight(v8, a, rosca, 20)
+    await seedWeight(v8, b, rosca, 15, 'LB')
+    // Only the NEWER gym has this one — it still has to end up global.
+    await seedWeight(v8, b, supino, 40)
+    v8.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      // Rosca: A wins the global slot, B keeps its row as an exception.
+      expect(await resolveWeight(a, rosca, db)).toMatchObject({
+        scope: 'global',
+        weight: { value: 20, unit: 'KG' },
+      })
+      expect(await resolveWeight(b, rosca, db)).toMatchObject({
+        scope: 'gym',
+        weight: { value: 15, unit: 'LB' },
+      })
+      // Supino: nobody older had it, so B's row is the global one.
+      expect(await resolveWeight(b, supino, db)).toMatchObject({
+        scope: 'global',
+        weight: { value: 40 },
+      })
+      expect(await resolveWeight(a, supino, db)).toMatchObject({ scope: 'global' })
+    } finally {
+      db.close()
+    }
+  })
+
+  it('history travels with the promoted weight, and nothing is lost', async () => {
+    const v8 = await openV8()
+    const a = (await v8.table('gyms').add({ name: 'A', createdAt: 1_000 })) as number
+    const b = (await v8.table('gyms').add({ name: 'B', createdAt: 2_000 })) as number
+    const rosca = (await v8.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
+    await seedWeight(v8, a, rosca, 20)
+    await v8
+      .table('weightHistory')
+      .add({ gymId: a, exerciseId: rosca, value: 22.5, unit: 'KG', changedAt: 30, kind: 'value' })
+    await seedWeight(v8, b, rosca, 15)
+    const weightsBefore = await v8.table('weights').count()
+    const historyBefore = await v8.table('weightHistory').count()
+    v8.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      expect(await db.weights.count()).toBe(weightsBefore)
+      expect(await db.weightHistory.count()).toBe(historyBefore)
+      // A's two entries are now the global timeline; B keeps its single one.
+      expect(await db.weightHistory.where('gymId').equals(GLOBAL_GYM_ID).count()).toBe(2)
+      expect(await db.weightHistory.where('gymId').equals(a).count()).toBe(0)
+      expect(await db.weightHistory.where('gymId').equals(b).count()).toBe(1)
+    } finally {
+      db.close()
+    }
+  })
+
+  it('a gym with no weights at all is left with nothing to promote', async () => {
+    const v8 = await openV8()
+    const a = (await v8.table('gyms').add({ name: 'A', createdAt: 1_000 })) as number
+    const rosca = (await v8.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
+    v8.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      expect(await db.weights.count()).toBe(0)
+      expect(await resolveWeight(a, rosca, db)).toMatchObject({ scope: 'global', weight: undefined })
     } finally {
       db.close()
     }

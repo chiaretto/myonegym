@@ -1,71 +1,13 @@
-# weights Specification
+# Delta: weights
 
-## Purpose
-TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
-## Requirements
-### Requirement: Track a Global Target Weight
+**Change ID:** `global-weights-with-gym-exception`
+**Affects:** `src/db/types.ts`, `src/db/db.ts` (v9), `src/db/repos.ts`,
+`src/lib/hooks.ts`, `src/features/exercise/WeightEditor.tsx`, badges da Home,
+`SessionPage`, `SessionEntryPage`
 
-Cada exercício MUST ter um **peso alvo global** — um único valor + **unidade**
-(**KG**, **LB** ou **#**) válido em **todas** as academias. Uma academia MAY ter
-uma **exceção**: um peso próprio para aquele exercício, que prevalece sobre o
-global **apenas nela**.
+---
 
-O peso exibido e editado para `(academia ativa, exercício)` MUST ser a exceção
-quando ela existe e, caso contrário, o peso global. A unidade acompanha o
-registro que prevaleceu — global e exceção MAY usar unidades diferentes.
-
-#### Scenario: Set a weight with no exception
-- GIVEN "Rosca Direta" existe e ainda não tem peso
-- WHEN o usuário abre o detalhe do exercício e salva 20 com unidade "KG"
-- THEN o peso global de "Rosca Direta" é 20 KG
-- AND toda academia mostra 20 KG para esse exercício
-
-#### Scenario: Weight is shared across gyms by default
-- GIVEN "Rosca Direta" tem peso global 20 KG e nenhuma exceção
-- WHEN o usuário troca a academia ativa de "A" para "B"
-- THEN "Rosca Direta" continua mostrando 20 KG
-
-#### Scenario: An exception overrides the global weight in one gym only
-- GIVEN "Rosca Direta" tem peso global 20 KG e uma exceção de 15 LB na academia "B"
-- WHEN o usuário abre o exercício na academia "B"
-- THEN ele mostra 15 LB
-- AND na academia "A" continua mostrando 20 KG
-
-#### Scenario: Same weight regardless of day
-- GIVEN "Rosca Direta" está no "Dia 1" e no "Dia 3"
-- WHEN seu peso resolvido é 20 KG
-- THEN abrir a partir de qualquer um dos dias mostra 20 KG
-  (o peso é do exercício, não do dia)
-
-#### Scenario: No active gym
-- GIVEN nenhuma academia existe ainda
-- WHEN o usuário abre o detalhe de um exercício
-- THEN o campo de peso pede que ele crie/selecione uma academia primeiro
-- AND nenhum peso pode ser salvo enquanto não houver academia ativa
-
-### Requirement: Global Weight Sentinel
-
-O peso global MUST ser persistido na mesma tabela dos pesos por academia,
-usando o **id de academia reservado `0`** (`GLOBAL_GYM_ID`) — ids reais de
-academia são gerados a partir de 1, então a sentinela nunca colide. O mesmo
-vale para o histórico global.
-
-A sentinela é um detalhe da camada de dados: nenhuma tela MUST receber
-`gymId = 0` como se fosse uma academia. A resolução (exceção → global) e o
-escopo resultante MUST ser produzidos pelo repositório, e as telas consomem
-valor + escopo já resolvidos.
-
-#### Scenario: Global row is keyed by the sentinel
-- GIVEN nenhum peso registrado para "Rosca Direta"
-- WHEN o usuário salva 20 KG com a flag desmarcada
-- THEN existe uma linha de peso `(0, Rosca Direta) = 20 KG`
-- AND nenhuma linha de peso é criada para a academia ativa
-
-#### Scenario: The sentinel never reaches the UI as a gym
-- GIVEN "Rosca Direta" tem apenas peso global
-- WHEN o detalhe do exercício é aberto em qualquer academia
-- THEN nenhum nome/rótulo de academia é derivado da linha global
-- AND a seleção de academia ativa não lista a sentinela
+## ADDED
 
 ### Requirement: Per-Gym Exception Flag
 
@@ -102,6 +44,8 @@ algum antes de **Salvar**.
 - WHEN o usuário abre o detalhe do exercício da sessão
 - THEN o peso é exibido somente para referência
 - AND nenhuma flag de escopo é apresentada
+
+---
 
 ### Requirement: Create, Update and Remove a Gym Exception
 
@@ -147,6 +91,118 @@ naquela academia. Desmarcá-la e salvar MUST devolver o par ao escopo global.
 - THEN a exceção da academia "A" é 45 LB
 - AND o peso global segue 20 KG
 
+---
+
+### Requirement: Global Weight Sentinel
+
+O peso global MUST ser persistido na mesma tabela dos pesos por academia,
+usando o **id de academia reservado `0`** (`GLOBAL_GYM_ID`) — ids reais de
+academia são gerados a partir de 1, então a sentinela nunca colide. O mesmo
+vale para o histórico global.
+
+A sentinela é um detalhe da camada de dados: nenhuma tela MUST receber
+`gymId = 0` como se fosse uma academia. A resolução (exceção → global) e o
+escopo resultante MUST ser produzidos pelo repositório, e as telas consomem
+valor + escopo já resolvidos.
+
+#### Scenario: Global row is keyed by the sentinel
+- GIVEN nenhum peso registrado para "Rosca Direta"
+- WHEN o usuário salva 20 KG com a flag desmarcada
+- THEN existe uma linha de peso `(0, Rosca Direta) = 20 KG`
+- AND nenhuma linha de peso é criada para a academia ativa
+
+#### Scenario: The sentinel never reaches the UI as a gym
+- GIVEN "Rosca Direta" tem apenas peso global
+- WHEN o detalhe do exercício é aberto em qualquer academia
+- THEN nenhum nome/rótulo de academia é derivado da linha global
+- AND a seleção de academia ativa não lista a sentinela
+
+---
+
+### Requirement: Migrate Existing Per-Gym Weights to Global
+
+A migração do banco (v9) MUST, para **cada exercício**, promover a peso
+**global** o registro da **academia mais antiga que tenha peso para ele**
+(ordem de criação da academia; desempate pelo id), levando junto **todo o
+histórico** daquela academia para aquele exercício. Os registros das demais
+academias MUST permanecer como estão e passam a valer como **exceções**.
+
+A migração MUST NOT apagar nem mesclar registro algum.
+
+#### Scenario: Single gym becomes fully global
+- GIVEN existe apenas a academia "A", com pesos e histórico para 12 exercícios
+- WHEN a migração roda
+- THEN os 12 pesos e seus históricos passam a ser globais
+- AND nenhuma exceção permanece
+- AND o usuário vê exatamente os mesmos valores de antes
+
+#### Scenario: Oldest gym with a record wins per exercise
+- GIVEN "A" (criada primeiro) tem "Rosca Direta" 20 KG e "B" tem "Rosca Direta" 15 LB
+- AND apenas "B" tem "Supino" 40 KG
+- WHEN a migração roda
+- THEN o peso global de "Rosca Direta" é 20 KG (de "A") e "B" fica com a exceção 15 LB
+- AND o peso global de "Supino" é 40 KG (de "B"), sem exceção
+
+#### Scenario: History travels with the promoted weight
+- GIVEN "A" tem 3 registros de histórico para "Rosca Direta" e "B" tem 1
+- WHEN a migração roda e "A" é promovida
+- THEN os 3 registros passam a ser o histórico global do exercício
+- AND o único registro de "B" permanece como histórico da exceção de "B"
+
+#### Scenario: Nothing is deleted
+- GIVEN qualquer conjunto de pesos e históricos por academia
+- WHEN a migração roda
+- THEN a soma de registros de peso e de histórico é a mesma de antes
+  (apenas re-chaveados)
+
+---
+
+## MODIFIED
+
+### Requirement: Track Target Weight Per Gym
+
+*(renomeado para **Track a Global Target Weight**)*
+
+Cada exercício MUST ter um **peso alvo global** — um único valor + **unidade**
+(**KG**, **LB** ou **#**) válido em **todas** as academias. Uma academia MAY ter
+uma **exceção**: um peso próprio para aquele exercício, que prevalece sobre o
+global **apenas nela**.
+
+O peso exibido e editado para `(academia ativa, exercício)` MUST ser a exceção
+quando ela existe e, caso contrário, o peso global. A unidade acompanha o
+registro que prevaleceu — global e exceção MAY usar unidades diferentes.
+
+#### Scenario: Set a weight with no exception
+- GIVEN "Rosca Direta" existe e ainda não tem peso
+- WHEN o usuário abre o detalhe do exercício e salva 20 com unidade "KG"
+- THEN o peso global de "Rosca Direta" é 20 KG
+- AND toda academia mostra 20 KG para esse exercício
+
+#### Scenario: Weight is shared across gyms by default
+- GIVEN "Rosca Direta" tem peso global 20 KG e nenhuma exceção
+- WHEN o usuário troca a academia ativa de "A" para "B"
+- THEN "Rosca Direta" continua mostrando 20 KG
+
+#### Scenario: An exception overrides the global weight in one gym only
+- GIVEN "Rosca Direta" tem peso global 20 KG e uma exceção de 15 LB na academia "B"
+- WHEN o usuário abre o exercício na academia "B"
+- THEN ele mostra 15 LB
+- AND na academia "A" continua mostrando 20 KG
+
+#### Scenario: Same weight regardless of day
+- GIVEN "Rosca Direta" está no "Dia 1" e no "Dia 3"
+- WHEN seu peso resolvido é 20 KG
+- THEN abrir a partir de qualquer um dos dias mostra 20 KG
+  (o peso é do exercício, não do dia)
+
+#### Scenario: No active gym
+- GIVEN nenhuma academia existe ainda
+- WHEN o usuário abre o detalhe de um exercício
+- THEN o campo de peso pede que ele crie/selecione uma academia primeiro
+- AND nenhum peso pode ser salvo enquanto não houver academia ativa
+
+---
+
 ### Requirement: Edit and Save Weight
 
 O peso alvo MUST continuar exigindo **editar → salvar** explícito, com o
@@ -179,7 +235,11 @@ sessão. Numa sessão **concluída** o editor é exibido **somente-leitura**.
 - THEN a academia "A" passa a ter exceção de 20 KG
 - AND o restante do app segue com 25 KG fora de "A"
 
-### Requirement: Weight Change History Follows the Scope
+---
+
+### Requirement: Weight Change History Per Gym
+
+*(renomeado para **Weight Change History Follows the Scope**)*
 
 Toda alteração persistida de peso (valor ou unidade) MUST ser anexada a um
 **histórico local** na **mesma chave** em que o peso foi gravado: o histórico
@@ -226,6 +286,8 @@ par estiver no escopo global, e voltam a aparecer se a exceção for recriada.
 - AND ao recriar a exceção em "B" os 2 registros anteriores voltam a ser exibidos,
   seguidos do novo
 
+---
+
 ### Requirement: Delete a History Entry
 
 Cada linha do histórico MUST expor a ação **excluir**, operando sobre o escopo a
@@ -266,7 +328,11 @@ resolver para o peso global. A exclusão MUST ser confirmada pelo usuário.
 - THEN uma confirmação é apresentada antes da remoção
 - AND recusar deixa o histórico inalterado
 
+---
+
 ### Requirement: Gym Label Only Marks an Exception
+
+*(novo comportamento para um rótulo que hoje é incondicional)*
 
 O rótulo com o nome da academia no cartão de peso MUST ser exibido **apenas**
 quando o peso vigente é uma **exceção** daquela academia. No escopo global
@@ -291,6 +357,8 @@ escopo de exceção.
 - WHEN o usuário desmarca a flag e salva
 - THEN o rótulo deixa de ser exibido
 
+---
+
 ### Requirement: Weight Badges Resolve Global Plus Exceptions
 
 Toda leitura de peso em lote — os badges da Home, a lista de exercícios da
@@ -313,39 +381,9 @@ academia em questão: exceção quando existe, global caso contrário.
 - WHEN o usuário gera o card detalhado
 - THEN os pesos impressos são os resolvidos para "B"
 
-### Requirement: Migrate Existing Per-Gym Weights to Global
+---
 
-A migração do banco (v9) MUST, para **cada exercício**, promover a peso
-**global** o registro da **academia mais antiga que tenha peso para ele**
-(ordem de criação da academia; desempate pelo id), levando junto **todo o
-histórico** daquela academia para aquele exercício. Os registros das demais
-academias MUST permanecer como estão e passam a valer como **exceções**.
+## REMOVED
 
-A migração MUST NOT apagar nem mesclar registro algum.
-
-#### Scenario: Single gym becomes fully global
-- GIVEN existe apenas a academia "A", com pesos e histórico para 12 exercícios
-- WHEN a migração roda
-- THEN os 12 pesos e seus históricos passam a ser globais
-- AND nenhuma exceção permanece
-- AND o usuário vê exatamente os mesmos valores de antes
-
-#### Scenario: Oldest gym with a record wins per exercise
-- GIVEN "A" (criada primeiro) tem "Rosca Direta" 20 KG e "B" tem "Rosca Direta" 15 LB
-- AND apenas "B" tem "Supino" 40 KG
-- WHEN a migração roda
-- THEN o peso global de "Rosca Direta" é 20 KG (de "A") e "B" fica com a exceção 15 LB
-- AND o peso global de "Supino" é 40 KG (de "B"), sem exceção
-
-#### Scenario: History travels with the promoted weight
-- GIVEN "A" tem 3 registros de histórico para "Rosca Direta" e "B" tem 1
-- WHEN a migração roda e "A" é promovida
-- THEN os 3 registros passam a ser o histórico global do exercício
-- AND o único registro de "B" permanece como histórico da exceção de "B"
-
-#### Scenario: Nothing is deleted
-- GIVEN qualquer conjunto de pesos e históricos por academia
-- WHEN a migração roda
-- THEN a soma de registros de peso e de histórico é a mesma de antes
-  (apenas re-chaveados)
-</content>
+(Nenhum requisito removido — o peso por academia deixa de ser o padrão e passa a
+ser a exceção, mas continua existindo.)

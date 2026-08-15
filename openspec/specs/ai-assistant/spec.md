@@ -454,7 +454,8 @@ MUST NOT touch it, not even to tidy it up.
 Applying MUST keep the rest of the database valid:
 
 - an entity returned with an existing id MUST be **updated in place**, keeping
-  that id, so per-gym **weights**, **notes**, **photos**, **weight history** and
+  that id, so **weights** (global and per-gym exceptions), **notes**, **photos**,
+  **weight history** and
   **session entries** keep pointing at it;
 - an entity returned with a null id MUST be **created** with a fresh id;
 - an entity absent from the returned catalog MUST be **deleted with the same

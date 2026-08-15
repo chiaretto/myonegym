@@ -1,5 +1,5 @@
-import { allTables, db, type MyOneGymDB } from '../db/db'
-import { UNCATEGORIZED } from '../db/types'
+import { allTables, db, promoteWeightsToGlobal, type MyOneGymDB } from '../db/db'
+import { GLOBAL_GYM_ID, UNCATEGORIZED } from '../db/types'
 import type {
   Category,
   Day,
@@ -19,6 +19,12 @@ import { clearImages, readImage, removeImage, writeImage, type StoredImage } fro
 import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
+// v6: a weight is GLOBAL by default — its `gymId` is `GLOBAL_GYM_ID`, which
+// matches no gym in the document on purpose — and a row keyed to a real gym is
+// that gym's exception. Older files have no global row at all, so restoring one
+// promotes their weights the same way the v9 database upgrade does; see
+// `GLOBAL_WEIGHTS_VERSION`.
+//
 // v5: exercises carry their ALTERNATIVES (`alternativeIds`) and a session entry
 // that stands for a set carries its members. Nothing was removed, so a v4 file
 // still imports — see `normalizeAlternatives`.
@@ -26,7 +32,14 @@ export const APP_TAG = 'myonegym'
 // v4: the backup carries the WHOLE database — weight history, sessions and photos
 // included (photos base64-encoded). Older backups (v3 and earlier) omit some of
 // these arrays and still import (missing tables restore empty).
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
+
+/**
+ * First document version whose weights are already global. A file older than
+ * this carries only per-gym weights, and restoring it as-is would put the
+ * device back on the model the app left behind — so the restore promotes them.
+ */
+export const GLOBAL_WEIGHTS_VERSION = 6
 
 /** Bundled sample routine (issue #4) used by "Gerar exemplo". */
 const EXAMPLE_DATA = exampleBackup as unknown as {
@@ -61,6 +74,12 @@ export type SerializedPhoto = Omit<ExercisePhoto, 'bytes' | 'file' | 'size'> & {
  * catalog, weights AND their history, workout sessions AND entries, notes, and
  * photos (base64-encoded). Device-local **UI preferences** (font size, the
  * first-launch flag) are not user data and are intentionally NOT part of this.
+ *
+ * `weights` and `weightHistory` hold **both scopes** in one list: the exercise's
+ * global row, keyed by `GLOBAL_GYM_ID`, alongside the per-gym exceptions. A
+ * global row therefore names a gym the document does not contain — that is its
+ * shape, not corruption, and the import must never read it as a dangling
+ * reference.
  */
 export interface BackupDoc {
   app: typeof APP_TAG
@@ -273,6 +292,12 @@ function normalizeCategories(obj: Record<string, unknown>): void {
  * removed on the way out. The replaced device's own images are dropped only
  * after the transaction commits — by name, never by clearing the directory,
  * which at that point also holds the incoming ones.
+ *
+ * The one thing not restored verbatim is a **pre-global** file's weights: they
+ * are all per-gym, and dropping them in as-is would hand a migrated device the
+ * model it left behind. They go through the same promotion the v9 upgrade
+ * performs, in the same transaction, so the restore either lands entirely or
+ * not at all.
  */
 export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db): Promise<void> {
   const replaced: string[] = []
@@ -307,6 +332,9 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     if (doc.sessionEntries?.length) await d.sessionEntries.bulkAdd(doc.sessionEntries)
     if (doc.exerciseNotes?.length) await d.exerciseNotes.bulkAdd(doc.exerciseNotes)
     if (photos.length) await d.exercisePhotos.bulkAdd(photos)
+    if ((doc.version ?? 0) < GLOBAL_WEIGHTS_VERSION) {
+      await promoteWeightsToGlobal(d.gyms, d.weights, d.weightHistory)
+    }
   })
 
   for (const file of replaced) await removeImage({ file })
@@ -372,17 +400,19 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
     await d.days.add({ name: day.name, exerciseIds })
   }
 
-  // Seed the example gym + per-gym weights (with a history entry) only when no
-  // gym exists yet — don't add a second gym over the user's own.
+  // Seed the example gym + the sample weights (with a history entry) only when
+  // no gym exists yet — don't add a second gym over the user's own. The weights
+  // are **global**: they belong to the exercises, not to the example gym, and a
+  // second gym created later shows them without copying anything.
   const gymCount = await d.gyms.count()
   if (gymCount === 0 && EXAMPLE_DATA.gyms.length) {
-    const gymId = await d.gyms.add({ name: EXAMPLE_DATA.gyms[0].name, createdAt: Date.now() })
+    await d.gyms.add({ name: EXAMPLE_DATA.gyms[0].name, createdAt: Date.now() })
     for (const w of EXAMPLE_DATA.weights) {
       const exerciseId = exRemap.get(w.exerciseId)
       if (exerciseId == null) continue
-      await d.weights.add({ gymId, exerciseId, value: w.value, unit: w.unit })
+      await d.weights.add({ gymId: GLOBAL_GYM_ID, exerciseId, value: w.value, unit: w.unit })
       await d.weightHistory.add({
-        gymId,
+        gymId: GLOBAL_GYM_ID,
         exerciseId,
         value: w.value,
         unit: w.unit,
