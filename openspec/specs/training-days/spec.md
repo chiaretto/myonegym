@@ -30,6 +30,15 @@ that lists the not-yet-added exercises MUST be filterable by name and category
 and MUST NOT change which exercises can be added or the order in which added
 exercises are kept.
 
+O seletor MUST oferecer **somente exercícios de Força**. Cardio é avulso e é
+iniciado a partir da sua própria aba (ver a capability `cardio`), então um
+exercício de Cardio nunca é candidato a compor um dia — nem pela busca, nem pelo
+filtro de categoria.
+
+Um exercício que **passa a ser Cardio** MUST sair dos dias em que estava, com
+confirmação (ver *Changing an Exercise to Cardio Leaves the Days*, em
+`exercises`). Nenhum dia MUST NOT ficar apontando para um exercício de Cardio.
+
 #### Scenario: Add exercises to a day
 - GIVEN exercises "Rosca Direta" and "Supino" exist
 - WHEN the user adds both to "Dia 1"
@@ -46,10 +55,16 @@ exercises are kept.
 - THEN "Dia 1" no longer lists it
 - AND the "Supino" exercise record and its weights are unaffected
 
-#### Scenario: Every exercise is reachable through the picker
+#### Scenario: O seletor não oferece cardio
+- GIVEN o catálogo tem "Supino" (Força) e "Esteira" (Cardio)
+- WHEN o usuário abre "Adicionar exercício" no formulário de um dia
+- THEN "Supino" é oferecido
+- AND "Esteira" não aparece, nem buscando por nome
+
+#### Scenario: Every strength exercise is reachable through the picker
 - GIVEN no filter is active in the day form
 - WHEN the user opens the "Adicionar exercício" list
-- THEN every exercise not already in the day is offered
+- THEN every **strength** exercise not already in the day is offered
 
 ### Requirement: Filter the Day Form's Exercise Picker
 

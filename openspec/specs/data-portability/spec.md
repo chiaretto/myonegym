@@ -7,46 +7,32 @@ TBD - created by archiving change bootstrap-myonegym. Update Purpose after archi
 ### Requirement: Generate Example Data
 
 A rotina de exemplo MUST semear os pesos da amostra como **pesos globais** dos
-exercícios, e não como pesos da academia de exemplo. Todo o resto do requisito
-permanece: a partir de Configurações, o usuário MUST poder **gerar uma rotina de
-amostra realista** para explorar o app rapidamente. A amostra é um **conjunto
-embutido** (uma academia predefinida, **categorias** musculares, **exercícios**
-com mídia, vários **dias de treino** nomeados e os **pesos**). A geração MUST ser
-**aditiva e segura** — inserida com **ids remapeados**, de modo que dados
-existentes nunca sejam sobrescritos e as referências (exercício→categoria,
-dia→exercícios, peso→exercício) permaneçam íntegras. As categorias de cada dia
-são **derivadas dos exercícios do dia** (a categoria por dia do conjunto é
-ignorada). A **academia** de exemplo MUST ser criada **apenas quando nenhuma
-academia existe**; as categorias/exercícios/dias são sempre adicionados, e os
-pesos globais, por não pertencerem a academia alguma, são semeados junto dela.
+exercícios, e não como pesos da academia de exemplo. A geração MUST ser
+**aditiva e segura** — inserida com **ids remapeados**, sem sobrescrever dados
+existentes e com as referências íntegras. As categorias de cada dia são
+**derivadas dos exercícios do dia**. A **academia** de exemplo MUST ser criada
+**apenas quando nenhuma academia existe**.
+
+A amostra MUST conter ao menos um exercício de **Cardio**, que MUST NOT entrar
+em nenhum dia de treino e MUST NOT receber peso.
+
+#### Scenario: A amostra traz um cardio
+- GIVEN o app tem pouco ou nenhum dado
+- WHEN o usuário toca "Gerar exemplo"
+- THEN pelo menos um exercício de Cardio é criado
+- AND ele aparece na aba Cardio, sem peso e fora dos dias
 
 #### Scenario: Generate the sample routine
-- GIVEN the app has little or no data
-- WHEN the user taps "Gerar exemplo"
-- THEN the bundled categories, exercises (with media), and named training days are created and visible
-
-#### Scenario: Fresh app also gets a gym and global weights
-- GIVEN nenhuma academia existe ainda
-- WHEN o usuário toca em "Gerar exemplo"
-- THEN a academia de exemplo é criada
-- AND os pesos da amostra são registrados como **globais**, com um registro de histórico cada
-- AND eles aparecem na Home, sem rótulo de academia
-
-#### Scenario: Sample weights apply to a second gym too
-- GIVEN a amostra foi gerada
-- WHEN o usuário cria uma segunda academia e a torna ativa
-- THEN os exercícios da amostra mostram os mesmos pesos, sem nenhuma cópia de registros
-
-#### Scenario: Days show derived categories
-- GIVEN the sample was generated
-- WHEN the user views Home
-- THEN each day shows the categories derived from its exercises (not a stored day category)
+- GIVEN o app tem pouco ou nenhum dado
+- WHEN o usuário toca "Gerar exemplo"
+- THEN as categorias, exercícios (com mídia) e dias de treino da amostra são
+  criados e visíveis
 
 #### Scenario: Additive and safe with existing data
-- GIVEN the user already has some categories and a gym
-- WHEN the user taps "Gerar exemplo"
-- THEN the sample content is added without overwriting existing data
-- AND references remain valid (no id collisions)
+- GIVEN o usuário já tem algumas categorias e uma academia
+- WHEN o usuário toca "Gerar exemplo"
+- THEN o conteúdo da amostra é adicionado sem sobrescrever dados existentes
+- AND as referências permanecem válidas (sem colisão de ids)
 
 ### Requirement: Export Full Backup JSON
 
@@ -152,6 +138,32 @@ device that was already set up the way its owner wanted.
 - WHEN um backup de A é restaurado em B
 - THEN B continua em "Roxo"
 - AND todos os dados do usuário foram substituídos normalmente
+
+### Requirement: Backups Carry the Exercise Kind
+
+O documento de backup MUST carregar o **tipo** de cada exercício e o **tipo** de
+cada sessão, junto do resto do registro.
+
+A importação MUST aceitar um documento **anterior** a esta mudança, em que o
+campo não existe, assumindo **Força** para todo exercício e toda sessão — que é
+exatamente o que eles eram. Rejeitar por campo ausente inutilizaria todo backup
+gerado antes desta versão.
+
+#### Scenario: Round-trip preserva os tipos
+- GIVEN o app tem exercícios de Força e de Cardio e sessões dos dois tipos
+- WHEN o usuário exporta o backup e o restaura num dispositivo limpo
+- THEN cada exercício e cada sessão voltam com o mesmo tipo
+
+#### Scenario: Backup antigo importa como Força
+- GIVEN um backup gerado antes desta mudança, sem o campo de tipo
+- WHEN o usuário o restaura
+- THEN todos os exercícios e sessões ficam como Força
+- AND nada é rejeitado nem perdido
+
+#### Scenario: A aba Cardio reflete o que foi restaurado
+- GIVEN um backup com dois exercícios de Cardio é restaurado
+- WHEN o usuário abre a aba Cardio
+- THEN os dois aparecem na lista
 
 ### Requirement: Backups Carry Global Weights
 

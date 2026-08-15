@@ -6,78 +6,98 @@ TBD - created by archiving change bootstrap-myonegym. Update Purpose after archi
 
 ### Requirement: Register an Exercise
 
-The user MUST be able to create an exercise with a name (e.g. "Rosca Direta"), a
-**media URL**, **zero or more categories**, and **zero or more alternative
-exercises** (see *Alternative Exercises*). A compound exercise (e.g. a bench
-press training Peito **and** Tríceps) MAY carry several categories; an exercise
-MAY also carry **none** — an exercise with no categories is **uncategorized** and
-is shown with the label "Sem categoria". There is **no reserved "Sem categoria"
-category**: uncategorized simply means an empty category list. The media MAY be a
-**static image** (PNG/JPG/JPEG/WebP) or an **animated GIF** — a single URL field
-accepts either. Exercises are global (not tied to a gym) and MAY be reused across
-multiple training days and categories.
+O usuário MUST poder cadastrar um exercício com **nome**, **mídia** opcional
+(imagem ou GIF), **categorias** (zero ou mais) e **tipo** (**Força** ou
+**Cardio**, ver *Exercise Kind*). O nome MUST ser obrigatório; o tipo MUST vir
+preenchido como **Força**.
 
-The category picker MUST let the user select **multiple** categories (e.g.
-tap-to-toggle), and selecting none MUST be valid. O seletor de **alternativas**
-segue a mesma forma — ver *Choose Alternatives in the Exercise Form*.
+#### Scenario: Criar com tipo
+- GIVEN o formulário de exercício aberto
+- WHEN o usuário informa nome, escolhe o tipo e salva
+- THEN o exercício é persistido com o tipo escolhido
 
-While the user fills the form, the media given MUST be previewed at large size —
-see *Large Media Preview in the Exercise Form*. Listing thumbnails are unchanged.
+#### Scenario: Nome continua obrigatório
+- GIVEN o formulário de exercício aberto
+- WHEN o usuário salva sem nome
+- THEN o cadastro é bloqueado com uma mensagem de validação
 
-#### Scenario: Create an exercise with a static image
-- GIVEN category "Bíceps" exists
-- WHEN the user creates exercise "Rosca Direta" with media URL "https://…/rosca.png" and category "Bíceps"
-- THEN the exercise is persisted with its media URL and category
-- AND it becomes available for selection when building training days
+### Requirement: Exercise Kind — Força or Cardio
 
-#### Scenario: Create an exercise with an animated GIF
-- GIVEN category "Bíceps" exists
-- WHEN the user creates exercise "Rosca Direta" with media URL "https://…/rosca.gif" and category "Bíceps"
-- THEN the exercise is persisted with the GIF URL
-- AND the app treats it as valid media (GIF is an accepted format)
+Todo exercício MUST ter um **tipo**: **Força** ou **Cardio**. O tipo é do
+exercício (não da academia, não do dia) e MUST ser escolhido no formulário do
+exercício, com **Força** como padrão.
 
-#### Scenario: Require a name
-- GIVEN the exercise form is open
-- WHEN the user submits without a name
-- THEN creation is blocked with a validation message
+O tipo MUST determinar três coisas, e nada além delas:
 
-#### Scenario: Media URL is optional but validated when present
-- GIVEN the user is creating an exercise
-- WHEN a media URL is provided that is not a valid URL, or points to an unsupported type (not an image or GIF)
-- THEN the app shows a validation message
-- AND WHEN no media URL is provided, the exercise is still created (placeholder used at render time)
+- **Peso.** Um exercício de Cardio MUST NOT ter peso alvo nem histórico de peso
+  exibidos em lugar algum. Observação e fotos continuam disponíveis, por
+  academia, como em qualquer exercício.
+- **Dias de treino.** Um exercício de Cardio MUST NOT ser oferecido ao montar
+  um dia de treino.
+- **Onde ele é iniciado.** Força começa a partir de um **dia** na Home; Cardio
+  começa a partir do **próprio exercício**, na aba Cardio.
 
-#### Scenario: Animated GIF renders animated
-- GIVEN an exercise whose media URL is an animated GIF
-- WHEN its detail view (or list thumbnail) renders the media
-- THEN the GIF is shown and plays its animation (not a frozen frame)
+Exercícios já cadastrados MUST passar a valer como **Força**, sem exigir revisão
+do catálogo.
 
-#### Scenario: Create an exercise with multiple categories
-- GIVEN categories "Peito" and "Tríceps" exist
-- WHEN the user creates "Supino Reto" and selects both "Peito" and "Tríceps"
-- THEN the exercise is persisted carrying both categories
+#### Scenario: Novo exercício nasce Força
+- GIVEN o usuário abre o formulário de novo exercício
+- WHEN observa o campo de tipo
+- THEN "Força" está selecionado
+- AND salvar sem tocar no campo cria um exercício de Força
 
-#### Scenario: Create an exercise with no category
-- GIVEN the exercise form is open
-- WHEN the user creates "Alongamento" without selecting any category
-- THEN the exercise is persisted with no categories and is shown as "Sem categoria"
+#### Scenario: Cadastrar um cardio
+- GIVEN o formulário de novo exercício está aberto
+- WHEN o usuário informa "Esteira", escolhe **Cardio** e salva
+- THEN o exercício é criado como Cardio
+- AND ele aparece na aba Cardio, não na lista de exercícios de um dia
 
-#### Scenario: All of an exercise's categories are shown
-- GIVEN "Supino Reto" is categorized as "Peito" and "Tríceps"
-- WHEN it is shown in a listing or on its detail
-- THEN both "Peito" and "Tríceps" are shown
+#### Scenario: O tipo é visível na lista do catálogo
+- GIVEN existem exercícios dos dois tipos
+- WHEN o usuário abre a lista de exercícios em Configurações
+- THEN cada linha indica o tipo do exercício
 
-#### Scenario: Create an exercise with no alternatives
-- GIVEN the exercise form is open
-- WHEN the user creates "Rosca Direta" without selecting any alternative
-- THEN the exercise is persisted with no alternatives and behaves exactly as
-  exercises did before alternatives existed
+#### Scenario: Exercícios existentes viram Força
+- GIVEN um catálogo criado antes desta mudança
+- WHEN o app é aberto pela primeira vez depois dela
+- THEN todo exercício existente é Força
+- AND nada no comportamento deles muda
 
-#### Scenario: Conferir a mídia antes de salvar
-- GIVEN o usuário está criando "Rosca Direta"
-- WHEN cola a URL "https://…/rosca.gif" no campo de mídia
-- THEN vê a mídia em tamanho grande antes de salvar
-- AND pode corrigir a URL caso não seja o exercício esperado
+### Requirement: Changing an Exercise to Cardio Leaves the Days
+
+Mudar um exercício de **Força para Cardio** MUST removê-lo de **todos** os dias
+de treino em que estiver, porque um dia não pode conter cardio.
+
+A remoção MUST ser **confirmada** antes de acontecer, e a confirmação MUST
+**nomear os dias** que perderão o exercício. Recusar MUST deixar o exercício e
+os dias exatamente como estavam.
+
+Os **pesos e o histórico de peso** já registrados para esse exercício MUST NOT
+ser apagados: eles apenas deixam de ser exibidos enquanto ele for Cardio, e
+voltam se ele voltar a ser Força. Uma troca de campo não destrói histórico em
+silêncio.
+
+#### Scenario: Trocar para Cardio remove dos dias, com aviso
+- GIVEN "Esteira" é Força e está no "Dia 2" e no "Dia 4"
+- WHEN o usuário muda o tipo para Cardio e salva
+- THEN uma confirmação informa que ele sairá de "Dia 2" e "Dia 4"
+- AND ao confirmar, o exercício vira Cardio e some desses dois dias
+
+#### Scenario: Recusar a confirmação não muda nada
+- GIVEN a confirmação da troca de tipo está na tela
+- WHEN o usuário recusa
+- THEN o exercício continua Força
+- AND continua nos mesmos dias
+
+#### Scenario: Trocar para Cardio sem estar em dia algum não pergunta
+- GIVEN "Bicicleta" é Força e não está em nenhum dia
+- WHEN o usuário muda o tipo para Cardio e salva
+- THEN a troca acontece direto, sem confirmação
+
+#### Scenario: O peso sobrevive à ida e à volta
+- GIVEN "Esteira" tem peso e histórico registrados como Força
+- WHEN o usuário a torna Cardio e depois volta a torná-la Força
+- THEN o peso e o histórico anteriores voltam a ser exibidos
 
 ### Requirement: Large Media Preview in the Exercise Form
 
