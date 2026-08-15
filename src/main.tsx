@@ -9,12 +9,14 @@ import { maintainPhotoStorage } from './db/repos'
 import { scheduleBootSplashDismissal } from './lib/bootSplash'
 import { initInstall } from './lib/install'
 import { requestPersistentStorage } from './lib/storage'
-import { applyFontScale, useSettings } from './state/settings'
+import { applyAccent, applyFontScale, useSettings } from './state/settings'
 
-// Apply the saved font size BEFORE first paint so the app never flashes the
-// default before the user's preference applies. zustand+persist rehydrates
-// synchronously from localStorage, so getState() already holds the stored value.
+// Apply the saved font size and accent colour BEFORE first paint so the app
+// never flashes the defaults before the user's preferences apply.
+// zustand+persist rehydrates synchronously from localStorage, so getState()
+// already holds the stored values.
 applyFontScale(useSettings.getState().fontScale)
+applyAccent(useSettings.getState().accent)
 
 // Also before first render: `beforeinstallprompt` fires early and only once, so
 // a listener mounted later (e.g. by the Settings screen) would never see it and

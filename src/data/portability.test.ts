@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ACCENTS } from '../state/accents'
+import { useSettings } from '../state/settings'
 import { allTables, MyOneGymDB } from '../db/db'
 import { GLOBAL_GYM_ID } from '../db/types'
 import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
@@ -281,6 +283,27 @@ describe('exercise alternatives survive a backup', () => {
     await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
 
     expect((await d.exercises.get(ex))?.alternativeIds).toEqual([])
+  })
+})
+
+describe('device-local UI preferences stay out of the backup', () => {
+  it('does not carry the accent colour', async () => {
+    const g = await createGym('Academia A', d)
+    const cat = await createCategory('Peito', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
+    await saveWeight(g, ex, 40, 'KG', 'global', d)
+    useSettings.getState().setAccent('green')
+
+    const json = JSON.stringify(await exportBackup(d))
+
+    // The choice describes how THIS device paints the app, not what the user
+    // recorded in it: restoring must never repaint a device that was already
+    // set up the way its owner wanted.
+    const green = ACCENTS.find((a) => a.id === 'green')!
+    expect(json).not.toContain('accent')
+    expect(json).not.toContain(green.accent)
+    expect(json).not.toContain('green')
+    useSettings.getState().reset()
   })
 })
 

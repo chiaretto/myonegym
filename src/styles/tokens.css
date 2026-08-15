@@ -25,21 +25,35 @@
   --border: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.15);
 
-  /* Accent (red).
-     #EC2C2E is the new brand red, brighter than the previous #BE2125.
-     Everything below is derived from it:
-     · --accent-2 is the gradient's bottom stop (0.79 × #EC2C2E).
-     · --text-accent: #EC2C2E as TEXT on --surface-0 reaches 4.5:1 (AA);
-       it's used for the same purposes (tab labels, deltas, badges).
-     · tint/border alphas adjusted down slightly: the new red is brighter,
-       so less opacity is needed for the same visual weight. */
+  /* Accent — brand red by default, USER-CHOOSABLE at runtime.
+     #EC2C2E is the brand red, brighter than the previous #BE2125.
+
+     Settings → Aparência lets the user pick from a curated list
+     (src/state/accents.ts). Switching colours writes exactly THREE properties
+     on the root: --accent, --accent-2 and --accent-rgb. Everything below
+     derives from those, which is what keeps a colour change coherent — there
+     is no fourth value that could be left behind on the old palette.
+
+     So: never hardcode an accent literal anywhere else, and never add an
+     accent token that does not derive from these three.
+
+     · --accent-2 is the gradient's bottom stop (0.79 × --accent).
+     · --accent-rgb carries --accent's channels so the rgba() tints can be
+       built from it; rgba() cannot take a hex.
+     · --text-accent as TEXT on --surface-0 reaches 4.5:1 (AA) — for EVERY
+       colour in the list, which all sit at the red's relative luminance.
+       Used for tab labels, deltas and badges.
+     · tint/border alphas are tuned for this brightness; they are the same for
+       every colour, because every colour is that bright. */
   --accent: #ec2c2e;
   --accent-2: #ba2324; /* gradient partner (darker, bottom stop) */
-  --bg-accent: rgba(236, 44, 46, 0.16);  /* soft tint fill */
-  --border-accent: rgba(236, 44, 46, 0.42);
-  --text-accent: #ec2c2e; /* accent text on dark */
-  --fill-accent: #ec2c2e; /* solid accent fill (buttons, rings, checkboxes) */
-  --on-accent: #ffffff;   /* text/icon on red — the reference CTA is WHITE on red */
+  --accent-rgb: 236, 44, 46; /* channels of --accent, for the tints below */
+  --bg-accent: rgba(var(--accent-rgb), 0.16);  /* soft tint fill */
+  --bg-accent-mid: rgba(var(--accent-rgb), 0.45); /* half-strength fill (heatmap, partial bars) */
+  --border-accent: rgba(var(--accent-rgb), 0.42);
+  --text-accent: var(--accent); /* accent text on dark */
+  --fill-accent: var(--accent); /* solid accent fill (buttons, rings, checkboxes) */
+  --on-accent: #ffffff;   /* text/icon on the accent — the reference CTA is WHITE on it */
   --accent-grad: linear-gradient(180deg, var(--accent), var(--accent-2));
 
   /* Danger — amber, deliberately NOT red.
@@ -59,6 +73,12 @@
      effectively hue-only separation; hence the lighter amber.
      Colour is not the only signal either: every destructive action also carries
      a trash glyph and a confirmation.
+
+     Now that the accent is user-choosable, this separation cannot be a
+     property of one pair of colours any more — it has to hold for every colour
+     the list offers. It does: the list is built so no option comes closer to
+     this amber, in hue, than the default red does, and `accents.test.ts`
+     asserts it. The warm band that WOULD collide is simply not offered.
 
      Trade-off, stated plainly: this gives up the red = destructive convention.
 

@@ -90,14 +90,14 @@
 .hm-card { background: var(--surface-1); border: 0.5px solid var(--border);
   border-radius: var(--r-card); padding: 14px; }
 /* One block per WEEK — a single row of 12. Each block carries its session
-   count; the red level tracks it (0 = dark, 1–2 = mid, 3+ = full), so an empty
-   week reads as a hole and a strong week as a solid. */
+   count; the accent level tracks it (0 = dark, 1–2 = mid, 3+ = full), so an
+   empty week reads as a hole and a strong week as a solid. */
 .hm-strip { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px;
   font-size: var(--fs-2xs); }
 .hm-c { display: grid; place-items: center; aspect-ratio: 1; border-radius: 6px;
   background: var(--surface-2); color: var(--text-muted); font-weight: 600;
   font-variant-numeric: tabular-nums; font-style: normal; }
-.hm-c.l1 { background: rgba(236, 44, 46, 0.45); color: var(--on-accent); }
+.hm-c.l1 { background: var(--bg-accent-mid); color: var(--on-accent); }
 .hm-c.l2 { background: var(--accent); color: var(--on-accent); font-weight: 700; }
 /* Month labels under the strip, anchored to the week where each month starts. */
 .hm-months { display: grid; grid-template-columns: repeat(12, 1fr);
@@ -123,7 +123,7 @@
   border-radius: 4px 4px 0 0; min-height: 3px; }
 /* current month, still counting — the mid tone, so "em andamento" reads
    lighter than a finished month without leaving the hue. */
-.mo-bar.partial { background: rgba(236, 44, 46, 0.45); }
+.mo-bar.partial { background: var(--bg-accent-mid); }
 .mo-months { display: grid; grid-template-columns: repeat(12, 1fr); margin-top: 8px;
   font-size: var(--fs-2xs); font-weight: 600; color: var(--text-muted);
   text-transform: lowercase; text-align: center; }

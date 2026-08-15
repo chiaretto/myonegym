@@ -74,7 +74,24 @@ no server** — all data lives in the browser.
    It is opt-in (needs a token the user supplies), it never sends gyms, weights,
    notes, photos or sessions, and its client is loaded on demand so the offline
    bundle does not carry it. Everything else in the app remains local-only.
-9. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
+9. **The accent colour is the user's, and it is governed by a list.** The app is
+   dark-only, but the accent is chosen in Settings → Aparência from a curated
+   set of 16 (`src/state/accents.ts`) — brand red by default. There is exactly
+   **one** accent: the gradient's far stop derives from it by the brand's
+   historical 0.79 factor, not from a second colour the user picks. (A second
+   colour was built and rejected on look; see the archived change.)
+
+   Three rules hold, enforced by `accents.test.ts` rather than by good
+   intentions: every offered colour sits at the red's relative luminance (so
+   the AA contrast the palette was built on holds for all of them, and the warm
+   band that would collide with the danger amber is simply not offered); no two
+   colours are perceptually close enough to be confused; and switching writes
+   only `--accent`, `--accent-2` and `--accent-rgb` — tint, border, text, fill
+   and gradient all derive from those in `tokens.css`. So: never hardcode an
+   accent literal, and never add an accent token that does not derive. Canvas
+   cannot read custom properties, so the shared session card takes the colour
+   as an argument.
+10. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
    are a file in the origin's private file system (`src/data/photoStore.ts`);
    the `exercisePhotos` row keeps only metadata plus the file name. Two
    consequences to respect: no transaction spans a record and its file (write

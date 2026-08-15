@@ -5,7 +5,7 @@ import { hasAnyRegisteredData } from './db/repos'
 import { generateExample } from './data/portability'
 import { useActiveGym } from './state/activeGym'
 import { useOnboarding } from './state/onboarding'
-import { applyFontScale, useSettings } from './state/settings'
+import { applyAccent, applyFontScale, useSettings } from './state/settings'
 import { useKeyboardInset } from './lib/keyboardInset'
 import { FeedbackProvider } from './ui/Feedback'
 import { Sheet } from './ui/Sheet'
@@ -27,6 +27,7 @@ import { InstallPage } from './features/settings/InstallPage'
 export function App() {
   const reconcile = useActiveGym((s) => s.reconcile)
   const fontScale = useSettings((s) => s.fontScale)
+  const accent = useSettings((s) => s.accent)
   const markPromptSeen = useOnboarding((s) => s.markPromptSeen)
 
   // Publish `--kb-inset` so the fixed action bar / toast lift above the on-screen
@@ -54,6 +55,11 @@ export function App() {
   useEffect(() => {
     applyFontScale(fontScale)
   }, [fontScale])
+
+  // Same for the accent colour — picking one in Aparência repaints the app.
+  useEffect(() => {
+    applyAccent(accent)
+  }, [accent])
 
   const onAcceptExample = async () => {
     setGenerating(true)

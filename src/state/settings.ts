@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { type AccentId, DEFAULT_ACCENT_ID, isAccentId, resolveAccent } from './accents'
 
 /** Global font-size multiplier bounds — see the app-foundation typography spec.
  *  Floor is 1.0 so inputs stay >=16px effective (no iOS zoom-on-focus). */
@@ -20,9 +21,23 @@ export function applyFontScale(v: number): void {
   document.documentElement.style.setProperty('--font-scale', String(clampFontScale(v)))
 }
 
+/** Write the chosen accent to the document root. Three properties is the whole
+ *  job: tint, border, text, fill and the gradient all derive from them in
+ *  tokens.css. An unknown id resolves to the brand red rather than leaving the
+ *  app with no accent. */
+export function applyAccent(id: string | null | undefined): void {
+  const { accent, accent2, rgb } = resolveAccent(id)
+  const root = document.documentElement.style
+  root.setProperty('--accent', accent)
+  root.setProperty('--accent-2', accent2)
+  root.setProperty('--accent-rgb', rgb)
+}
+
 interface SettingsState {
   fontScale: number
+  accent: AccentId
   setFontScale: (v: number) => void
+  setAccent: (id: AccentId) => void
   reset: () => void
 }
 
@@ -30,14 +45,20 @@ export const useSettings = create<SettingsState>()(
   persist(
     (set) => ({
       fontScale: FONT_SCALE_DEFAULT,
+      accent: DEFAULT_ACCENT_ID,
       setFontScale: (v) => set({ fontScale: clampFontScale(v) }),
-      reset: () => set({ fontScale: FONT_SCALE_DEFAULT }),
+      setAccent: (id) => set({ accent: isAccentId(id) ? id : DEFAULT_ACCENT_ID }),
+      // Aparência's single reset covers everything the screen offers.
+      reset: () => set({ fontScale: FONT_SCALE_DEFAULT, accent: DEFAULT_ACCENT_ID }),
     }),
     {
       name: 'myonegym.settings',
-      // Clamp whatever was persisted (guards against tampered/legacy storage).
+      // Sanitise whatever was persisted (guards against tampered/legacy storage,
+      // and against a colour that a later version dropped from the list).
       onRehydrateStorage: () => (state) => {
-        if (state) state.fontScale = clampFontScale(state.fontScale)
+        if (!state) return
+        state.fontScale = clampFontScale(state.fontScale)
+        if (!isAccentId(state.accent)) state.accent = DEFAULT_ACCENT_ID
       },
     },
   ),

@@ -1,3 +1,4 @@
+import { type Accent, resolveAccent } from '../../../state/accents'
 import type { ShareCard, ShareRow } from './shareModel'
 
 /**
@@ -8,11 +9,16 @@ import type { ShareCard, ShareRow } from './shareModel'
  * spec). A shared image is a fixed design, not a responsive screen, so it looks
  * the same no matter how the user set up Aparência.
  *
- * The tokens below are copied from `tokens.css` ("OneGym Red", dark-only).
- * Canvas cannot read CSS custom properties, so this block is an unavoidable
- * MIRROR: every palette change has to be applied here by hand or the shared PNG
- * silently keeps the old identity. Keeping it in one block is what makes that
- * cheap — the card is deliberately *similar to* the session detail, not a copy.
+ * The tokens below are copied from `tokens.css` (dark-only). Canvas cannot read
+ * CSS custom properties, so this block is an unavoidable MIRROR: every palette
+ * change has to be applied here by hand or the shared PNG silently keeps the old
+ * identity. Keeping it in one block is what makes that cheap — the card is
+ * deliberately *similar to* the session detail, not a copy.
+ *
+ * The ACCENT is deliberately NOT in this block. It is the user's choice now
+ * (Settings → Aparência), so freezing it here would print everyone's card in
+ * whichever colour happened to be hardcoded. It arrives through `cardAccent`
+ * instead — see `renderCard`'s second argument.
  *
  * `borderStrong` was added because a literal `rgba(255,255,255,0.14)` had escaped
  * this block and was sitting inline in `drawCheck`, which meant one colour could
@@ -25,10 +31,7 @@ const C = {
   text: '#ffffff', // --text-primary
   dim: '#8a8f98', // --text-secondary
   muted: '#5c6069', // --text-muted
-  accent: '#ec2c2e', // --accent
-  accent2: '#ba2324', // --accent-2 (bottom stop of the vertical gradient)
-  accentTint: 'rgba(236, 44, 46, 0.16)', // --bg-accent
-  onAccent: '#ffffff', // --on-accent — white on red, per the reference
+  onAccent: '#ffffff', // --on-accent — white on the accent, per the reference
   border: 'rgba(255, 255, 255, 0.07)', // --border
   borderStrong: 'rgba(255, 255, 255, 0.15)', // --border-strong
 } as const
@@ -151,9 +154,16 @@ function drawPlaceholder(ctx: CanvasRenderingContext2D, x: number, y: number, si
   ctx.stroke()
 }
 
-function drawCheck(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, done: boolean) {
+function drawCheck(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  done: boolean,
+  accent: string,
+) {
   if (done) {
-    fillRRect(ctx, x, y, size, size, 8, C.accent)
+    fillRRect(ctx, x, y, size, size, 8, accent)
     ctx.strokeStyle = C.onAccent
     ctx.lineWidth = 2.4
     ctx.lineCap = 'round'
@@ -210,11 +220,31 @@ function cardHeight(card: ShareCard): number {
   return h
 }
 
+/** The three accent values the card paints with, in canvas-ready form. */
+export interface CardAccent {
+  accent: string
+  accent2: string
+  /** --bg-accent: the same 0.16 tint the app uses, built from the hex. */
+  tint: string
+}
+
+/** Canvas takes colour strings, not CSS custom properties, so the chosen accent
+ *  is expanded here — the one place that mirrors the `--bg-accent` alpha. An
+ *  unknown id yields the brand red, exactly like the app. */
+export function cardAccent(id?: string | null): CardAccent {
+  const a: Accent = resolveAccent(id)
+  return { accent: a.accent, accent2: a.accent2, tint: `rgba(${a.rgb}, 0.16)` }
+}
+
 /**
  * Paints `card` and resolves the PNG. Media loads in parallel first, then the
  * whole card is painted in one pass.
+ *
+ * `accentId` is the user's chosen accent (see src/state/accents.ts); omitting it
+ * paints the brand red.
  */
-export async function renderCard(card: ShareCard): Promise<Blob> {
+export async function renderCard(card: ShareCard, accentId?: string | null): Promise<Blob> {
+  const A = cardAccent(accentId)
   // Canvas silently falls back to a system font if it paints before the webfonts
   // are ready. Sora/Manrope/JetBrains Mono ship locally via @fontsource.
   await document.fonts?.ready
@@ -246,8 +276,8 @@ export async function renderCard(card: ShareCard): Promise<Blob> {
     ctx.font = META
     const label = ellipsize(ctx, card.gymName, 220)
     const w = ctx.measureText(label).width + 22
-    fillRRect(ctx, x, y, w, 22, 999, C.accentTint)
-    ctx.fillStyle = C.accent2
+    fillRRect(ctx, x, y, w, 22, 999, A.tint)
+    ctx.fillStyle = A.accent2
     ctx.textBaseline = 'middle'
     ctx.fillText(label, x + 11, y + 12)
     ctx.textBaseline = 'alphabetic'
@@ -271,7 +301,7 @@ export async function renderCard(card: ShareCard): Promise<Blob> {
 
   // ── Rows ──────────────────────────────────────────────────────────────────
   card.rows.forEach((row, i) => {
-    drawRow(ctx, row, media[i], y)
+    drawRow(ctx, row, media[i], y, A)
     y += ROW_H + (i < card.rows.length - 1 ? ROW_GAP : 0)
   })
 
@@ -295,6 +325,7 @@ function drawRow(
   row: ShareRow,
   img: HTMLImageElement | null,
   y: number,
+  accent: CardAccent,
 ) {
   ctx.save()
   if (!row.done) ctx.globalAlpha = SKIPPED_ALPHA
@@ -302,7 +333,7 @@ function drawRow(
   fillRRect(ctx, PAD, y, W - PAD * 2, ROW_H, 16, C.row)
 
   const cy = y + ROW_H / 2
-  drawCheck(ctx, PAD + 10, cy - CHECK / 2, CHECK, row.done)
+  drawCheck(ctx, PAD + 10, cy - CHECK / 2, CHECK, row.done, accent.accent)
 
   const tx = PAD + 10 + CHECK + 10
   if (img) drawCover(ctx, img, tx, cy - THUMB / 2, THUMB)
