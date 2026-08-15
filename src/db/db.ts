@@ -140,6 +140,30 @@ export class MyOneGymDB extends Dexie {
           tx.table('weightHistory') as Table<WeightHistory, number>,
         )
       })
+    // v10 — an exercise is Força or Cardio, and a session records which kind of
+    // visit it was. `kind` joins the exercises index because the Cardio tab
+    // queries by it; sessions are read by gym/date, never by kind alone, so
+    // theirs stays unindexed.
+    //
+    // Everything stored before this version is strength — that was the only
+    // thing the app could model — so the upgrade backfills both tables with
+    // 'strength'. Nothing is deleted, and re-running it changes nothing.
+    this.version(10)
+      .stores({ exercises: '++id, name, kind, *categoryIds' })
+      .upgrade(async (tx) => {
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            if (e.kind !== 'cardio') e.kind = 'strength'
+          })
+        await tx
+          .table('sessions')
+          .toCollection()
+          .modify((s: Record<string, unknown>) => {
+            if (s.kind !== 'cardio') s.kind = 'strength'
+          })
+      })
   }
 }
 

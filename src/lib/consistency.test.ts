@@ -77,6 +77,44 @@ describe('buildMonthGrid', () => {
     const cells = buildMonthGrid([at(2026, 6, 26, 8)], { year: 2026, month: 6 }, NOW)
     expect(cells.find((c) => c.inMonth && c.day === 26)!.state).toBe('done')
   })
+
+  it('marks the days that had cardio, without changing their state', () => {
+    const strength = at(2026, 6, 15, 8)
+    const cardio = at(2026, 6, 12, 18)
+    const cells = buildMonthGrid([strength, cardio], { year: 2026, month: 6 }, NOW, [cardio])
+    const day = (n: number) => cells.find((c) => c.inMonth && c.day === n)!
+
+    // Cardio IS a workout: the disc is there either way. The star only says
+    // which kind it was.
+    expect(day(12)).toMatchObject({ state: 'done', sessions: 1, cardio: true })
+    expect(day(15)).toMatchObject({ state: 'done', sessions: 1, cardio: false })
+  })
+
+  it('a day with both kinds carries both marks', () => {
+    const cardio = at(2026, 6, 14, 7)
+    const strength = at(2026, 6, 14, 19)
+    const cells = buildMonthGrid([cardio, strength], { year: 2026, month: 6 }, NOW, [cardio])
+    expect(cells.find((c) => c.inMonth && c.day === 14)!).toMatchObject({
+      state: 'done',
+      sessions: 2, // the 2+ badge
+      cardio: true, // and the star
+    })
+  })
+
+  it('no cardio list means no stars', () => {
+    const cells = buildMonthGrid([at(2026, 6, 15)], { year: 2026, month: 6 }, NOW)
+    expect(cells.every((c) => !c.cardio)).toBe(true)
+  })
+
+  it('a cardio in another month does not star this one', () => {
+    const cells = buildMonthGrid(
+      [at(2026, 5, 12)],
+      { year: 2026, month: 6 },
+      NOW,
+      [at(2026, 5, 12)],
+    )
+    expect(cells.every((c) => !c.cardio)).toBe(true)
+  })
 })
 
 describe('weeklyTotals', () => {

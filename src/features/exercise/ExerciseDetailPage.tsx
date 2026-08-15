@@ -103,7 +103,11 @@ export function ExerciseDetailPage() {
             <div className="hero">
               <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
             </div>
-            <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+            {/* Cardio has no target load — a treadmill has nothing to define,
+                so the card is absent rather than empty. */}
+            {exercise.kind !== 'cardio' && (
+              <WeightEditor gymId={activeGymId ?? null} exerciseId={exerciseId} />
+            )}
             {/* Under the weight, not in the header: this is a place to go, not
                 a label, and it can be several rows tall. */}
             <AlternativesSection exercise={exercise} hrefFor={altHref} />

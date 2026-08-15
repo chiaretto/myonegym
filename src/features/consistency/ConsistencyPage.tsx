@@ -67,6 +67,11 @@ export function ConsistencyPage() {
   const loaded = summaries !== undefined
   const completed = (summaries ?? []).filter((s) => s.session.completedAt != null)
   const timestamps = completed.map((s) => s.session.completedAt!)
+  // A subset of `timestamps`: cardio counts in every aggregate like any other
+  // workout, and this is only what decides where the star goes.
+  const cardioAt = completed
+    .filter((s) => s.session.kind === 'cardio')
+    .map((s) => s.session.completedAt!)
 
   const current = monthOf(now)
   const floor = firstSessionMonth(timestamps)
@@ -80,7 +85,7 @@ export function ConsistencyPage() {
     setExpanded(false)
   }
 
-  const cells = buildMonthGrid(timestamps, ref, now)
+  const cells = buildMonthGrid(timestamps, ref, now, cardioAt)
   const monthSessions = completed.filter((s) => sameMonth(monthOf(s.session.completedAt!), ref))
   const visible = expanded ? monthSessions : monthSessions.slice(0, COLLAPSED_COUNT)
   const hiddenCount = monthSessions.length - COLLAPSED_COUNT
@@ -164,11 +169,15 @@ export function ConsistencyPage() {
                     )
                   }
                   const multi = cell.sessions > 1
+                  const marks = [
+                    multi ? `${cell.sessions} sessões` : null,
+                    cell.cardio ? 'cardio' : null,
+                  ].filter(Boolean)
                   return (
                     <span
                       key={i}
-                      className={`cal-cell ${cell.state}${multi ? ' multi' : ''}`}
-                      title={multi ? `${cell.sessions} sessões` : undefined}
+                      className={`cal-cell ${cell.state}${multi ? ' multi' : ''}${cell.cardio ? ' cardio' : ''}`}
+                      title={marks.length ? marks.join(' · ') : undefined}
                     >
                       {cell.day}
                     </span>
@@ -181,6 +190,9 @@ export function ConsistencyPage() {
                 </span>
                 <span>
                   <i className="cal-cell done multi" /> 2+ sessões
+                </span>
+                <span>
+                  <i className="cal-cell done cardio" /> cardio
                 </span>
                 <span>
                   <i className="cal-cell today" /> hoje

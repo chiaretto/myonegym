@@ -12,6 +12,7 @@ import { buildShareCard, type ShareVariant } from './share/shareModel'
 import {
   useCategoryMap,
   useExerciseMap,
+  useExercises,
   useGymWeights,
   useGyms,
   useSession,
@@ -30,6 +31,7 @@ export function SessionPage() {
   const entries = useSessionEntries(sessionId)
   const gyms = useGyms()
   const weights = useGymWeights(session?.gymId ?? null)
+  const exs = useExercises()
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
   const accent = useSettings((s) => s.accent)
@@ -122,7 +124,11 @@ export function SessionPage() {
         <div className="session-hero">
           <span className="session-day">{session.dayName}</span>
           <div className="session-meta">
-            {gym && (
+            {/* Not on a cardio: which gym you ran in is not a property of the
+                run, and the chip was the only thing on the screen implying the
+                exercise belonged to a place. The session is still stored per
+                gym — the Consistência list, which mixes gyms, still names it. */}
+            {gym && session.kind !== 'cardio' && (
               <span className="chip accent">
                 <Icon name="building" size={12} /> {gym.name}
               </span>
@@ -169,8 +175,15 @@ export function SessionPage() {
                   </span>
                   {(() => {
                     // No badge while the gym's targets are unknown — "definir"
-                    // would be claiming this exercise has none.
-                    if (!weights) return null
+                    // would be claiming this exercise has none. Same for the
+                    // exercises themselves: until they load we cannot tell a
+                    // cardio from a strength entry, and `exMap` answers "unknown"
+                    // and "not there" identically (both are a missing key).
+                    if (!weights || !exs) return null
+                    // And none at all for cardio: there is no load to show, so
+                    // "definir" would nag for a number that cannot exist.
+                    const ex = entry.exerciseId != null ? exMap.get(entry.exerciseId) : undefined
+                    if (ex?.kind === 'cardio') return null
                     const w = entry.exerciseId != null ? weights.get(entry.exerciseId) : undefined
                     return w ? (
                       <span className="used-weight readonly">
@@ -222,10 +235,20 @@ export function SessionPage() {
 
       {!readOnly && (
         <ActionBar>
-          <button className="btn primary" onClick={onComplete} disabled={done === 0}>
+          {/* A cardio session has a single entry, so requiring it to be ticked
+              before Concluir would ask for the same fact twice — completing it
+              marks that entry done (see completeSession). A strength session
+              still cannot be completed empty. */}
+          <button
+            className="btn primary"
+            onClick={onComplete}
+            disabled={session.kind !== 'cardio' && done === 0}
+          >
             <Icon name="check" /> Concluir treino
           </button>
-          {done === 0 && (
+          {/* Only when the button is actually gated. On a cardio session it is
+              not, so the hint would contradict an enabled button. */}
+          {done === 0 && session.kind !== 'cardio' && (
             <p className="complete-hint">Marque ao menos um exercício para concluir.</p>
           )}
         </ActionBar>

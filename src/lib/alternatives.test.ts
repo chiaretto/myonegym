@@ -5,6 +5,7 @@ import type { Exercise } from '../db/types'
 const ex = (id: number, name: string, alts: number[] = []): Exercise => ({
   id,
   name,
+  kind: 'strength',
   categoryIds: [],
   alternativeIds: alts,
 })
@@ -50,7 +51,7 @@ describe('alternativesOf', () => {
   })
 
   it('tolerates a record written before the field existed', () => {
-    const legacy = { id: 1, name: 'Legado', categoryIds: [] } as unknown as Exercise
+    const legacy = { id: 1, name: 'Legado', kind: 'strength', categoryIds: [] } as unknown as Exercise
     expect(() => alternativesOf(legacy, catalog(legacy))).not.toThrow()
     expect(alternativesOf(legacy, catalog(legacy))).toEqual([])
   })

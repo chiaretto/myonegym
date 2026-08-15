@@ -37,9 +37,28 @@ export interface Category {
   name: string
 }
 
+/**
+ * Força or Cardio. It is a property of the **exercise**, not of a gym or a day,
+ * and it decides exactly three things — no more:
+ *
+ *   · **weight** — a cardio exercise has none (a treadmill has no target load),
+ *     so no weight card, editor, history or badge is shown for it. Notes and
+ *     photos stay: the bike's seat setting is worth writing down;
+ *   · **training days** — a day is a strength routine, so the day form offers
+ *     strength exercises only;
+ *   · **where it starts** — strength starts from a DAY on Home, cardio starts
+ *     from the EXERCISE itself, on the Cardio tab.
+ *
+ * Weights already recorded for an exercise that becomes Cardio are kept, not
+ * deleted: they stop being displayed and come back if it turns Strength again.
+ */
+export type ExerciseKind = 'strength' | 'cardio'
+
 export interface Exercise {
   id?: number
   name: string
+  /** Força or Cardio — see ExerciseKind. Indexed: the Cardio tab queries it. */
+  kind: ExerciseKind
   /** URL of a static image or an animated GIF (optional). */
   mediaUrl?: string
   /** Zero or more categories. Empty = uncategorized (shown as "Sem categoria").
@@ -180,8 +199,19 @@ export type SessionStatus = 'active' | 'completed'
 export interface Session {
   id?: number
   gymId: number
-  /** Source training day; kept for linking but may be deleted later. */
+  /**
+   * Which kind of visit this was, **snapshotted at start** like `dayName`.
+   *
+   * Deliberately not derived from the session's exercises: an exercise can
+   * change kind or be deleted later, and the history is precisely the thing
+   * that must not change retroactively. A cardio session has no `dayId` and
+   * carries the exercise's name in `dayName`.
+   */
+  kind: ExerciseKind
+  /** Source training day; kept for linking but may be deleted later.
+   *  Absent on a cardio session — cardio has no day. */
   dayId?: number
+  /** The day's name, or the exercise's name on a cardio session. */
   dayName: string
   startedAt: number
   completedAt?: number

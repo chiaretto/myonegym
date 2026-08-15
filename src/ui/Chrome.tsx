@@ -11,12 +11,19 @@ import { Icon } from './Icon'
  * the brand set covers ~16 concepts, so this complements the webfont rather than
  * replacing it.
  */
-export function TabBar({ active }: { active: 'home' | 'sessions' | 'settings' }) {
+export function TabBar({ active }: { active: 'home' | 'cardio' | 'sessions' | 'settings' }) {
   return (
     <nav className="tabbar">
       <Link to="/" className={active === 'home' ? 'active' : ''}>
         <i className="png-ic pi-home" aria-hidden />
         Treinos
+      </Link>
+      {/* Tabler glyph among three brand PNGs: the brand set covers ~16 concepts
+          and cardio is not one of them. Visible up close, and swapping it for
+          brand art later is one file. */}
+      <Link to="/cardio" className={active === 'cardio' ? 'active' : ''}>
+        <Icon name="heartbeat" aria-hidden />
+        Cardio
       </Link>
       <Link to="/sessions" className={active === 'sessions' ? 'active' : ''}>
         <i className="png-ic pi-history" aria-hidden />

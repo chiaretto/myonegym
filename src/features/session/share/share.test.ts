@@ -10,6 +10,7 @@ const gym: Gym = { id: 1, name: 'Academia A', createdAt: 0 }
 const session: Session = {
   id: 10,
   gymId: 1,
+  kind: 'strength',
   dayName: 'Dia 1',
   startedAt: STARTED,
   completedAt: COMPLETED,
@@ -22,8 +23,8 @@ const catMap = new Map<number, Category>([
 ])
 
 const exMap = new Map<number, Exercise>([
-  [1, { id: 1, name: 'Rosca Direta', categoryIds: [1], alternativeIds: [], mediaUrl: 'https://x.com/a.gif' }],
-  [2, { id: 2, name: 'Supino', categoryIds: [2], alternativeIds: [] }],
+  [1, { id: 1, name: 'Rosca Direta', kind: 'strength', categoryIds: [1], alternativeIds: [], mediaUrl: 'https://x.com/a.gif' }],
+  [2, { id: 2, name: 'Supino', kind: 'strength', categoryIds: [2], alternativeIds: [] }],
 ])
 
 const weights = new Map<number, Weight>([

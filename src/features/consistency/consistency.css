@@ -57,6 +57,17 @@
 .cal-cell.multi::after { content: ''; position: absolute; right: -1px; bottom: -1px;
   width: 0.6em; height: 0.6em; border-radius: 50%;
   background: var(--accent); border: 2px solid var(--surface-1); }
+/* Cardio that day. A mark ADDED to the cell, not a state of its own: the disc
+   still says "trained", this says "and some of it was cardio". Top-left, so it
+   never collides with the 2+ badge at bottom-right, and small enough not to
+   compete with the day number. */
+.cal-cell.cardio::before { content: '★'; position: absolute; left: -2px; top: -4px;
+  font-size: 0.62em; line-height: 1; color: var(--accent);
+  text-shadow: 0 0 2px var(--surface-1), 0 0 2px var(--surface-1); }
+/* On a filled disc the star sits ON the accent, so it flips to the on-accent
+   colour to stay visible. */
+.cal-cell.done.cardio::before { color: var(--on-accent); text-shadow: none; }
+
 /* today, no session yet — the open red ring from the week track. */
 .cal-cell.today { background: var(--bg-accent); border: 2px solid var(--accent);
   color: var(--text-accent); font-weight: 700; }

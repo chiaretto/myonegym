@@ -175,7 +175,10 @@ function DayForm({ day }: { day: Day | null }) {
   // Candidates to add = catalog minus what's already in the day, then narrowed by
   // the picker filters. Filtering after the exclusion means an added exercise
   // leaves the list no matter which filters are active.
-  const available = (exs ?? []).filter((e) => !selected.includes(e.id!))
+  // Cardio never composes a day — it is loose, and it is started from its own
+  // tab. Excluding it here also keeps it out of the search and the category
+  // filter, which run over `available`.
+  const available = (exs ?? []).filter((e) => e.kind !== 'cardio' && !selected.includes(e.id!))
   const categoryFilter: CategoryFilter =
     categorySel === 'all' || categorySel === 'none' ? categorySel : Number(categorySel)
   // No day filter here: this form is already scoped to a single day, so `days` is unused.

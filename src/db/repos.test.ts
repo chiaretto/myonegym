@@ -9,6 +9,7 @@ import {
   createCategory,
   createDay,
   createExercise,
+  daysContaining,
   createGym,
   deleteCategory,
   deleteExercise,
@@ -24,6 +25,7 @@ import {
   listCategories,
   listDays,
   reorderDays,
+  listCardioExercises,
   listHistory,
   listPhotos,
   listSessionEntries,
@@ -36,6 +38,7 @@ import {
   saveWeight,
   setAlternatives,
   setEntryDone,
+  startCardioSession,
   startSession,
   swapEntryExercise,
   sweepPhotoOrphans,
@@ -171,6 +174,69 @@ describe('exercises', () => {
     expect(await getNote(g, ex, d)).toBeUndefined()
     expect(await listPhotos(g, ex, d)).toHaveLength(0)
     expect(await d.exercises.get(ex)).toBeUndefined()
+  })
+})
+
+describe('exercise kind', () => {
+  it('defaults to strength', async () => {
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    expect((await d.exercises.get(ex))?.kind).toBe('strength')
+  })
+
+  it('creates a cardio exercise when asked', async () => {
+    const ex = await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
+    expect((await d.exercises.get(ex))?.kind).toBe('cardio')
+  })
+
+  it('listCardioExercises returns only cardio, by name', async () => {
+    await createExercise({ name: 'Supino' }, d)
+    await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
+    await createExercise({ name: 'Bicicleta', kind: 'cardio' }, d)
+    expect((await listCardioExercises(d)).map((e) => e.name)).toEqual(['Bicicleta', 'Esteira'])
+  })
+
+  it('turning an exercise into cardio takes it out of every day', async () => {
+    const ex = await createExercise({ name: 'Esteira' }, d)
+    const other = await createExercise({ name: 'Supino' }, d)
+    const d2 = await createDay({ name: 'Dia 2', exerciseIds: [ex, other] }, d)
+    const d4 = await createDay({ name: 'Dia 4', exerciseIds: [ex] }, d)
+
+    const left = await updateExercise(ex, { name: 'Esteira', kind: 'cardio' }, d)
+
+    // The caller gets the days back so it can name them in the confirmation.
+    expect(left.map((day) => day.name).sort()).toEqual(['Dia 2', 'Dia 4'])
+    expect((await d.days.get(d2))?.exerciseIds).toEqual([other])
+    expect((await d.days.get(d4))?.exerciseIds).toEqual([])
+  })
+
+  it('daysContaining names the days before the change is made', async () => {
+    const ex = await createExercise({ name: 'Esteira' }, d)
+    await createDay({ name: 'Dia 2', exerciseIds: [ex] }, d)
+    expect((await daysContaining(ex, d)).map((day) => day.name)).toEqual(['Dia 2'])
+    // Asking does not change anything.
+    expect((await d.exercises.get(ex))?.kind).toBe('strength')
+  })
+
+  it('staying strength leaves the days alone', async () => {
+    const ex = await createExercise({ name: 'Supino' }, d)
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
+    const left = await updateExercise(ex, { name: 'Supino Reto' }, d)
+    expect(left).toEqual([])
+    expect((await d.days.get(day))?.exerciseIds).toEqual([ex])
+  })
+
+  it('the weight survives a trip to cardio and back', async () => {
+    const g = await createGym('A', d)
+    const ex = await createExercise({ name: 'Esteira' }, d)
+    await saveWeight(g, ex, 5, 'KG', 'global', d)
+
+    await updateExercise(ex, { name: 'Esteira', kind: 'cardio' }, d)
+    // Deliberately NOT deleted — hidden by the UI, not destroyed by the repo.
+    expect((await getWeight(g, ex, d))?.value).toBe(5)
+
+    await updateExercise(ex, { name: 'Esteira', kind: 'strength' }, d)
+    expect((await getWeight(g, ex, d))?.value).toBe(5)
+    expect(await listHistory(g, ex, d)).toHaveLength(1)
   })
 })
 
@@ -837,6 +903,78 @@ describe('sessions', () => {
     // the target weight is gone with the exercise (no per-session copy)
     expect(await getWeight(g, rosca, d)).toBeUndefined()
     expect((await getSession(sid, d))?.dayName).toBe('Dia 1')
+  })
+})
+
+describe('cardio sessions', () => {
+  async function seedCardio() {
+    const g = await createGym('A', d)
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
+    const supino = await createExercise({ name: 'Supino' }, d)
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, d)
+    return { g, esteira, supino, day }
+  }
+
+  it('starts a one-entry session that records its own kind and name', async () => {
+    const { g, esteira } = await seedCardio()
+    const sid = await startCardioSession(g, esteira, d)
+
+    const session = await getSession(sid, d)
+    expect(session?.kind).toBe('cardio')
+    expect(session?.dayName).toBe('Esteira') // the history has to show something
+    expect(session?.dayId).toBeUndefined() // cardio has no day
+    const entries = await listSessionEntries(sid, d)
+    expect(entries.map((e) => e.exerciseName)).toEqual(['Esteira'])
+  })
+
+  it('refuses a strength exercise', async () => {
+    const { g, supino } = await seedCardio()
+    await expect(startCardioSession(g, supino, d)).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('refuses an exercise that does not exist', async () => {
+    const { g } = await seedCardio()
+    await expect(startCardioSession(g, 9999, d)).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('one active session per gym holds across the two kinds', async () => {
+    const { g, esteira, day } = await seedCardio()
+    await startSession(g, day, d)
+    // A cardio cannot start on top of a strength workout...
+    await expect(startCardioSession(g, esteira, d)).rejects.toBeInstanceOf(ValidationError)
+    expect(await d.sessions.count()).toBe(1)
+  })
+
+  it('a strength workout cannot start on top of a cardio either', async () => {
+    const { g, esteira, day } = await seedCardio()
+    await startCardioSession(g, esteira, d)
+    await expect(startSession(g, day, d)).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('completing marks the single entry done — no ticking first', async () => {
+    const { g, esteira } = await seedCardio()
+    const sid = await startCardioSession(g, esteira, d)
+    await completeSession(sid, d)
+
+    const session = await getSession(sid, d)
+    expect(session?.status).toBe('completed')
+    expect(session?.completedAt).toBeGreaterThan(0)
+    expect((await listSessionEntries(sid, d)).every((e) => e.done)).toBe(true)
+  })
+
+  it('completing a strength session does NOT tick its entries', async () => {
+    const { g, day } = await seedCardio()
+    const sid = await startSession(g, day, d)
+    await completeSession(sid, d)
+    // The runner governs which entries are done; completion must not decide.
+    expect((await listSessionEntries(sid, d)).every((e) => !e.done)).toBe(true)
+  })
+
+  it('frees the gym once completed', async () => {
+    const { g, esteira } = await seedCardio()
+    const first = await startCardioSession(g, esteira, d)
+    await completeSession(first, d)
+    await expect(startCardioSession(g, esteira, d)).resolves.toBeGreaterThan(0)
   })
 })
 

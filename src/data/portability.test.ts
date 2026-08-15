@@ -21,6 +21,7 @@ import {
   saveWeight,
   setAlternatives,
   setEntryDone,
+  startCardioSession,
   startSession,
   swapEntryExercise,
 } from '../db/repos'
@@ -286,6 +287,71 @@ describe('exercise alternatives survive a backup', () => {
   })
 })
 
+describe('exercise kind travels through a backup', () => {
+  it('round-trips both kinds', async () => {
+    await createExercise({ name: 'Supino' }, d)
+    await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    const byName = new Map((await d.exercises.toArray()).map((e) => [e.name, e.kind]))
+    expect(byName.get('Supino')).toBe('strength')
+    expect(byName.get('Esteira')).toBe('cardio')
+  })
+
+  it('a cardio session keeps its kind through a round-trip', async () => {
+    const g = await createGym('A', d)
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
+    const sid = await startCardioSession(g, esteira, d)
+    await completeSession(sid, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    const sessions = await d.sessions.toArray()
+    expect(sessions).toHaveLength(1)
+    expect(sessions[0].kind).toBe('cardio')
+    expect(sessions[0].dayName).toBe('Esteira')
+  })
+
+  it('a backup made before the kind existed imports as strength', async () => {
+    await createExercise({ name: 'Supino' }, d)
+    const g = await createGym('A', d)
+    const day = await createDay({ name: 'Dia 1', exerciseIds: [] }, d)
+    const sid = await startSession(g, day, d)
+    await completeSession(sid, d)
+
+    // Strip the field the way an older export simply would not have had it.
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    for (const e of raw.exercises as Record<string, unknown>[]) delete e.kind
+    for (const s of raw.sessions as Record<string, unknown>[]) delete s.kind
+
+    const doc = parseBackup(JSON.stringify(raw))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    // Nothing rejected, and everything is what it actually was: strength.
+    expect((await d.exercises.toArray()).every((e) => e.kind === 'strength')).toBe(true)
+    expect((await d.sessions.toArray()).every((s) => s.kind === 'strength')).toBe(true)
+  })
+
+  it('the sample seeds loose cardio exercises', async () => {
+    await generateExample(d)
+    const cardio = (await d.exercises.toArray()).filter((e) => e.kind === 'cardio')
+    expect(cardio.length).toBeGreaterThan(0)
+
+    // They are what the Cardio tab is for: outside every day, and with no weight.
+    const inDays = new Set((await d.days.toArray()).flatMap((day) => day.exerciseIds))
+    for (const e of cardio) {
+      expect(inDays.has(e.id!)).toBe(false)
+      expect(await d.weights.where('exerciseId').equals(e.id!).count()).toBe(0)
+    }
+  })
+})
+
 describe('device-local UI preferences stay out of the backup', () => {
   it('does not carry the accent colour', async () => {
     const g = await createGym('Academia A', d)
@@ -525,7 +591,9 @@ describe('generate example', () => {
   it('creates the bundled sample routine (gym, categories, exercises, days, weights)', async () => {
     await generateExample(d)
     expect(await d.categories.count()).toBe(8)
-    expect(await d.exercises.count()).toBe(27)
+    // 27 strength + 2 loose cardio (the Cardio tab must not open empty).
+    expect(await d.exercises.count()).toBe(29)
+    expect((await d.exercises.toArray()).filter((e) => e.kind === 'cardio')).toHaveLength(2)
     expect(await d.days.count()).toBe(6)
     expect(await d.gyms.count()).toBe(1)
     expect((await d.gyms.toArray())[0].name).toBe('Fit Park')

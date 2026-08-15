@@ -77,6 +77,15 @@ export interface MonthCell {
   state: MonthCellState
   /** Completed sessions that day. >1 renders the "2+" badge. */
   sessions: number
+  /**
+   * At least one of that day's sessions was cardio.
+   *
+   * A **signal added to** the cell, not a state of its own: `state` still
+   * answers "was there a workout", this answers "what kind". That is what lets
+   * a day with both strength and cardio show both marks without inventing a
+   * combinatorial fourth state.
+   */
+  cardio: boolean
 }
 
 /**
@@ -89,8 +98,13 @@ export function buildMonthGrid(
   completedAt: readonly number[],
   ref: MonthRef,
   now: number,
+  /** Completion times of the CARDIO sessions — a subset of `completedAt`. */
+  cardioAt: readonly number[] = [],
 ): MonthCell[] {
   const counts = dayCountsForMonth(completedAt, ref)
+  const cardioDays = new Set(
+    [...dayCountsForMonth(cardioAt, ref).keys()],
+  )
   const first = new Date(ref.year, ref.month, 1).getTime()
   const daysInMonth = new Date(ref.year, ref.month + 1, 0).getDate()
   const lead = dayIndexInWeek(first)
@@ -108,7 +122,13 @@ export function buildMonthGrid(
     else if (startOfDay(dayTs) === today) state = 'today'
     else if (dayTs > now) state = 'future'
     else state = 'past'
-    cells.push({ day: d.getDate(), inMonth, state, sessions })
+    cells.push({
+      day: d.getDate(),
+      inMonth,
+      state,
+      sessions,
+      cardio: inMonth && cardioDays.has(d.getDate()),
+    })
   }
   return cells
 }
