@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie'
-import { UNCATEGORIZED } from './types'
+import { GLOBAL_GYM_ID, UNCATEGORIZED } from './types'
 import type {
   Category,
   Day,
@@ -121,7 +121,85 @@ export class MyOneGymDB extends Dexie {
     // and are moved afterwards, one at a time and idempotently, by
     // `migrateLegacyPhotos` in db/repos, which fills `size` as it goes.
     this.version(8).stores({})
+    // v9 — a weight is GLOBAL by default (`gymId = GLOBAL_GYM_ID`) and a gym's
+    // own weight is an exception. No index changes: the sentinel is just an id
+    // the same compound keys already accept.
+    //
+    // Everything stored before this version is per-gym, so the upgrade has to
+    // decide which of a user's gyms speaks for the exercise. It promotes, per
+    // exercise, the OLDEST gym that has a weight for it — see
+    // `promoteWeightsToGlobal`. Nothing is deleted and nothing is merged: the
+    // other gyms' rows stay exactly as they are and simply become exceptions,
+    // so a user with a single gym comes out fully global with no exceptions.
+    this.version(9)
+      .stores({})
+      .upgrade(async (tx) => {
+        await promoteWeightsToGlobal(
+          tx.table('gyms') as Table<Gym, number>,
+          tx.table('weights') as Table<Weight, number>,
+          tx.table('weightHistory') as Table<WeightHistory, number>,
+        )
+      })
   }
+}
+
+/**
+ * Give every exercise that has any weight a **global** one, by promoting the
+ * row of the oldest gym that has it (creation order, ties by id) and moving
+ * that gym's history for the pair along with it. Rows of other gyms are left
+ * untouched and become exceptions.
+ *
+ * Runs on tables rather than on the database so the v9 upgrade and the restore
+ * of a pre-v9 backup can share it — two paths that face the same data with the
+ * same required outcome.
+ *
+ * **Idempotent**: an exercise that already has a global row is skipped, so
+ * re-running promotes nothing and re-keys nothing. Returns how many exercises
+ * were promoted.
+ */
+export async function promoteWeightsToGlobal(
+  gyms: Table<Gym, number>,
+  weights: Table<Weight, number>,
+  history: Table<WeightHistory, number>,
+): Promise<number> {
+  const [allGyms, allWeights] = await Promise.all([gyms.toArray(), weights.toArray()])
+
+  // Creation order decides who speaks for the exercise. A weight whose gym no
+  // longer exists ranks after every real gym — it is a leftover, not a choice.
+  const rank = new Map<number, number>()
+  allGyms
+    .slice()
+    .sort((a, b) => a.createdAt - b.createdAt || (a.id ?? 0) - (b.id ?? 0))
+    .forEach((g, i) => {
+      if (g.id != null) rank.set(g.id, i)
+    })
+  const rankOf = (gymId: number) => rank.get(gymId) ?? allGyms.length + gymId
+
+  const alreadyGlobal = new Set(
+    allWeights.filter((w) => w.gymId === GLOBAL_GYM_ID).map((w) => w.exerciseId),
+  )
+  const winners = new Map<number, Weight>()
+  for (const w of allWeights) {
+    if (w.gymId === GLOBAL_GYM_ID || alreadyGlobal.has(w.exerciseId)) continue
+    const best = winners.get(w.exerciseId)
+    if (!best || rankOf(w.gymId) < rankOf(best.gymId)) winners.set(w.exerciseId, w)
+  }
+
+  for (const [exerciseId, row] of winners) {
+    if (row.id == null) continue
+    // The entries move first: once the weight is re-keyed, its old gym id is
+    // no longer readable from it, and a half-applied promotion would leave the
+    // timeline stranded under a gym that no longer holds the weight.
+    const entries = await history
+      .where('[gymId+exerciseId]')
+      .equals([row.gymId, exerciseId])
+      .toArray()
+    for (const entry of entries) {
+      if (entry.id != null) await history.update(entry.id, { gymId: GLOBAL_GYM_ID })
+    }
+    await weights.update(row.id, { gymId: GLOBAL_GYM_ID })
+  }
+  return winners.size
 }
 
 export const db = new MyOneGymDB()

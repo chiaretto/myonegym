@@ -40,6 +40,15 @@
 .unit-seg button { background: transparent; border: 0; padding: 11px 0; font-size: var(--fs-sm);
   font-weight: 600; color: var(--text-secondary); border-radius: var(--r-pill); }
 .unit-seg button.on { background: var(--accent-grad); color: var(--on-accent); font-weight: 700; }
+/* "Só nessa academia" — the scope of the save. A whole row is the tap target,
+   because a bare checkbox is far below the comfortable size for a thumb. */
+.wc-scope { display: flex; align-items: flex-start; gap: 12px; padding: 12px;
+  border-radius: var(--r-ctl); border: 0.5px solid var(--border); background: var(--surface-2); }
+.wc-scope input { width: 20px; height: 20px; flex-shrink: 0; margin: 1px 0 0; accent-color: var(--accent); }
+.wc-scope-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.wc-scope-text strong { font-size: var(--fs-sm); font-weight: 600; }
+.wc-scope-text small { font-size: var(--fs-2xs); color: var(--text-secondary); line-height: 1.35; }
+
 /* Salvar reads as the primary action — wider than Cancelar (handoff ~1.4x). */
 .wc-edit .sheet-actions .btn { flex: 1; width: auto; }
 .wc-edit .sheet-actions .btn.primary { flex: 1.4; }

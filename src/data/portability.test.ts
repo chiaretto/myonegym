@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { allTables, MyOneGymDB } from '../db/db'
+import { GLOBAL_GYM_ID } from '../db/types'
 import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
 import { removeImage } from './photoStore'
 import {
@@ -11,7 +12,9 @@ import {
   createGym,
   createCategory,
   getNote,
+  listHistory,
   listSessionEntries,
+  resolveWeight,
   saveNote,
   saveWeight,
   setAlternatives,
@@ -41,20 +44,26 @@ afterEach(async () => {
 
 async function seed() {
   const cat = await createCategory('Peito', d)
-  const g = await createGym('A', undefined, d)
+  const g = await createGym('A', d)
   const ex = await createExercise({ name: 'Supino', mediaUrl: 'https://x.com/s.gif', categoryIds: [cat] }, d)
   await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
-  await saveWeight(g, ex, 40, 'KG', d)
-  await saveWeight(g, ex, 42.5, 'KG', d) // creates history
+  await saveWeight(g, ex, 40, 'KG', 'global', d)
+  await saveWeight(g, ex, 42.5, 'KG', 'global', d) // creates history
   return { cat, g, ex }
 }
 
 describe('backup export/import', () => {
   it('exports the current weight AND its full history', async () => {
-    const { g, ex } = await seed() // saveWeight twice → 2 history entries
+    const { ex } = await seed() // saveWeight twice → 2 history entries
     const doc = await exportBackup(d)
     expect(doc.weights).toHaveLength(1)
-    expect(doc.weights[0]).toMatchObject({ gymId: g, exerciseId: ex, value: 42.5, unit: 'KG' })
+    // A global weight travels under the sentinel — it belongs to no gym.
+    expect(doc.weights[0]).toMatchObject({
+      gymId: GLOBAL_GYM_ID,
+      exerciseId: ex,
+      value: 42.5,
+      unit: 'KG',
+    })
     expect(doc.weightHistory.length).toBe(await d.weightHistory.count())
     expect(doc.weightHistory.length).toBeGreaterThan(0)
     expect(JSON.stringify(doc)).toContain('changedAt')
@@ -83,7 +92,7 @@ describe('backup export/import', () => {
     await seed() // gym "A"
     const doc = await exportBackup(d)
     // mutate: add gym B
-    await createGym('B', undefined, d)
+    await createGym('B', d)
     expect(await d.gyms.count()).toBe(2)
     // importing the old doc should replace, leaving only "A"
     await importBackupReplaceAll(doc, d)
@@ -210,7 +219,7 @@ describe('exercise alternatives survive a backup', () => {
   })
 
   it("round-trips a session entry's swapped exercise", async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const reto = await createExercise({ name: 'Supino Reto' }, d)
     const maq = await createExercise({ name: 'Supino Máquina' }, d)
     await setAlternatives(reto, [maq], d)
@@ -278,12 +287,12 @@ describe('exercise alternatives survive a backup', () => {
 describe('full backup is a complete snapshot', () => {
   /** Seed one of everything, then export/JSON/parse/wipe/import and compare. */
   async function seedEverything() {
-    const g = await createGym('Academia A', undefined, d)
+    const g = await createGym('Academia A', d)
     const cat = await createCategory('Peito', d)
     const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
-    await saveWeight(g, ex, 40, 'KG', d)
-    await saveWeight(g, ex, 42.5, 'KG', d) // history
+    await saveWeight(g, ex, 40, 'KG', 'global', d)
+    await saveWeight(g, ex, 42.5, 'KG', 'global', d) // history
     await saveNote(g, ex, 'cotovelo fixo', d)
     await addPhoto(g, ex, new Blob([new Uint8Array([9, 8, 7, 200, 255])], { type: 'image/jpeg' }), 100, 80, d)
     const sid = await startSession(g, day, d)
@@ -506,7 +515,7 @@ describe('generate example', () => {
   it('is additive and reference-safe with existing data (remapped ids)', async () => {
     // Pre-existing category (shared name) + a gym, so the run must dedup + skip gym.
     await createCategory('Peito', d)
-    await createGym('Casa', undefined, d)
+    await createGym('Casa', d)
     await generateExample(d)
     // "Peito" not duplicated; a fresh gym is NOT added (one already existed)
     expect((await d.categories.where('name').equalsIgnoreCase('Peito').count())).toBe(1)
@@ -602,5 +611,85 @@ describe('backup includes workout sessions', () => {
     const entries = await listSessionEntries(sid, d)
     expect(entries.length).toBeGreaterThan(0)
     expect(entries.some((e) => e.done)).toBe(true)
+  })
+})
+
+describe('weight scopes travel through a backup', () => {
+  /** A global weight plus one gym exception, in two gyms. */
+  async function seedScopes() {
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
+    const rosca = await createExercise({ name: 'Rosca' }, d)
+    const supino = await createExercise({ name: 'Supino' }, d)
+    await saveWeight(a, rosca, 20, 'KG', 'global', d)
+    await saveWeight(a, supino, 40, 'KG', 'global', d)
+    await saveWeight(b, supino, 30, 'KG', 'gym', d)
+    return { a, b, rosca, supino }
+  }
+
+  it('round-trips global weights and exceptions unchanged', async () => {
+    const { a, b, rosca, supino } = await seedScopes()
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    expect(await resolveWeight(a, rosca, d)).toMatchObject({ scope: 'global', weight: { value: 20 } })
+    expect(await resolveWeight(b, supino, d)).toMatchObject({ scope: 'gym', weight: { value: 30 } })
+    expect(await resolveWeight(a, supino, d)).toMatchObject({ scope: 'global', weight: { value: 40 } })
+    // Each scope keeps its own timeline.
+    expect(await listHistory(b, supino, d)).toHaveLength(1)
+    expect(await listHistory(a, supino, d)).toHaveLength(1)
+  })
+
+  it('a weight naming no gym is not rejected as a dangling reference', async () => {
+    await seedScopes()
+    const json = JSON.stringify(await exportBackup(d))
+    const doc = parseBackup(json)
+    expect(doc.weights.some((w) => w.gymId === GLOBAL_GYM_ID)).toBe(true)
+    await expect(importBackupReplaceAll(doc, d)).resolves.not.toThrow()
+  })
+
+  it('promotes the weights of a backup written before they were global', async () => {
+    const { a, b, rosca, supino } = await seedScopes()
+    // Rewrite the export the way the old format looked: no global rows, every
+    // weight keyed to a gym. "A" is the older gym, so it owns them.
+    const legacy = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    legacy.version = 5
+    for (const table of ['weights', 'weightHistory'] as const) {
+      for (const row of legacy[table] as { gymId: number }[]) {
+        if (row.gymId === GLOBAL_GYM_ID) row.gymId = a
+      }
+    }
+    await resetAll(d)
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(legacy)), d)
+
+    // A's rows became the global ones; B's stayed an exception.
+    expect(await resolveWeight(a, rosca, d)).toMatchObject({ scope: 'global', weight: { value: 20 } })
+    expect(await resolveWeight(b, rosca, d)).toMatchObject({ scope: 'global', weight: { value: 20 } })
+    expect(await resolveWeight(b, supino, d)).toMatchObject({ scope: 'gym', weight: { value: 30 } })
+    expect(await d.weights.where('gymId').equals(a).count()).toBe(0)
+  })
+
+  it('leaves a current backup exactly as it is', async () => {
+    const { a, b, supino } = await seedScopes()
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+
+    await importBackupReplaceAll(doc, d)
+
+    // B's exception was NOT promoted over A's global weight.
+    expect(await resolveWeight(a, supino, d)).toMatchObject({ scope: 'global', weight: { value: 40 } })
+    expect(await d.weights.where('gymId').equals(b).count()).toBe(1)
+  })
+
+  it('seeds the sample routine with GLOBAL weights, shared by a later gym', async () => {
+    await generateExample(d)
+
+    expect(await d.weights.where('gymId').equals(GLOBAL_GYM_ID).count()).toBe(18)
+    const nova = await createGym('Nova', d)
+    const withWeight = (await d.weights.toArray())[0].exerciseId
+    expect(await resolveWeight(nova, withWeight, d)).toMatchObject({ scope: 'global' })
   })
 })

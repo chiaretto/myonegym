@@ -6,6 +6,7 @@ import {
   createDay,
   createExercise,
   createGym,
+  getWeight,
   listCategories,
   listDays,
   listExercises,
@@ -117,8 +118,8 @@ function unchanged(s: Awaited<ReturnType<typeof seed>>): CatalogProposal {
 describe('catalogSnapshot', () => {
   it('carries only categories, exercises and days', async () => {
     const s = await seed()
-    const gym = await createGym('Academia', undefined, d)
-    await saveWeight(gym, s.supino, 60, 'KG', d)
+    const gym = await createGym('Academia', d)
+    await saveWeight(gym, s.supino, 60, 'KG', 'global', d)
     await saveNote(gym, s.supino, 'banco na altura 3', d)
     await addPhoto(gym, s.supino, new Blob(['jpeg'], { type: 'image/jpeg' }), 10, 10, d)
     await startSession(gym, s.dia1, d)
@@ -281,8 +282,8 @@ describe('validateProposal', () => {
 describe('applyCatalogProposal', () => {
   it('keeps weight, note and photo when an exercise moves between days', async () => {
     const s = await seed()
-    const gym = await createGym('Academia', undefined, d)
-    await saveWeight(gym, s.maquina, 45, 'KG', d)
+    const gym = await createGym('Academia', d)
+    await saveWeight(gym, s.maquina, 45, 'KG', 'global', d)
     await saveNote(gym, s.maquina, 'pino 7', d)
     await addPhoto(gym, s.maquina, new Blob(['jpeg'], { type: 'image/jpeg' }), 8, 8, d)
 
@@ -290,7 +291,7 @@ describe('applyCatalogProposal', () => {
     p.days = [day('d1', s.dia1, 'Dia 1', ['e1']), day('d2', s.dia2, 'Dia 2', ['e3', 'e2'])]
     await applyCatalogProposal(p, ALL_SECTIONS, d)
 
-    expect((await d.weights.where({ gymId: gym, exerciseId: s.maquina }).first())?.value).toBe(45)
+    expect((await getWeight(gym, s.maquina, d))?.value).toBe(45)
     expect((await d.exerciseNotes.where({ gymId: gym, exerciseId: s.maquina }).first())?.text).toBe('pino 7')
     expect(await d.exercisePhotos.where({ gymId: gym, exerciseId: s.maquina }).count()).toBe(1)
 

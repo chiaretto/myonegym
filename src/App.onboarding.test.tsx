@@ -75,7 +75,7 @@ describe('First-launch sample data prompt', () => {
   })
 
   it('is not shown to a device that already has registered data (migration safety)', async () => {
-    await createGym('Minha academia', undefined, db)
+    await createGym('Minha academia', db)
 
     render(
       <MemoryRouter initialEntries={['/']}>

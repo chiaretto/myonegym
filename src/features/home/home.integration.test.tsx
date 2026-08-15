@@ -49,13 +49,13 @@ afterEach(async () => {
 })
 
 describe('Home end-to-end', () => {
-  it('shows seeded days and the per-gym weight badge after expanding', async () => {
+  it('shows seeded days and the weight badge after expanding', async () => {
     // Seed a controlled fixture (independent of the sample-data content).
-    const gym = await createGym('Academia A', undefined, db)
+    const gym = await createGym('Academia A', db)
     const cat = await createCategory('Peito', db)
     const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
     await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
-    await saveWeight(gym, supino, 40, 'KG', db)
+    await saveWeight(gym, supino, 40, 'KG', 'global', db)
     const user = userEvent.setup()
 
     render(
@@ -73,11 +73,35 @@ describe('Home end-to-end', () => {
     expect(await screen.findByText('Supino Reto')).toBeInTheDocument()
     await waitFor(() => expect(screen.getByText('40 KG')).toBeInTheDocument())
   })
+
+  it("shows this gym's exception over the global weight", async () => {
+    const gym = await createGym('Academia A', db)
+    const outra = await createGym('Academia B', db)
+    const supino = await createExercise({ name: 'Supino Reto' }, db)
+    const rosca = await createExercise({ name: 'Rosca Direta' }, db)
+    await createDay({ name: 'Dia 1', exerciseIds: [supino, rosca] }, db)
+    await saveWeight(gym, supino, 40, 'KG', 'global', db)
+    await saveWeight(gym, rosca, 20, 'KG', 'global', db)
+    // Only the bench differs here; the curl is whatever it is everywhere.
+    await saveWeight(outra, supino, 30, 'KG', 'gym', db)
+    useActiveGym.setState({ activeGymId: outra })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    await user.click(await screen.findByText('Dia 1'))
+    await waitFor(() => expect(screen.getByText('30 KG')).toBeInTheDocument())
+    expect(screen.getByText('20 KG')).toBeInTheDocument()
+  })
 })
 
 /** Two days in one gym, so one can hold the open session and the other be blocked. */
 async function seedTwoDays() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   const cat = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
   const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [cat] }, db)

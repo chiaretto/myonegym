@@ -35,7 +35,7 @@ afterEach(async () => {
 /** "Crucifixo" is deliberately in BOTH days, so the catalog detail would
  *  otherwise have had a "2 dias" chip to show. */
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const peito = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)

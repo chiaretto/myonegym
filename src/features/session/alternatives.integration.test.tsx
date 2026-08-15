@@ -42,7 +42,7 @@ afterEach(async () => {
  * feature: the day lists what the user put in it.
  */
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   const peito = await createCategory('Peito', db)
   await createExercise({ name: 'Rosca Direta', categoryIds: [peito] }, db)
   const reto = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
@@ -50,8 +50,8 @@ async function seed() {
   const cruc = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
   const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peito] }, db)
   await setAlternatives(reto, [maq, cruc], db)
-  await saveWeight(gym, reto, 60, 'KG', db)
-  await saveWeight(gym, maq, 45, 'KG', db)
+  await saveWeight(gym, reto, 60, 'KG', 'global', db)
+  await saveWeight(gym, maq, 45, 'KG', 'global', db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [reto, corda] }, db)
   return { gym, reto, maq, cruc, corda, day }
 }

@@ -1,6 +1,7 @@
 import { readImage, removeImage, sweepOrphans, writeImage } from '../data/photoStore'
 import { db, type MyOneGymDB } from './db'
 import {
+  GLOBAL_GYM_ID,
   type Category,
   type Day,
   type Exercise,
@@ -12,6 +13,7 @@ import {
   type Unit,
   type Weight,
   type WeightHistory,
+  type WeightScope,
 } from './types'
 
 /** Thrown for user-facing validation failures (empty/duplicate names, etc.). */
@@ -45,40 +47,31 @@ export async function listGyms(d: MyOneGymDB = db): Promise<Gym[]> {
 }
 
 /**
- * Create a gym. When `copyFromGymId` is given, duplicates that gym's CURRENT
- * weights into independent rows for the new gym (history is NOT copied).
- * Returns the new gym id.
+ * Create a gym and return its id.
+ *
+ * No weights are copied into it — and there is nothing to copy from: weights are
+ * global (see `GLOBAL_GYM_ID`), so a new gym already shows every weight the user
+ * has the moment it exists. It starts with no exceptions of its own, which is
+ * what a new gym should be until the user says otherwise.
  */
-export async function createGym(
-  name: string,
-  copyFromGymId?: number,
-  d: MyOneGymDB = db,
-): Promise<number> {
+export async function createGym(name: string, d: MyOneGymDB = db): Promise<number> {
   const clean = requireName(name, 'nome da academia')
-  return d.transaction('rw', d.gyms, d.weights, async () => {
-    const gymId = await d.gyms.add({ name: clean, createdAt: Date.now() })
-    if (copyFromGymId != null) {
-      const source = await d.weights.where('gymId').equals(copyFromGymId).toArray()
-      if (source.length) {
-        await d.weights.bulkAdd(
-          source.map((w) => ({
-            gymId,
-            exerciseId: w.exerciseId,
-            value: w.value,
-            unit: w.unit,
-          })),
-        )
-      }
-    }
-    return gymId
-  })
+  return d.gyms.add({ name: clean, createdAt: Date.now() })
 }
 
 export async function renameGym(id: number, name: string, d: MyOneGymDB = db): Promise<void> {
   await d.gyms.update(id, { name: requireName(name, 'nome da academia') })
 }
 
-/** Delete a gym and cascade to its weights, history, exercise notes and photos. */
+/**
+ * Delete a gym and cascade to its **own** weights (its exceptions), their
+ * history, its exercise notes and its photos.
+ *
+ * The global weights are untouched, and are so by construction: every clause
+ * below matches `gymId === id`, and a real gym id is never `GLOBAL_GYM_ID`.
+ * Deleting the last gym therefore keeps the user's weights — creating another
+ * one brings them all back.
+ */
 export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
   // Note the file names before the records go: after the transaction there is
   // nothing left to say which images belonged to this gym.
@@ -339,64 +332,131 @@ export async function deleteDay(id: number, d: MyOneGymDB = db): Promise<void> {
 
 /* --------------------------------------------------------------- weights */
 
+/** The weight that applies to a pair, and which scope it came from. */
+export interface ResolvedWeight {
+  /** Absent when the exercise has neither an exception here nor a global weight. */
+  weight?: Weight
+  scope: WeightScope
+}
+
+/** The row stored at exactly `(gymId, exerciseId)` — no fallback. */
+function rowAt(gymId: number, exerciseId: number, d: MyOneGymDB) {
+  return d.weights.where('[gymId+exerciseId]').equals([gymId, exerciseId]).first()
+}
+
+/**
+ * The weight that applies to `(gym, exercise)`: the gym's own **exception**
+ * when it has one, otherwise the exercise's **global** weight.
+ *
+ * This is the single place the two-layer lookup lives — screens ask for "the
+ * weight of this exercise in this gym" and get back the value plus the scope
+ * that produced it, never the `GLOBAL_GYM_ID` sentinel.
+ */
+export async function resolveWeight(
+  gymId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<ResolvedWeight> {
+  if (gymId !== GLOBAL_GYM_ID) {
+    const override = await rowAt(gymId, exerciseId, d)
+    if (override) return { weight: override, scope: 'gym' }
+  }
+  return { weight: await rowAt(GLOBAL_GYM_ID, exerciseId, d), scope: 'global' }
+}
+
+/** The weight applying to (gym, exercise), exception first. */
 export async function getWeight(
   gymId: number,
   exerciseId: number,
   d: MyOneGymDB = db,
 ): Promise<Weight | undefined> {
-  return d.weights.where('[gymId+exerciseId]').equals([gymId, exerciseId]).first()
+  return (await resolveWeight(gymId, exerciseId, d)).weight
 }
 
-/** Current weights for a gym as a Map<exerciseId, Weight> (for Home badges). */
+/**
+ * Weights applying to a gym as a Map<exerciseId, Weight> (Home badges, session
+ * rows, share card): every global weight, with this gym's exceptions laid over
+ * the top.
+ */
 export async function weightsForGym(
   gymId: number,
   d: MyOneGymDB = db,
 ): Promise<Map<number, Weight>> {
-  const rows = await d.weights.where('gymId').equals(gymId).toArray()
-  return new Map(rows.map((w) => [w.exerciseId, w]))
+  const [globals, overrides] = await Promise.all([
+    d.weights.where('gymId').equals(GLOBAL_GYM_ID).toArray(),
+    gymId === GLOBAL_GYM_ID
+      ? Promise.resolve([] as Weight[])
+      : d.weights.where('gymId').equals(gymId).toArray(),
+  ])
+  const map = new Map(globals.map((w) => [w.exerciseId, w]))
+  for (const w of overrides) map.set(w.exerciseId, w)
+  return map
 }
 
 /**
- * Persist a target weight for (gym, exercise) and append a history entry.
- * The entry kind: 'first' when there was no prior weight, 'unit' when only the
- * unit changed relative to the current record, otherwise 'value'.
+ * Persist a target weight in the given **scope** and append a history entry to
+ * that same scope.
+ *
+ * - `'global'` writes the exercise's global weight **and drops this gym's
+ *   exception**, if it had one — that is precisely what unchecking "Só nessa
+ *   academia" and saving means. The dropped exception's *history* is kept: it
+ *   is a record of what happened in that gym, not a consequence of a checkbox,
+ *   and it comes back into view if the exception is recreated.
+ * - `'gym'` writes only this gym's exception, leaving the global weight alone.
+ *
+ * The entry kind: 'first' when that scope had no prior weight, 'unit' when only
+ * the unit changed relative to it, otherwise 'value'.
  */
 export async function saveWeight(
   gymId: number,
   exerciseId: number,
   value: number,
   unit: Unit,
+  scope: WeightScope,
   d: MyOneGymDB = db,
 ): Promise<void> {
   if (!Number.isFinite(value) || value < 0) {
     throw new ValidationError('Peso inválido.')
   }
+  const target = scope === 'gym' ? gymId : GLOBAL_GYM_ID
   await d.transaction('rw', d.weights, d.weightHistory, async () => {
-    const current = await d.weights
-      .where('[gymId+exerciseId]')
-      .equals([gymId, exerciseId])
-      .first()
+    const current = await rowAt(target, exerciseId, d)
     const kind = !current ? 'first' : current.unit !== unit ? 'unit' : 'value'
 
     if (current?.id != null) {
       await d.weights.update(current.id, { value, unit })
     } else {
-      await d.weights.add({ gymId, exerciseId, value, unit })
+      await d.weights.add({ gymId: target, exerciseId, value, unit })
     }
-    await d.weightHistory.add({ gymId, exerciseId, value, unit, changedAt: Date.now(), kind })
+    await d.weightHistory.add({
+      gymId: target,
+      exerciseId,
+      value,
+      unit,
+      changedAt: Date.now(),
+      kind,
+    })
+
+    if (scope === 'global' && gymId !== GLOBAL_GYM_ID) {
+      const override = await rowAt(gymId, exerciseId, d)
+      if (override?.id != null) await d.weights.delete(override.id)
+    }
   })
 }
 
-/** History for (gym, exercise), newest first. */
+/**
+ * History for (gym, exercise), newest first — of the scope that is actually in
+ * effect: the gym's own timeline while it has an exception, the global one
+ * otherwise.
+ */
 export async function listHistory(
   gymId: number,
   exerciseId: number,
   d: MyOneGymDB = db,
 ): Promise<WeightHistory[]> {
-  const rows = await d.weightHistory
-    .where('[gymId+exerciseId]')
-    .equals([gymId, exerciseId])
-    .toArray()
+  const { scope } = await resolveWeight(gymId, exerciseId, d)
+  const key = scope === 'gym' ? gymId : GLOBAL_GYM_ID
+  const rows = await d.weightHistory.where('[gymId+exerciseId]').equals([key, exerciseId]).toArray()
   return rows.sort((a, b) => b.changedAt - a.changedAt || (b.id ?? 0) - (a.id ?? 0))
 }
 
@@ -404,6 +464,12 @@ export async function listHistory(
  * Delete a history entry. Deleting the newest entry reverts the current weight
  * to the previous entry (or clears it if none remain). Non-newest deletions
  * leave the current weight untouched.
+ *
+ * Everything here works on the entry's **own** key, never on the resolved one:
+ * an entry belongs to the scope it was written in. So deleting the last entry
+ * of a gym's exception removes the exception row itself, and the pair falls
+ * back to the global weight — the same rule as "revert to the previous entry",
+ * one level up.
  */
 export async function deleteHistoryEntry(entryId: number, d: MyOneGymDB = db): Promise<void> {
   await d.transaction('rw', d.weights, d.weightHistory, async () => {

@@ -53,7 +53,7 @@ const EMPTY_HOME = /Nenhum dia de treino ainda/i
 /** Gym "A" active, one training day with one exercise, no first-launch prompt. */
 async function seedOneDay() {
   useOnboarding.getState().markPromptSeen()
-  const gym = await createGym('A', undefined, db)
+  const gym = await createGym('A', db)
   const ex = await createExercise({ name: 'Supino' }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   useActiveGym.setState({ activeGymId: gym })

@@ -34,7 +34,7 @@ afterEach(async () => {
 
 /** Gym "A" active + three days (Dia 1..3), each with one exercise. */
 async function seedThreeDays() {
-  const gym = await createGym('A', undefined, db)
+  const gym = await createGym('A', db)
   const ex = await createExercise({ name: 'Supino' }, db)
   const d1 = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   const d2 = await createDay({ name: 'Dia 2', exerciseIds: [ex] }, db)
@@ -111,7 +111,7 @@ describe('Home "Próximo treino" selection', () => {
     // reason to reset because the workout happened somewhere else. This used to
     // fall back to "Dia 1", since the history was read per active gym.
     const { gym, d2 } = await seedThreeDays()
-    const other = await createGym('B', undefined, db)
+    const other = await createGym('B', db)
     await completeDay(gym, d2)
 
     useActiveGym.setState({ activeGymId: other })
@@ -129,7 +129,7 @@ describe('Home "Próximo treino" selection', () => {
     // The counterpart to the test above: history is global, but an in-progress
     // session is not — a workout is happening in one physical place.
     const { gym, d1 } = await seedThreeDays()
-    const other = await createGym('B', undefined, db)
+    const other = await createGym('B', db)
     await startSession(gym, d1, db)
 
     useActiveGym.setState({ activeGymId: other })

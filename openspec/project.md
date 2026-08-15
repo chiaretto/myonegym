@@ -10,8 +10,9 @@
 MyOneGym is a personal, offline-first Progressive Web App for managing gym
 workouts. A user registers one or more **gyms**, defines **exercises** (grouped
 by muscle **category**), organizes them into **training days**, and tracks the
-**target weight** for each exercise **per gym**. There is **no login and no
-server** — all data lives in the browser.
+**target weight** of each exercise — one weight shared by every gym, with a
+**per-gym exception** where a gym really is different. There is **no login and
+no server** — all data lives in the browser.
 
 ## Tech Stack (proposed conventions)
 
@@ -33,23 +34,34 @@ server** — all data lives in the browser.
 
 ## Core Domain Entities
 
-- **Gym (Academia)** — a physical gym. Weights are scoped to a gym.
+- **Gym (Academia)** — a physical gym. It owns the *exceptions* to weights, plus
+  notes, photos and sessions.
 - **Category (Categoria)** — muscle group (Peito, Tríceps, Costas, Bíceps…). Editable.
 - **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL and a category.
 - **Training Day (Dia de Treino)** — e.g. "Dia 1"; optional category; ordered list of exercises.
-- **Weight (Peso)** — target load for an exercise **within a gym**; value + unit (KG/LB/#).
+- **Weight (Peso)** — target load for an exercise; value + unit (KG/LB/#).
+  **Global** by default; a gym may hold an **exception** that wins inside it.
 
 ## Key Design Decisions (to review)
 
-1. **Weight is keyed by `(gymId, exerciseId)`.** Because exercises repeat across
-   days and categories, the target weight belongs to the exercise within a gym —
-   not to a day-exercise pairing. The same "Rosca Direta" shows the same weight
-   on every day, but differs between gyms.
-2. **Unit (KG/LB/#) is stored on each weight record — per exercise per gym.**
-   The same exercise can use KG in one gym, LB in another, and a plain number (#)
-   in a third.
-3. **Copy-on-create for gyms.** When creating a new gym the user may pick a
-   source gym to duplicate all of its weight records.
+1. **Weight is global, and a gym is the exception.** What a person lifts is a
+   property of that person, not of the building, so the target weight belongs to
+   the **exercise** and is the same everywhere — the same "Rosca Direta" on every
+   day and in every gym. A gym MAY hold an **exception** (that machine really is
+   different), which wins inside it alone.
+
+   Both live in `weights`, keyed by `(gymId, exerciseId)`: the global row uses
+   the reserved `GLOBAL_GYM_ID = 0`, which no `++id` gym can collide with. That
+   is what keeps `&[gymId+exerciseId]` a working unique index — a compound key
+   cannot hold `undefined` — so both scopes are read, written and cascaded by
+   the same queries. The sentinel never leaves `db/repos`: screens call
+   `resolveWeight`/`weightsForGym` and get the value plus the scope it came from.
+2. **The history belongs to the scope that was saved.** A global save appends to
+   the global timeline, an exception to that gym's. Entries never move between
+   scopes, so dropping an exception hides its timeline rather than deleting it —
+   and recreating the exception brings it back.
+3. **A new gym copies nothing.** It already shows every global weight the moment
+   it exists, and starts with no exceptions of its own.
 4. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
 5. **Local-only, no auth.** Sharing happens through JSON export/import.
 6. **Category deletion reassigns** affected exercises to a reserved "Sem

@@ -54,13 +54,13 @@ beforeEach(() => {
 
 /** A completed "Dia 1" in gym "Academia A": Supino Reto (done, 40 KG) + Crucifixo (not done, no target). */
 async function seedCompleted() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const peito = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
   const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo] }, db)
-  await saveWeight(gym, supino, 40, 'KG', db)
+  await saveWeight(gym, supino, 40, 'KG', 'global', db)
   const sessionId = await startSession(gym, day, db)
   const entries = await listSessionEntries(sessionId, db)
   await setEntryDone(entries[0].id!, true, db)
@@ -86,7 +86,7 @@ describe('Share a completed session as an image', () => {
   })
 
   it('offers no share action while a session is in progress', async () => {
-    const gym = await createGym('Academia A', undefined, db)
+    const gym = await createGym('Academia A', db)
     useActiveGym.setState({ activeGymId: gym })
     const ex = await createExercise({ name: 'Supino Reto' }, db)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)

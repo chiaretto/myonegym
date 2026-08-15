@@ -28,14 +28,14 @@ afterEach(async () => {
  *  second "Dia 2", independent of the sample-data content so these tests stay
  *  stable (Dia 2 provides another day to exercise the resume/second-session path). */
 async function seedDia1() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   const peito = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
   const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
   const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peito] }, db)
   await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, corda] }, db)
   await createDay({ name: 'Dia 2', exerciseIds: [crucifixo, corda] }, db)
-  await saveWeight(gym, supino, 40, 'KG', db)
+  await saveWeight(gym, supino, 40, 'KG', 'global', db)
 }
 
 describe('Workout session end-to-end', () => {

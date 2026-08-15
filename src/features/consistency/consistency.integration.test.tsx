@@ -32,7 +32,7 @@ afterEach(async () => {
 })
 
 async function seed() {
-  const gym = await createGym('Fit Park', undefined, db)
+  const gym = await createGym('Fit Park', db)
   const ex = await createExercise({ name: 'Supino' }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, db)
   useActiveGym.setState({ activeGymId: gym })

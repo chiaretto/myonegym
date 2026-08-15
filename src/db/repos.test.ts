@@ -59,43 +59,55 @@ afterEach(async () => {
 })
 
 describe('gyms', () => {
-  it('creates a gym and copies weights independently', async () => {
-    const a = await createGym('A', undefined, d)
+  it('a new gym inherits the global weights, with no rows of its own', async () => {
+    const a = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca Direta' }, d)
     const ex2 = await createExercise({ name: 'Supino' }, d)
-    await saveWeight(a, ex, 20, 'KG', d)
-    await saveWeight(a, ex2, 40, 'KG', d)
+    await saveWeight(a, ex, 20, 'KG', 'global', d)
+    await saveWeight(a, ex2, 40, 'KG', 'global', d)
 
-    const b = await createGym('B', a, d)
+    const b = await createGym('B', d)
     expect((await getWeight(b, ex, d))?.value).toBe(20)
     expect((await getWeight(b, ex2, d))?.value).toBe(40)
+    // Inherited, not copied: nothing is keyed to B.
+    expect(await d.weights.where('gymId').equals(b).count()).toBe(0)
 
-    // editing B does not affect A
-    await saveWeight(b, ex, 99, 'KG', d)
-    expect((await getWeight(a, ex, d))?.value).toBe(20)
-    expect((await getWeight(b, ex, d))?.value).toBe(99)
-  })
-
-  it('creates a gym without copying when no source given', async () => {
-    const a = await createGym('A', undefined, d)
-    const ex = await createExercise({ name: 'Rosca' }, d)
-    await saveWeight(a, ex, 20, 'KG', d)
-    const b = await createGym('B', undefined, d)
-    expect(await getWeight(b, ex, d)).toBeUndefined()
+    // And editing from B moves the same global weight, in both gyms.
+    await saveWeight(b, ex, 25, 'KG', 'global', d)
+    expect((await getWeight(a, ex, d))?.value).toBe(25)
+    expect((await getWeight(b, ex, d))?.value).toBe(25)
   })
 
   it('rejects an empty gym name', async () => {
-    await expect(createGym('   ', undefined, d)).rejects.toBeInstanceOf(ValidationError)
+    await expect(createGym('   ', d)).rejects.toBeInstanceOf(ValidationError)
   })
 
-  it('deleting a gym cascades to weights and history', async () => {
-    const b = await createGym('B', undefined, d)
+  it('deleting a gym cascades to its exceptions, never to the global weights', async () => {
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await saveWeight(b, ex, 20, 'KG', d)
-    await saveWeight(b, ex, 22.5, 'KG', d)
+    await saveWeight(a, ex, 20, 'KG', 'global', d)
+    await saveWeight(b, ex, 15, 'KG', 'gym', d)
+    await saveWeight(b, ex, 17.5, 'KG', 'gym', d)
+
     await deleteGym(b, d)
-    expect(await getWeight(b, ex, d)).toBeUndefined()
-    expect(await listHistory(b, ex, d)).toHaveLength(0)
+
+    expect(await d.weights.where('gymId').equals(b).count()).toBe(0)
+    expect(await d.weightHistory.where('gymId').equals(b).count()).toBe(0)
+    // The global weight and its history are somebody else's business.
+    expect((await getWeight(a, ex, d))?.value).toBe(20)
+    expect(await listHistory(a, ex, d)).toHaveLength(1)
+  })
+
+  it('deleting the last gym keeps the global weights', async () => {
+    const a = await createGym('A', d)
+    const ex = await createExercise({ name: 'Rosca' }, d)
+    await saveWeight(a, ex, 20, 'KG', 'global', d)
+
+    await deleteGym(a, d)
+    const b = await createGym('B', d)
+
+    expect((await getWeight(b, ex, d))?.value).toBe(20)
   })
 })
 
@@ -146,10 +158,10 @@ describe('exercises', () => {
   })
 
   it('delete removes from days and drops weights + history + notes + photos', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
-    await saveWeight(g, ex, 20, 'KG', d)
+    await saveWeight(g, ex, 20, 'KG', 'global', d)
     await saveNote(g, ex, 'manter cotovelo fixo', d)
     await addPhoto(g, ex, jpeg(), 800, 600, d)
     await deleteExercise(ex, d)
@@ -260,13 +272,13 @@ describe('exercise alternatives', () => {
   })
 
   it('alternatives keep their own per-gym weight and history', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const reto = await createExercise({ name: 'Supino Reto' }, d)
     const maq = await createExercise({ name: 'Supino Máquina' }, d)
     await setAlternatives(reto, [maq], d)
-    await saveWeight(g, reto, 60, 'KG', d)
-    await saveWeight(g, maq, 45, 'KG', d)
-    await saveWeight(g, reto, 62.5, 'KG', d)
+    await saveWeight(g, reto, 60, 'KG', 'global', d)
+    await saveWeight(g, maq, 45, 'KG', 'global', d)
+    await saveWeight(g, reto, 62.5, 'KG', 'global', d)
     expect((await getWeight(g, reto, d))?.value).toBe(62.5)
     expect((await getWeight(g, maq, d))?.value).toBe(45)
     expect(await listHistory(g, maq, d)).toHaveLength(1)
@@ -279,14 +291,14 @@ describe('exercise alternatives', () => {
 
 describe('exercise notes', () => {
   it('upsert round-trip: save then read back the note', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveNote(g, ex, 'manter cotovelo fixo', d)
     expect((await getNote(g, ex, d))?.text).toBe('manter cotovelo fixo')
   })
 
   it('editing replaces the text (still one record)', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveNote(g, ex, 'manter cotovelo fixo', d)
     await saveNote(g, ex, 'usar pegada aberta', d)
@@ -295,7 +307,7 @@ describe('exercise notes', () => {
   })
 
   it('trims and saving blank/whitespace text deletes the note', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveNote(g, ex, '  espaçado  ', d)
     expect((await getNote(g, ex, d))?.text).toBe('espaçado')
@@ -304,8 +316,8 @@ describe('exercise notes', () => {
   })
 
   it('is isolated per gym', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveNote(a, ex, 'nota da A', d)
     expect((await getNote(a, ex, d))?.text).toBe('nota da A')
@@ -313,8 +325,8 @@ describe('exercise notes', () => {
   })
 
   it('deleting a gym removes its notes but leaves other gyms untouched', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await saveNote(a, ex, 'nota da A', d)
     await saveNote(b, ex, 'nota da B', d)
@@ -326,7 +338,7 @@ describe('exercise notes', () => {
 
 describe('exercise photos', () => {
   it('attaches a photo and reads the image back', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(g, ex, jpeg('abc'), 1600, 1200, d)
 
@@ -338,7 +350,7 @@ describe('exercise photos', () => {
   })
 
   it('stores the image as a file and keeps it out of the record', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(g, ex, jpeg('abc'), 1600, 1200, d)
 
@@ -349,7 +361,7 @@ describe('exercise photos', () => {
   })
 
   it('keeps the image in the record where there is no OPFS', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await withoutOpfs(() => addPhoto(g, ex, jpeg('abc'), 100, 100, d))
 
@@ -360,7 +372,7 @@ describe('exercise photos', () => {
   })
 
   it('reads both kinds of record side by side', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(g, ex, jpeg('as-file'), 100, 100, d)
     await withoutOpfs(() => addPhoto(g, ex, jpeg('in-record'), 100, 100, d))
@@ -370,7 +382,7 @@ describe('exercise photos', () => {
   })
 
   it('leaves no file behind when the record cannot be written', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     // A database whose insert fails: the file is written first, so this is the
     // moment an orphan would be created.
@@ -383,7 +395,7 @@ describe('exercise photos', () => {
   })
 
   it('keeps many photos per (gym, exercise), newest first', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Leg Press' }, d)
     // Both land in the same millisecond here — the id tie-break is what makes
     // the order deterministic (fake timers would deadlock Dexie's scheduler).
@@ -397,7 +409,7 @@ describe('exercise photos', () => {
   })
 
   it('orders by createdAt when the timestamps differ', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Leg Press' }, d)
     // Inserted directly with explicit timestamps: `addPhoto` stamps Date.now(),
     // and this is asserting listPhotos' sort, not the insert. Note the older row
@@ -421,8 +433,8 @@ describe('exercise photos', () => {
   })
 
   it('is isolated per gym', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(a, ex, jpeg(), 100, 100, d)
     expect(await listPhotos(a, ex, d)).toHaveLength(1)
@@ -430,7 +442,7 @@ describe('exercise photos', () => {
   })
 
   it('deletes a single photo without touching the others', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const first = await addPhoto(g, ex, jpeg('one'), 100, 100, d)
     await addPhoto(g, ex, jpeg('two'), 100, 100, d)
@@ -442,9 +454,9 @@ describe('exercise photos', () => {
   })
 
   it('deleting a photo leaves the weight and note alone', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
-    await saveWeight(g, ex, 20, 'KG', d)
+    await saveWeight(g, ex, 20, 'KG', 'global', d)
     await saveNote(g, ex, 'cotovelo fixo', d)
     const id = await addPhoto(g, ex, jpeg(), 100, 100, d)
     await deletePhoto(id, d)
@@ -454,8 +466,8 @@ describe('exercise photos', () => {
   })
 
   it('deleting a gym removes its photos but leaves other gyms untouched', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(a, ex, jpeg(), 100, 100, d)
     await addPhoto(b, ex, jpeg(), 100, 100, d)
@@ -466,8 +478,8 @@ describe('exercise photos', () => {
   })
 
   it('deleting an exercise removes its photos in every gym', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(a, ex, jpeg(), 100, 100, d)
     await addPhoto(b, ex, jpeg(), 100, 100, d)
@@ -479,7 +491,7 @@ describe('exercise photos', () => {
 
 describe('photo image files', () => {
   it('deleting a photo frees its file and leaves the others alone', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const first = await addPhoto(g, ex, jpeg('one'), 100, 100, d)
     await addPhoto(g, ex, jpeg('two'), 100, 100, d)
@@ -491,8 +503,8 @@ describe('photo image files', () => {
   })
 
   it('deleting a gym frees its files and leaves the other gym intact', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(a, ex, jpeg('a1'), 100, 100, d)
     await addPhoto(a, ex, jpeg('a2'), 100, 100, d)
@@ -506,8 +518,8 @@ describe('photo image files', () => {
   })
 
   it('deleting an exercise frees its files in every gym', async () => {
-    const a = await createGym('A', undefined, d)
-    const b = await createGym('B', undefined, d)
+    const a = await createGym('A', d)
+    const b = await createGym('B', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const other = await createExercise({ name: 'Supino' }, d)
     await addPhoto(a, ex, jpeg('a'), 100, 100, d)
@@ -521,7 +533,7 @@ describe('photo image files', () => {
   })
 
   it('sweeps a file no record points at', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     const id = await addPhoto(g, ex, jpeg('orphan'), 100, 100, d)
     await addPhoto(g, ex, jpeg('kept'), 100, 100, d)
@@ -535,7 +547,7 @@ describe('photo image files', () => {
   })
 
   it('never sweeps a file a record still points at', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await addPhoto(g, ex, jpeg('a'), 100, 100, d)
     await addPhoto(g, ex, jpeg('b'), 100, 100, d)
@@ -561,7 +573,7 @@ describe('migrating photos that predate file storage', () => {
     })
 
   it('moves the image to a file and drops it from the record', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'antiga')
 
@@ -575,7 +587,7 @@ describe('migrating photos that predate file storage', () => {
   })
 
   it('displays a legacy photo even before it is migrated', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'antiga')
 
@@ -583,7 +595,7 @@ describe('migrating photos that predate file storage', () => {
   })
 
   it('is idempotent and leaves migrated photos alone', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'uma')
     await legacy(g, ex, 'outra')
@@ -597,7 +609,7 @@ describe('migrating photos that predate file storage', () => {
   })
 
   it('picks up where it stopped when it was interrupted', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'uma')
     await withoutOpfs(() => migrateLegacyPhotos(d)) // interrupted: nothing moved
@@ -608,7 +620,7 @@ describe('migrating photos that predate file storage', () => {
   })
 
   it('keeps a legacy record readable when there is nowhere to move it', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'antiga')
 
@@ -620,7 +632,7 @@ describe('migrating photos that predate file storage', () => {
   })
 
   it('migrates and sweeps in one pass at launch', async () => {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const ex = await createExercise({ name: 'Rosca' }, d)
     await legacy(g, ex, 'antiga')
     const orphan = await addPhoto(g, ex, jpeg('orphan'), 100, 100, d)
@@ -663,12 +675,12 @@ describe('days', () => {
 
 describe('sessions', () => {
   async function seedDay() {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const rosca = await createExercise({ name: 'Rosca Direta' }, d)
     const supino = await createExercise({ name: 'Supino' }, d)
     const agachamento = await createExercise({ name: 'Agachamento' }, d)
-    await saveWeight(g, rosca, 20, 'KG', d)
-    await saveWeight(g, supino, 40, 'KG', d)
+    await saveWeight(g, rosca, 20, 'KG', 'global', d)
+    await saveWeight(g, supino, 40, 'KG', 'global', d)
     // agachamento intentionally has no weight
     const day = await createDay({ name: 'Dia 1', exerciseIds: [rosca, supino, agachamento] }, d)
     return { g, rosca, supino, agachamento, day }
@@ -689,7 +701,7 @@ describe('sessions', () => {
     await startSession(g, day, d)
     // the target read for the session's gym is the current one, and it moves
     expect((await getWeight(g, rosca, d))?.value).toBe(20)
-    await saveWeight(g, rosca, 25, 'KG', d)
+    await saveWeight(g, rosca, 25, 'KG', 'global', d)
     expect((await getWeight(g, rosca, d))?.value).toBe(25)
   })
 
@@ -704,7 +716,7 @@ describe('sessions', () => {
   it('active session is per gym', async () => {
     const { g, day } = await seedDay()
     await startSession(g, day, d)
-    const b = await createGym('B', undefined, d)
+    const b = await createGym('B', d)
     expect(await getActiveSession(b, d)).toBeUndefined()
     // gym B can start its own session for the same day
     const sidB = await startSession(b, day, d)
@@ -718,7 +730,7 @@ describe('sessions', () => {
     const rEntry = entries.find((e) => e.exerciseName === 'Rosca Direta')!
     await setEntryDone(rEntry.id!, true, d)
     // editing the weight during a session goes through the target editor
-    await saveWeight(g, rosca, 22.5, 'KG', d)
+    await saveWeight(g, rosca, 22.5, 'KG', 'global', d)
     const r2 = (await listSessionEntries(sid, d)).find((e) => e.id === rEntry.id)!
     expect(r2.done).toBe(true)
     // the exercise's target weight for the gym IS updated, with a history entry
@@ -738,7 +750,7 @@ describe('sessions', () => {
 
   it('history lists completed sessions of every gym, newest first, with counts', async () => {
     const { g, day } = await seedDay()
-    const b = await createGym('B', undefined, d)
+    const b = await createGym('B', d)
     // one completed in A with 1/3 done
     const s1 = await startSession(g, day, d)
     const e1 = await listSessionEntries(s1, d)
@@ -758,7 +770,7 @@ describe('sessions', () => {
 
   it('history is ordered by completion across gyms, not grouped by gym', async () => {
     const { g, day } = await seedDay()
-    const b = await createGym('B', undefined, d)
+    const b = await createGym('B', d)
 
     // Interleave: A, then B, then A again. Stamp completedAt directly so the
     // order under test is the data's, not the clock's resolution.
@@ -832,14 +844,14 @@ describe('sessions with alternatives', () => {
   /** Dia 1 = Rosca, Supino Reto (alternates with Máquina, which is NOT in the
    *  day), Tríceps. The alternative deliberately stays out of the day. */
   async function seedDay() {
-    const g = await createGym('A', undefined, d)
+    const g = await createGym('A', d)
     const rosca = await createExercise({ name: 'Rosca Direta' }, d)
     const reto = await createExercise({ name: 'Supino Reto' }, d)
     const maq = await createExercise({ name: 'Supino Máquina' }, d)
     const triceps = await createExercise({ name: 'Tríceps Corda' }, d)
     await setAlternatives(reto, [maq], d)
-    await saveWeight(g, reto, 60, 'KG', d)
-    await saveWeight(g, maq, 45, 'KG', d)
+    await saveWeight(g, reto, 60, 'KG', 'global', d)
+    await saveWeight(g, maq, 45, 'KG', 'global', d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [rosca, reto, triceps] }, d)
     return { g, rosca, reto, maq, triceps, day }
   }
@@ -927,7 +939,7 @@ describe('hasAnyRegisteredData', () => {
   })
 
   it('is true as soon as any gym, category, exercise, or day exists', async () => {
-    await createGym('A', undefined, d)
+    await createGym('A', d)
     expect(await hasAnyRegisteredData(d)).toBe(true)
   })
 

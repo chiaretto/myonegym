@@ -45,7 +45,7 @@ afterEach(async () => {
 })
 
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const peito = await createCategory('Peito', db)
   const triceps = await createCategory('Tríceps', db)

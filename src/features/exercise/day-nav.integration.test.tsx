@@ -26,7 +26,7 @@ const url = () => screen.getByTestId('url').textContent
 /** Dia 1 = [Supino, Crucifixo, Rosca]; Dia 4 = [Rosca, Agachamento].
  *  "Rosca" deliberately belongs to BOTH days. */
 async function seed() {
-  const gym = await createGym('Academia A', undefined, db)
+  const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
   const cat = await createCategory('Peito', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
