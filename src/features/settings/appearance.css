@@ -8,9 +8,37 @@
 .fs-ends { display: flex; justify-content: space-between; font-size: var(--fs-2xs);
   color: var(--text-muted); margin-top: -2px; }
 
+/* ------------------------------------------------------- accent colour ---- */
+/* One swatch per offered colour. Each is painted with that colour's own
+   gradient — the same 180° pair the app uses — so the sample shows what the
+   buttons will actually look like, not a flat approximation. */
+.ac-card { padding: 18px 16px; display: block; }
+/* Four columns, fixed: the list is sixteen, so this lands on a clean 4 x 4
+   instead of whatever the viewport happens to fit (auto-fit left an orphan row
+   on a phone). Four 44px targets plus gaps still fit a 320px screen. */
+.ac-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.ac-swatch { width: 100%; aspect-ratio: 1; max-width: 56px; min-width: 44px; justify-self: center;
+  border: 2px solid transparent; border-radius: var(--r-pill); padding: 0;
+  display: grid; place-items: center; cursor: pointer; color: var(--on-accent);
+  font-size: var(--fs-lg); }
+.ac-swatch.on { border-color: var(--text-primary); }
+.ac-swatch:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 3px; }
+.ac-name { font-family: var(--font-title); font-weight: 600; font-size: var(--fs-md);
+  text-align: center; margin-top: 14px; }
+.ac-note { font-size: var(--fs-2xs); color: var(--text-muted); line-height: 1.5;
+  text-align: center; margin-top: 6px; }
+
+.ac-reset { padding: 14px 16px; display: block; }
+.ac-reset .ac-note { margin-top: 10px; }
+
 .fs-preview { padding: 18px 16px; display: grid; gap: 10px; }
 .fs-preview .p-title { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 600; }
 .fs-preview .p-body { font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.55; }
 .fs-preview .p-badge { justify-self: start; padding: 6px 12px; background: var(--surface-2);
   border: 0.5px solid var(--border); border-radius: var(--r-pill); font-size: var(--fs-sm);
   font-weight: 600; font-variant-numeric: tabular-nums; }
+/* The preview carries both accent roles the user will meet everywhere else: the
+   soft tint behind a weight badge, and the solid gradient of a primary action. */
+.fs-preview .p-badge.accent { background: var(--bg-accent); border-color: var(--border-accent);
+  color: var(--text-accent); }
+.fs-preview .p-cta { justify-self: start; }

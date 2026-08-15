@@ -16,17 +16,19 @@ import {
 } from '../../db/repos'
 import { listSessionEntries } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
+import { useSettings } from '../../state/settings'
 import type { ShareCard } from './share/shareModel'
 
 // jsdom has no 2D context, so the painter is stubbed — what it *paints* is
 // verified manually (see tasks 5.2). What matters here is that the page feeds it
 // the right card and routes the result correctly.
 const renderCard = vi.hoisted(() =>
-  vi.fn(async (_card: unknown) => new Blob(['png'], { type: 'image/png' })),
+  vi.fn(async (_card: unknown, _accentId?: string | null) => new Blob(['png'], { type: 'image/png' })),
 )
 vi.mock('./share/renderCard', () => ({ renderCard }))
 
 const lastCard = () => renderCard.mock.calls.at(-1)![0] as ShareCard
+const lastAccent = () => renderCard.mock.calls.at(-1)![1]
 
 afterEach(async () => {
   cleanup()
@@ -45,6 +47,7 @@ afterEach(async () => {
     ].map((t) => t.clear()),
   )
   useActiveGym.setState({ activeGymId: null })
+  useSettings.getState().reset()
 })
 
 beforeEach(() => {
@@ -115,6 +118,17 @@ describe('Share a completed session as an image', () => {
     expect(card.rows[0].weight).toBe('40 KG')
     // No target for Crucifixo → no badge, and never the "definir" hint.
     expect(card.rows[1].weight).toBeUndefined()
+  })
+
+  it('paints the card in the accent the user chose', async () => {
+    const { sessionId } = await seedCompleted()
+    useSettings.getState().setAccent('blue')
+    const user = userEvent.setup()
+    renderAt(`/session/${sessionId}`)
+
+    await user.click(await screen.findByRole('button', { name: /^Compartilhar$/ }))
+    await waitFor(() => expect(renderCard).toHaveBeenCalledOnce())
+    expect(lastAccent()).toBe('blue')
   })
 
   it('builds a simplified card with neither weights nor duration', async () => {

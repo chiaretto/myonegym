@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { ACCENTS, DEFAULT_ACCENT, DEFAULT_ACCENT_ID } from './accents'
 import {
+  applyAccent,
   applyFontScale,
   clampFontScale,
   FONT_SCALE_DEFAULT,
@@ -8,14 +10,18 @@ import {
   useSettings,
 } from './settings'
 
+const ACCENT_PROPS = ['--accent', '--accent-2', '--accent-rgb'] as const
+function clearRoot() {
+  document.documentElement.style.removeProperty('--font-scale')
+  for (const p of ACCENT_PROPS) document.documentElement.style.removeProperty(p)
+}
+
 beforeEach(() => {
   localStorage.clear()
   useSettings.getState().reset()
-  document.documentElement.style.removeProperty('--font-scale')
+  clearRoot()
 })
-afterEach(() => {
-  document.documentElement.style.removeProperty('--font-scale')
-})
+afterEach(clearRoot)
 
 describe('clampFontScale', () => {
   it('keeps in-range values, clamps out-of-range, and defaults on NaN', () => {
@@ -49,6 +55,26 @@ describe('useSettings store', () => {
     useSettings.getState().reset()
     expect(useSettings.getState().fontScale).toBe(FONT_SCALE_DEFAULT)
   })
+
+  it('defaults to the brand red', () => {
+    expect(useSettings.getState().accent).toBe(DEFAULT_ACCENT_ID)
+  })
+
+  it('setAccent stores a listed colour and rejects anything else', () => {
+    useSettings.getState().setAccent('blue')
+    expect(useSettings.getState().accent).toBe('blue')
+    // Not reachable through the UI, but storage and older builds are not typed.
+    useSettings.getState().setAccent('mauve' as never)
+    expect(useSettings.getState().accent).toBe(DEFAULT_ACCENT_ID)
+  })
+
+  it('reset restores the font size AND the accent', () => {
+    useSettings.getState().setFontScale(2)
+    useSettings.getState().setAccent('green')
+    useSettings.getState().reset()
+    expect(useSettings.getState().fontScale).toBe(FONT_SCALE_DEFAULT)
+    expect(useSettings.getState().accent).toBe(DEFAULT_ACCENT_ID)
+  })
 })
 
 describe('applyFontScale', () => {
@@ -57,5 +83,29 @@ describe('applyFontScale', () => {
     expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('1.8')
     applyFontScale(9) // out of range -> clamped to max
     expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe(String(FONT_SCALE_MAX))
+  })
+})
+
+describe('applyAccent', () => {
+  const read = () => ACCENT_PROPS.map((p) => document.documentElement.style.getPropertyValue(p))
+
+  it('writes the three properties every accent token derives from', () => {
+    const green = ACCENTS.find((a) => a.id === 'green')!
+    applyAccent('green')
+    expect(read()).toEqual([green.accent, green.accent2, green.rgb])
+  })
+
+  it('falls back to the brand red for an unknown id', () => {
+    applyAccent('chartreuse')
+    expect(read()).toEqual([DEFAULT_ACCENT.accent, DEFAULT_ACCENT.accent2, DEFAULT_ACCENT.rgb])
+  })
+
+  it('writes nothing else — the rest of the palette derives in CSS', () => {
+    applyAccent('blue')
+    // --bg-accent and friends are rgba(var(--accent-rgb), …) in tokens.css; if
+    // they were ever written here instead, a future colour could half-apply.
+    expect(document.documentElement.style.getPropertyValue('--bg-accent')).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--text-accent')).toBe('')
+    expect(document.documentElement.style.getPropertyValue('--fill-accent')).toBe('')
   })
 })

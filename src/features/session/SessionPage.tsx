@@ -5,6 +5,7 @@ import { completeSession, deleteSession, setEntryDone } from '../../db/repos'
 import type { SessionEntry } from '../../db/types'
 import { exerciseCategoryNames } from '../../lib/days'
 import { fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
+import { useSettings } from '../../state/settings'
 import { renderCard } from './share/renderCard'
 import { shareFilename, shareSessionImage } from './share/shareCard'
 import { buildShareCard, type ShareVariant } from './share/shareModel'
@@ -31,6 +32,7 @@ export function SessionPage() {
   const weights = useGymWeights(session?.gymId ?? null)
   const exMap = useExerciseMap()
   const catMap = useCategoryMap()
+  const accent = useSettings((s) => s.accent)
   const toast = useToast()
   const confirm = useConfirm()
   const nav = useNavigate()
@@ -83,7 +85,9 @@ export function SessionPage() {
     setSharing(variant)
     try {
       const card = buildShareCard({ session, entries, gym, weights, exMap, catMap, variant })
-      const blob = await renderCard(card)
+      // The shared PNG carries the user's accent — canvas cannot read the CSS
+      // custom property, so the choice is passed in.
+      const blob = await renderCard(card, accent)
       const filename = shareFilename(session.dayName, session.completedAt ?? session.startedAt)
       const outcome = await shareSessionImage(blob, filename, session.dayName)
       if (outcome === 'downloaded') toast('Imagem salva.')
