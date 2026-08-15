@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createExercise, deleteExercise, updateExercise, ValidationError } from '../../db/repos'
+import {
+  createExercise,
+  daysContaining,
+  deleteExercise,
+  updateExercise,
+  ValidationError,
+} from '../../db/repos'
 import { db } from '../../db/db'
-import type { Exercise } from '../../db/types'
+import type { Exercise, ExerciseKind } from '../../db/types'
 import {
   useCategories,
   useCategoryMap,
@@ -19,6 +25,13 @@ import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
+
+/** "Dia 2", "Dia 2 e Dia 4", "Dia 1, Dia 2 e Dia 4" — the confirmation reads as
+ *  a sentence, so the last separator is "e", not a comma. */
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? ''
+  return `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`
+}
 
 export function ExercisesPage() {
   const exs = useExercises()
@@ -138,9 +151,18 @@ export function ExercisesPage() {
             <div key={e.id} className="row">
               <Media className="thumb" url={e.mediaUrl} alt={e.name} />
               <span className="row-body">
-                <span className="row-title">{e.name}</span>
+                <span className="row-title">
+                  {e.name}
+                  {/* Only cardio is marked: strength is the default and the
+                      overwhelming majority — a chip on every row would be noise. */}
+                  {e.kind === 'cardio' && (
+                    <span className="chip sm accent kind-chip">
+                      <Icon name="heartbeat" /> Cardio
+                    </span>
+                  )}
+                </span>
                 <span className="row-sub">{exerciseCategoryLabel(e, catMap)}</span>
-                {dayNames.length ? (
+                {e.kind === 'cardio' ? null : dayNames.length ? (
                   <span className="chip-row">
                     {dayNames.map((n, i) => (
                       <span key={`${n}-${i}`} className="chip sm">
@@ -221,8 +243,10 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const cats = useCategories()
   const exs = useExercises()
   const toast = useToast()
+  const confirm = useConfirm()
   const nav = useNavigate()
   const [name, setName] = useState(exercise?.name ?? '')
+  const [kind, setKind] = useState<ExerciseKind>(exercise?.kind ?? 'strength')
   const [mediaUrl, setMediaUrl] = useState(exercise?.mediaUrl ?? '')
   const [categoryIds, setCategoryIds] = useState<number[]>(exercise?.categoryIds ?? [])
   const [alternativeIds, setAlternativeIds] = useState<number[]>(exercise?.alternativeIds ?? [])
@@ -249,11 +273,27 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
     try {
       const input = {
         name,
+        kind,
         mediaUrl: mediaUrl || undefined,
         categoryIds,
         alternativeIds,
       }
       if (exercise) {
+        // Becoming cardio takes the exercise out of every day, so the user is
+        // told WHICH days before it happens — not after, with a toast.
+        if (kind === 'cardio' && exercise.kind !== 'cardio') {
+          const days = await daysContaining(exercise.id!, db)
+          if (days.length) {
+            const ok = await confirm({
+              title: 'Tornar este exercício um cardio?',
+              message: `Cardio não entra em dia de treino, então ele sairá de ${listNames(
+                days.map((day) => day.name),
+              )}. O peso registrado é mantido.`,
+              confirmLabel: 'Tornar cardio',
+            })
+            if (!ok) return
+          }
+        }
         await updateExercise(exercise.id!, input, db)
         toast('Exercício atualizado.')
       } else {
@@ -273,6 +313,34 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
         <div className="field">
           <label htmlFor="ex-name">Nome</label>
           <input id="ex-name" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Ex.: Rosca Direta" />
+        </div>
+        <div className="field">
+          <label>Tipo</label>
+          {/* Segmented like the weight unit picker: two closed options, always
+              both visible, no hidden state. */}
+          <div className="unit-seg kind-seg" role="group" aria-label="Tipo">
+            <button
+              type="button"
+              className={kind === 'strength' ? 'on' : ''}
+              aria-pressed={kind === 'strength'}
+              onClick={() => setKind('strength')}
+            >
+              Força
+            </button>
+            <button
+              type="button"
+              className={kind === 'cardio' ? 'on' : ''}
+              aria-pressed={kind === 'cardio'}
+              onClick={() => setKind('cardio')}
+            >
+              Cardio
+            </button>
+          </div>
+          <small className="hint">
+            {kind === 'cardio'
+              ? 'Sem peso — só observação e fotos. Fica na aba Cardio, fora dos dias de treino.'
+              : 'Tem peso alvo e entra nos dias de treino.'}
+          </small>
         </div>
         <div className="field">
           <label htmlFor="ex-media">URL da imagem ou GIF (opcional)</label>

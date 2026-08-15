@@ -184,8 +184,11 @@ export function SessionEntryPage() {
             <div className="hero">
               <Media url={exercise?.mediaUrl} alt={shownName} className="hero-media" />
             </div>
-            {/* Per-gym target weight (same editor as the catalog); read-only once completed */}
-            <WeightEditor gymId={session.gymId} exerciseId={shownId} readOnly={readOnly} />
+            {/* Per-gym target weight (same editor as the catalog); read-only once
+                completed. Absent for cardio — there is no load to show. */}
+            {exercise?.kind !== 'cardio' && (
+              <WeightEditor gymId={session.gymId} exerciseId={shownId} readOnly={readOnly} />
+            )}
             {/* Not while previewing: nesting alternatives-of-alternatives would
                 let the user wander away from the entry they are doing. */}
             {!previewing && (

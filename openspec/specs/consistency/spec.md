@@ -6,30 +6,42 @@ A tela de **Consistência** (rota `/sessions`, aba do meio) responde "eu tenho s
 ## Requirements
 ### Requirement: Tela de Consistência no Lugar de Sessões
 
-O app MUST apresentar uma tela de **Consistência** na rota `/sessions`,
-substituindo a listagem plana anterior. A aba do meio da tab bar MUST passar a
-rotular-se **"Consistência"**, mantendo o mesmo ícone e a mesma posição. A tela
+O app MUST apresentar uma tela de **Consistência** na rota `/sessions`. A tela
 compõe, nesta ordem: os **cards de estatística**, o **calendário mensal**, a
 **lista dos treinos do mês exibido**, os blocos das **últimas 12 semanas** e o
 gráfico dos **últimos 12 meses**.
 
 Todos os agregados MUST considerar as sessões concluídas em **todas as
 academias** (sessões de academia excluída contam), MUST NOT ser recortados pela
-academia ativa, e a tela MUST NOT oferecer seletor de academia — mesma decisão
-do histórico global.
+academia ativa, e a tela MUST NOT oferecer seletor de academia.
+
+Os agregados MUST contar **os dois tipos de sessão**: um dia só de cardio conta
+como dia treinado na sequência, no "treinos no mês", nos blocos de 12 semanas e
+nas barras de 12 meses. Cardio é treino; o que distingue os tipos no calendário
+é a **estrela**, não a exclusão da contagem.
 
 Todos os valores MUST ser **derivados** do histórico existente
-(`Session.completedAt`); nenhum estado persistido novo é introduzido e nenhuma
-migração é necessária.
+(`Session.completedAt`); nenhum estado persistido novo é introduzido para a
+Consistência e nenhuma migração é necessária **por causa dela**.
 
-Enquanto o histórico não foi lido, a tela MUST NOT exibir contagens (ver
-"Estados Vazios Só Depois da Resposta" em app-foundation). Sem nenhuma sessão
-concluída, a tela MUST exibir um estado vazio válido que convida ao primeiro
-treino.
+Enquanto o histórico não foi lido, a tela MUST NOT exibir contagens. Sem nenhuma
+sessão concluída, a tela MUST exibir um estado vazio válido que convida ao
+primeiro treino.
+
+#### Scenario: Cardio mantém a sequência viva
+- GIVEN o usuário treinou musculação na segunda e fez só cardio na terça
+- WHEN abre a Consistência na quarta
+- THEN a sequência conta os dois dias
+
+#### Scenario: Cardio conta no mês e nos gráficos
+- GIVEN no mês houve 4 treinos de musculação e 3 cardios
+- WHEN o usuário vê os cards e os gráficos
+- THEN o "treinos no mês" conta 7
+- AND os blocos de 12 semanas e as barras de 12 meses incluem os cardios
 
 #### Scenario: A aba abre a tela nova
 - GIVEN o app aberto na Home
-- WHEN o usuário toca a aba do meio, rotulada "Consistência"
+- WHEN o usuário toca a aba rotulada "Consistência"
 - THEN a rota `/sessions` mostra a tela de Consistência (estatísticas,
   calendário, lista do mês, 12 semanas, 12 meses)
 
@@ -97,10 +109,40 @@ dias MUST comunicar:
 - **dia futuro** — número mais apagado que o passado
 - **dias dos meses vizinhos** — não exibidos
 
+Um dia em que houve **pelo menos uma sessão de cardio** MUST exibir, além do que
+já exibiria, uma **estrela**. A estrela é um **sinal somado**, não um estado
+novo: ela responde "que tipo de treino houve", enquanto o disco continua
+respondendo "houve treino". Um dia com musculação **e** cardio MUST mostrar os
+dois sinais, e um dia só de cardio MUST mostrar disco **e** estrela — cardio é
+treino.
+
+A estrela MUST ser discreta o bastante para não competir com o número do dia, e
+MUST aparecer na **legenda** do calendário como os demais sinais.
+
 A navegação MUST alcançar até o **primeiro mês com sessão** (o controle "‹"
 desabilita antes disso) e MUST NOT passar do **mês corrente** (o controle "›"
 desabilita nele). Trocar o mês MUST atualizar **junto** o calendário, o card
 "Treinos no mês" e a lista do mês — um só estado de mês.
+
+#### Scenario: Dia só de cardio
+- GIVEN o usuário concluiu apenas um cardio no dia 12
+- WHEN vê o calendário do mês
+- THEN o dia 12 aparece como dia treinado, com a estrela
+
+#### Scenario: Dia com musculação e cardio
+- GIVEN no dia 14 houve um treino de musculação e um cardio
+- WHEN o usuário vê o calendário
+- THEN o dia 14 mostra o disco de treino, o badge de 2+ sessões e a estrela
+
+#### Scenario: Dia só de musculação não tem estrela
+- GIVEN no dia 15 houve apenas musculação
+- WHEN o usuário vê o calendário
+- THEN o dia 15 mostra o disco, sem estrela
+
+#### Scenario: A legenda explica a estrela
+- GIVEN o usuário está na Consistência
+- WHEN lê a legenda do calendário
+- THEN há uma entrada indicando que a estrela marca o dia com cardio
 
 #### Scenario: Dia com duas sessões
 - GIVEN o usuário concluiu duas sessões (academias diferentes) no dia 16

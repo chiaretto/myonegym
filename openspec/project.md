@@ -37,10 +37,12 @@ no server** — all data lives in the browser.
 - **Gym (Academia)** — a physical gym. It owns the *exceptions* to weights, plus
   notes, photos and sessions.
 - **Category (Categoria)** — muscle group (Peito, Tríceps, Costas, Bíceps…). Editable.
-- **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL and a category.
+- **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL, categories
+  and a **kind**: *Força* or *Cardio*.
 - **Training Day (Dia de Treino)** — e.g. "Dia 1"; optional category; ordered list of exercises.
-- **Weight (Peso)** — target load for an exercise; value + unit (KG/LB/#).
-  **Global** by default; a gym may hold an **exception** that wins inside it.
+- **Weight (Peso)** — target load for a **strength** exercise; value + unit
+  (KG/LB/#). **Global** by default; a gym may hold an **exception** that wins
+  inside it. Cardio exercises have none.
 
 ## Key Design Decisions (to review)
 
@@ -62,19 +64,31 @@ no server** — all data lives in the browser.
    and recreating the exception brings it back.
 3. **A new gym copies nothing.** It already shows every global weight the moment
    it exists, and starts with no exceptions of its own.
-4. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
-5. **Local-only, no auth.** Sharing happens through JSON export/import.
-6. **Category deletion reassigns** affected exercises to a reserved "Sem
+4. **An exercise is Força or Cardio, and the kind decides three things.**
+   Whether it has a weight (cardio does not — only notes and photos), whether it
+   can join a training day (it cannot), and where it starts: strength from a
+   **day** on Home, cardio from the **exercise itself**, on its own tab. A
+   cardio session is one exercise, and completing it ticks its single entry
+   rather than asking the user for the same fact twice.
+
+   Both `Exercise.kind` and `Session.kind` are stored. The session's is a
+   **snapshot**, like `dayName`: derive it from the exercises and the history
+   would rewrite itself the moment one of them changes kind or is deleted.
+   Cardio counts as a workout in every Consistência aggregate — the calendar's
+   star says *which kind* it was, not *whether it counted*.
+5. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
+6. **Local-only, no auth.** Sharing happens through JSON export/import.
+7. **Category deletion reassigns** affected exercises to a reserved "Sem
    categoria" category (never blocks; never orphans).
-7. **Full-backup import replaces all** local data (with an overwrite warning).
+8. **Full-backup import replaces all** local data (with an overwrite warning).
    Importing *shared exercises* JSON instead merges/adds without touching gyms or
    weights.
-8. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
+9. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
    sends categories, exercises and days to the Gemini API to reorganize them.
    It is opt-in (needs a token the user supplies), it never sends gyms, weights,
    notes, photos or sessions, and its client is loaded on demand so the offline
    bundle does not carry it. Everything else in the app remains local-only.
-9. **The accent colour is the user's, and it is governed by a list.** The app is
+10. **The accent colour is the user's, and it is governed by a list.** The app is
    dark-only, but the accent is chosen in Settings → Aparência from a curated
    set of 16 (`src/state/accents.ts`) — brand red by default. There is exactly
    **one** accent: the gradient's far stop derives from it by the brand's
@@ -91,7 +105,7 @@ no server** — all data lives in the browser.
    accent literal, and never add an accent token that does not derive. Canvas
    cannot read custom properties, so the shared session card takes the colour
    as an argument.
-10. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
+11. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
    are a file in the origin's private file system (`src/data/photoStore.ts`);
    the `exercisePhotos` row keeps only metadata plus the file name. Two
    consequences to respect: no transaction spans a record and its file (write

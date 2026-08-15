@@ -1,0 +1,35 @@
+/* Settings → Cardio tab.
+   A flat list of rows, each ending in its own Iniciar — the day card's pill,
+   without the card, because there is no day to group by. */
+
+.cardio-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.cardio-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-row); }
+
+/* The row itself opens the detail; the button is a sibling, not a child, so a
+   tap on Iniciar never doubles as "open the exercise". */
+.cardio-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  color: inherit; text-decoration: none; }
+.cardio-body { min-width: 0; display: grid; gap: 2px; }
+.cardio-name { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardio-cat { font-size: var(--fs-xs); color: var(--text-secondary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cardio-start { flex: none; display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border: 0; border-radius: var(--r-btn);
+  background: var(--accent-grad); color: var(--on-accent);
+  font-family: var(--font-title); font-size: var(--fs-sm); font-weight: 700;
+  cursor: pointer; }
+.cardio-start .png-ic { width: 1em; height: 1em; }
+/* Blocked while another session is running — greyed, but still focusable and
+   still tappable, so it can say why (see the aria-disabled note in the TSX). */
+.cardio-start.blocked { background: var(--surface-3); color: var(--text-muted); }
+/* The one row that is NOT blocked while a cardio runs: its own. Outlined rather
+   than filled, so "Continuar" reads as returning to something in progress
+   instead of starting something new. */
+.cardio-start.resume { background: transparent; color: var(--text-accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cardio-row.running { border-color: var(--border-accent); background: var(--bg-accent); }

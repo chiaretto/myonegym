@@ -4,6 +4,7 @@ import type {
   Category,
   Day,
   Exercise,
+  ExerciseKind,
   ExerciseNote,
   ExercisePhoto,
   Gym,
@@ -45,7 +46,7 @@ export const GLOBAL_WEIGHTS_VERSION = 6
 const EXAMPLE_DATA = exampleBackup as unknown as {
   gyms: { id?: number; name: string }[]
   categories: { id?: number; name: string }[]
-  exercises: { id?: number; name: string; mediaUrl?: string; categoryId?: number }[]
+  exercises: { id?: number; name: string; mediaUrl?: string; categoryId?: number; kind?: ExerciseKind }[]
   days: { id?: number; name: string; exerciseIds?: number[] }[]
   weights: { gymId: number; exerciseId: number; value: number; unit: Unit }[]
 }
@@ -208,6 +209,7 @@ export function parseBackup(json: string): BackupDoc {
     }
   }
   normalizeCategories(obj)
+  normalizeKinds(obj)
   normalizeAlternatives(obj)
   return obj as unknown as BackupDoc
 }
@@ -273,6 +275,22 @@ function normalizeCategories(obj: Record<string, unknown>): void {
         : []
     ex.categoryIds = ids.filter((id) => !reservedIds.has(id))
     delete ex.categoryId
+  }
+}
+
+/**
+ * Back-compat for backups made before an exercise had a kind: everything the
+ * app could model back then was strength, so that is what an absent field
+ * means. Rejecting on a missing field would make every older backup
+ * unrestorable — the whole point of a safety-net backup is that old files still
+ * open.
+ */
+function normalizeKinds(obj: Record<string, unknown>): void {
+  for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
+    if (ex.kind !== 'cardio') ex.kind = 'strength'
+  }
+  for (const s of (obj.sessions ?? []) as Record<string, unknown>[]) {
+    if (s.kind !== 'cardio') s.kind = 'strength'
   }
 }
 
@@ -386,6 +404,7 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
     // a showcase of every feature.
     const id = await d.exercises.add({
       name: e.name,
+      kind: e.kind ?? 'strength',
       mediaUrl: e.mediaUrl,
       categoryIds,
       alternativeIds: [],

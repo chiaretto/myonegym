@@ -205,6 +205,18 @@
       "categoryId": 2,
       "id": 27,
       "mediaUrl": "https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/ombros-voador-invertido-na-maquina.gif"
+    },
+    {
+      "name": "Esteira",
+      "categoryId": 7,
+      "id": 28,
+      "kind": "cardio"
+    },
+    {
+      "name": "Bicicleta Ergométrica",
+      "categoryId": 7,
+      "id": 29,
+      "kind": "cardio"
     }
   ],
   "days": [

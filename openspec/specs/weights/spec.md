@@ -5,14 +5,23 @@ TBD - created by archiving change bootstrap-myonegym. Update Purpose after archi
 ## Requirements
 ### Requirement: Track a Global Target Weight
 
-Cada exercício MUST ter um **peso alvo global** — um único valor + **unidade**
-(**KG**, **LB** ou **#**) válido em **todas** as academias. Uma academia MAY ter
-uma **exceção**: um peso próprio para aquele exercício, que prevalece sobre o
-global **apenas nela**.
+Cada exercício **de Força** MUST ter um **peso alvo global** — um único valor +
+**unidade** (**KG**, **LB** ou **#**) válido em **todas** as academias. Uma
+academia MAY ter uma **exceção**: um peso próprio para aquele exercício, que
+prevalece sobre o global **apenas nela**.
 
 O peso exibido e editado para `(academia ativa, exercício)` MUST ser a exceção
 quando ela existe e, caso contrário, o peso global. A unidade acompanha o
 registro que prevaleceu — global e exceção MAY usar unidades diferentes.
+
+Um exercício de **Cardio** MUST NOT ter peso: o cartão "Peso alvo", o editor, a
+linha do tempo do histórico e o badge de peso MUST NOT ser exibidos para ele —
+nem no detalhe do catálogo, nem no detalhe dentro de uma sessão, nem em lista
+alguma. Não há "definir" a oferecer, porque não há o que definir.
+
+Registros de peso e de histórico de um exercício que **passou a ser Cardio**
+MUST NOT ser apagados: eles deixam de ser exibidos enquanto ele for Cardio e
+voltam se ele voltar a ser Força.
 
 #### Scenario: Set a weight with no exception
 - GIVEN "Rosca Direta" existe e ainda não tem peso
@@ -31,15 +40,25 @@ registro que prevaleceu — global e exceção MAY usar unidades diferentes.
 - THEN ele mostra 15 LB
 - AND na academia "A" continua mostrando 20 KG
 
-#### Scenario: Same weight regardless of day
-- GIVEN "Rosca Direta" está no "Dia 1" e no "Dia 3"
-- WHEN seu peso resolvido é 20 KG
-- THEN abrir a partir de qualquer um dos dias mostra 20 KG
-  (o peso é do exercício, não do dia)
+#### Scenario: Cardio não tem cartão de peso
+- GIVEN "Esteira" é um exercício de Cardio
+- WHEN o usuário abre o detalhe dela, no catálogo ou dentro de uma sessão
+- THEN nenhum cartão "Peso alvo", editor ou histórico de peso é exibido
+- AND a observação e as fotos continuam disponíveis
+
+#### Scenario: Cardio não pede "definir"
+- GIVEN uma lista que exibiria o badge de peso de um exercício
+- WHEN o exercício é de Cardio
+- THEN nenhum badge é exibido — nem valor, nem o convite "definir"
+
+#### Scenario: O peso volta com o tipo
+- GIVEN "Esteira" tinha 5 KG registrados quando era Força
+- WHEN ela vira Cardio e depois volta a ser Força
+- THEN os 5 KG e o histórico anterior voltam a ser exibidos
 
 #### Scenario: No active gym
 - GIVEN nenhuma academia existe ainda
-- WHEN o usuário abre o detalhe de um exercício
+- WHEN o usuário abre o detalhe de um exercício de Força
 - THEN o campo de peso pede que ele crie/selecione uma academia primeiro
 - AND nenhum peso pode ser salvo enquanto não houver academia ativa
 
@@ -295,7 +314,8 @@ escopo de exceção.
 
 Toda leitura de peso em lote — os badges da Home, a lista de exercícios da
 sessão e o card de compartilhamento — MUST usar o peso **resolvido** para a
-academia em questão: exceção quando existe, global caso contrário.
+academia em questão: exceção quando existe, global caso contrário. Exercícios de
+**Cardio** MUST ser omitidos dessas leituras: eles não têm peso a resolver.
 
 #### Scenario: Home badges show global weights
 - GIVEN os exercícios do "Dia 1" têm apenas pesos globais
@@ -307,6 +327,11 @@ academia em questão: exceção quando existe, global caso contrário.
   e os demais exercícios só têm peso global
 - WHEN o usuário abre a sessão
 - THEN "Supino" mostra 30 KG e os demais mostram seus pesos globais
+
+#### Scenario: A sessão de cardio não mostra badge
+- GIVEN uma sessão de cardio da "Esteira"
+- WHEN o usuário a abre
+- THEN a linha da Esteira não traz badge de peso
 
 #### Scenario: Share card prints the resolved weights
 - GIVEN uma sessão concluída na academia "B" com uma exceção entre os exercícios

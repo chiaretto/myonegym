@@ -89,7 +89,12 @@ describe('v6 migration: categoryId → categoryIds, retire reserved', () => {
     try {
       // Add a compound exercise post-migration and query by the indexed path.
       const triceps = await db.categories.add({ name: 'Tríceps' })
-      await db.exercises.add({ name: 'Mergulho', categoryIds: [peito, triceps], alternativeIds: [] })
+      await db.exercises.add({
+        name: 'Mergulho',
+        kind: 'strength',
+        categoryIds: [peito, triceps],
+        alternativeIds: [],
+      })
       const inPeito = await db.exercises.where('categoryIds').equals(peito).toArray()
       expect(inPeito.map((e) => e.name).sort()).toEqual(['Mergulho', 'Supino'])
     } finally {
@@ -386,6 +391,110 @@ describe('v9 migration: per-gym weights are promoted to global', () => {
       expect(await resolveWeight(a, rosca, db)).toMatchObject({ scope: 'global', weight: undefined })
     } finally {
       db.close()
+    }
+  })
+})
+
+describe('v10 migration: every exercise and session becomes strength', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig10-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  /** Open a Dexie declaring only up to v9 — nothing knows about `kind` yet. */
+  async function openV9() {
+    const db = new Dexie(name)
+    db.version(1).stores({
+      gyms: '++id, name, createdAt',
+      categories: '++id, &name',
+      exercises: '++id, name, categoryId',
+      days: '++id, name',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
+    })
+    db.version(2).stores({
+      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
+    })
+    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
+    db.version(4).stores({})
+    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
+    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
+    db.version(7).stores({})
+    db.version(8).stores({})
+    db.version(9).stores({})
+    await db.open()
+    return db
+  }
+
+  it('backfills strength on exercises and sessions, keeping every record', async () => {
+    const v9 = await openV9()
+    const gym = (await v9.table('gyms').add({ name: 'A', createdAt: 1_000 })) as number
+    await v9.table('exercises').add({ name: 'Supino', categoryIds: [], alternativeIds: [] })
+    await v9.table('exercises').add({ name: 'Rosca', categoryIds: [], alternativeIds: [] })
+    await v9
+      .table('sessions')
+      .add({ gymId: gym, dayName: 'Dia 1', startedAt: 1, completedAt: 2, status: 'completed' })
+    v9.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      const exercises = await db.exercises.toArray()
+      const sessions = await db.sessions.toArray()
+      // Nothing added, nothing dropped — only a field filled in.
+      expect(exercises).toHaveLength(2)
+      expect(sessions).toHaveLength(1)
+      expect(exercises.every((e) => e.kind === 'strength')).toBe(true)
+      expect(sessions[0].kind).toBe('strength')
+      // The names survived the modify().
+      expect(exercises.map((e) => e.name).sort()).toEqual(['Rosca', 'Supino'])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('makes `kind` an indexed query path', async () => {
+    const v9 = await openV9()
+    await v9.table('exercises').add({ name: 'Supino', categoryIds: [], alternativeIds: [] })
+    v9.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      await db.exercises.add({
+        name: 'Esteira',
+        kind: 'cardio',
+        categoryIds: [],
+        alternativeIds: [],
+      })
+      // where('kind') only works if v10 actually added the index.
+      const cardio = await db.exercises.where('kind').equals('cardio').toArray()
+      const strength = await db.exercises.where('kind').equals('strength').toArray()
+      expect(cardio.map((e) => e.name)).toEqual(['Esteira'])
+      expect(strength.map((e) => e.name)).toEqual(['Supino'])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('leaves an already-migrated database alone', async () => {
+    const db = new MyOneGymDB(name)
+    await db.open()
+    await db.exercises.add({ name: 'Esteira', kind: 'cardio', categoryIds: [], alternativeIds: [] })
+    db.close()
+
+    // Reopening runs no upgrade, but the assertion is the point: a cardio
+    // exercise must never be flipped back to strength by a re-run.
+    const again = new MyOneGymDB(name)
+    await again.open()
+    try {
+      expect((await again.exercises.toArray())[0].kind).toBe('cardio')
+    } finally {
+      again.close()
     }
   })
 })

@@ -84,9 +84,17 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -
   position: sticky; bottom: 0; z-index: 999; display: flex; border-top: 0.5px solid var(--border);
   background: var(--surface-0); padding-bottom: env(safe-area-inset-bottom);
 }
+/* min-width:0 is what lets a tab shrink below its label's width. Without it a
+   flex item refuses to go under max-content, so the longest label
+   ("Configurações") sets a floor and the whole bar overflows sideways instead
+   of wrapping — at 150% with four tabs, and at 175% with three. A phone has
+   vertical room to spare and none horizontally, so the label wraps to a second
+   line rather than pushing the bar off-screen. */
 .tabbar a {
-  flex: 1; text-align: center; padding: 12px 0 15px; font-size: var(--fs-2xs); color: var(--text-secondary);
+  flex: 1; min-width: 0; text-align: center; padding: 12px 4px 15px; font-size: var(--fs-2xs);
+  color: var(--text-secondary);
   display: grid; gap: 5px; justify-items: center; font-weight: 500; position: relative;
+  overflow-wrap: anywhere; hyphens: auto;
 }
 .tabbar a.active { color: var(--text-accent); font-weight: 600; }
 .tabbar a.active::before {
@@ -192,6 +200,9 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
 .chip.accent { background: rgba(190, 33, 37, 0.12); color: var(--text-accent);
   border: 1px solid var(--accent); font-weight: 600; }
 .chip.sm { padding: 4px 10px; gap: 4px; }
+/* The Cardio marker sits beside the exercise name, so it needs its own gap —
+   .row-title is a plain text line, not a flex row. */
+.kind-chip { margin-left: 8px; vertical-align: middle; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 
 /* Toggle-chip multi-select (e.g. an exercise's categories). Tap to add/remove. */

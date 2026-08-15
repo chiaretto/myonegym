@@ -22,73 +22,14 @@ import { fmtWeight } from '../../lib/format'
 import {
   buildWeekTrack,
   currentStreak,
-  WEEKDAY_LABELS,
-  WEEKLY_GOAL,
-  type WeekDayCell,
 } from '../../lib/week'
 import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { TabBar } from '../../ui/Chrome'
+import { WeeklySummary } from '../../ui/WeeklySummary'
 import { GymSelector } from '../gym/GymSelector'
 import './home.css'
-
-/**
- * Weekly training summary — the count, plus a seven-day track.
- *
- * CHANGED: this replaced a progress ring. The ring answered "how much" and never
- * "when": it could show 43% without revealing that Wednesday was skipped or that
- * the user had not trained for three days. The count stays the headline and the
- * track explains it.
- *
- * Everything is derived from `completedAt` on completed sessions — no new
- * persisted state, no migration.
- */
-function WeeklySummary({ cells, streak }: { cells: WeekDayCell[]; streak: number }) {
-  const done = cells.filter((c) => c.state === 'done').length
-  return (
-    <section className="week-card" aria-label="Resumo da semana">
-      <div className="week-head">
-        <div className="week-body">
-          <span className="eyebrow">Esta semana</span>
-          <strong className="week-count">
-            {done} <span className="week-of">/ {WEEKLY_GOAL} treinos</span>
-          </strong>
-        </div>
-        {streak > 1 && (
-          <span className="week-streak" title="Dias seguidos treinando">
-            <Icon name="flame" />
-            {streak}
-          </span>
-        )}
-      </div>
-      <ol className="week-track" aria-label="Dias da semana">
-        {cells.map((cell) => (
-          <li
-            key={cell.index}
-            className={`wd ${cell.state}${cell.sessions > 1 ? ' multi' : ''}`}
-            aria-label={weekCellLabel(cell)}
-          >
-            <span className="wd-dot">
-              {cell.state === 'done' && <Icon name="check" />}
-            </span>
-            <span className="wd-lab">{WEEKDAY_LABELS[cell.index]}</span>
-          </li>
-        ))}
-      </ol>
-    </section>
-  )
-}
-
-/** Spoken description of one cell — the visual states are colour-only otherwise. */
-function weekCellLabel(cell: WeekDayCell): string {
-  const day = WEEKDAY_LABELS[cell.index]
-  if (cell.sessions > 1) return `${day}: ${cell.sessions} treinos`
-  if (cell.state === 'done') return `${day}: treino concluído`
-  if (cell.state === 'today') return `${day}: hoje, sem treino ainda`
-  if (cell.state === 'future') return `${day}: ainda não chegou`
-  return `${day}: sem treino`
-}
 
 export function HomePage() {
   const days = useDays()
@@ -158,10 +99,15 @@ export function HomePage() {
       // was a third outcome they asked for neither. It still answers the tap —
       // a control that goes dead under the finger reads as a frozen app — but it
       // answers with the reason, and "Continuar" is a tap away on its own card.
-      if (activeSession.dayId !== dayId) {
+      // ...unless the running session belongs to no day at all (a cardio). Then
+      // there IS no card of its own to tap, so refusing would leave the user
+      // blocked everywhere with nowhere to go — which is exactly the trap this
+      // branch was written to avoid.
+      if (activeSession.dayId !== dayId && activeSession.dayId != null) {
         toast('Você já tem um treino em andamento.')
         return
       }
+      if (activeSession.dayId == null) toast('Você tem um cardio em andamento.')
       nav(`/session/${activeSession.id}`)
       return
     }
@@ -327,8 +273,16 @@ export function HomePage() {
                             </span>
                             {/* No badge until the gym's weights have loaded:
                                 "definir" claims this exercise has no target
-                                weight, which is not yet known. */}
+                                weight, which is not yet known.
+
+                                And never for cardio, which has no load at all —
+                                "definir" would nag for a number that cannot
+                                exist. A cardio exercise should not be in a day
+                                (turning one into cardio removes it), so this is
+                                belt-and-braces: the rule holds here by itself
+                                rather than by that invariant holding elsewhere. */}
                             {weights &&
+                              ex.kind !== 'cardio' &&
                               (w ? (
                                 <span className="weight-badge">{fmtWeight(w.value, w.unit)}</span>
                               ) : (

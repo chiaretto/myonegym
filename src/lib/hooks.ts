@@ -7,6 +7,7 @@ import {
   getSessionEntry,
   listCategories,
   listDays,
+  listCardioExercises,
   listExercises,
   listGyms,
   listHistory,
@@ -93,6 +94,12 @@ export function useCategoryMap(): Map<number, Category> {
 
 export function useExercises() {
   return useCachedLiveQuery('exercises', () => listExercises(db))
+}
+
+/** The Cardio tab's list. Its own cache key: it is a different query, not a
+ *  filtered view of `useExercises`, so it must not share that entry. */
+export function useCardioExercises() {
+  return useCachedLiveQuery('cardioExercises', () => listCardioExercises(db))
 }
 
 export function useExerciseMap(): Map<number, Exercise> {

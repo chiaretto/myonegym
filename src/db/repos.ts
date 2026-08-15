@@ -5,6 +5,7 @@ import {
   type Category,
   type Day,
   type Exercise,
+  type ExerciseKind,
   type ExerciseNote,
   type ExercisePhoto,
   type Gym,
@@ -148,6 +149,18 @@ export async function listExercises(d: MyOneGymDB = db): Promise<Exercise[]> {
   return d.exercises.orderBy('name').toArray()
 }
 
+/** The Cardio tab's list: cardio exercises, by name. Indexed on `kind`. */
+export async function listCardioExercises(d: MyOneGymDB = db): Promise<Exercise[]> {
+  const rows = await d.exercises.where('kind').equals('cardio').toArray()
+  return rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+}
+
+/** The days that currently contain `exerciseId` — what the UI names in the
+ *  confirmation before turning an exercise into cardio. */
+export async function daysContaining(exerciseId: number, d: MyOneGymDB = db): Promise<Day[]> {
+  return d.days.filter((day) => day.exerciseIds.includes(exerciseId)).toArray()
+}
+
 const URL_RE = /^https?:\/\/.+/i
 const MEDIA_RE = /\.(png|jpe?g|webp|gif)(\?.*)?$/i
 
@@ -163,7 +176,13 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
 }
 
 export async function createExercise(
-  input: { name: string; mediaUrl?: string; categoryIds?: number[]; alternativeIds?: number[] },
+  input: {
+    name: string
+    kind?: ExerciseKind
+    mediaUrl?: string
+    categoryIds?: number[]
+    alternativeIds?: number[]
+  },
   d: MyOneGymDB = db,
 ): Promise<number> {
   const name = requireName(input.name, 'nome do exercício')
@@ -171,6 +190,9 @@ export async function createExercise(
   return d.transaction('rw', d.exercises, async () => {
     const id = await d.exercises.add({
       name,
+      // Strength is the default: it is what every exercise was before the kind
+      // existed, and what most of them go on being.
+      kind: input.kind ?? 'strength',
       mediaUrl,
       categoryIds: input.categoryIds ?? [],
       alternativeIds: [],
@@ -182,18 +204,52 @@ export async function createExercise(
   })
 }
 
+/**
+ * Update an exercise.
+ *
+ * Turning one into **cardio** also takes it out of every training day, in the
+ * same transaction: a day is a strength routine, so a day pointing at a cardio
+ * exercise is a state the app must never hold. The caller is expected to have
+ * confirmed that with the user first — `daysContaining` is what it names them
+ * with. The weights are deliberately left alone: they stop being displayed and
+ * come back if the exercise turns strength again.
+ *
+ * Returns the days the exercise was removed from, so the caller can say so.
+ */
 export async function updateExercise(
   id: number,
-  input: { name: string; mediaUrl?: string; categoryIds?: number[]; alternativeIds?: number[] },
+  input: {
+    name: string
+    kind?: ExerciseKind
+    mediaUrl?: string
+    categoryIds?: number[]
+    alternativeIds?: number[]
+  },
   d: MyOneGymDB = db,
-): Promise<void> {
+): Promise<Day[]> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
-  await d.transaction('rw', d.exercises, async () => {
-    await d.exercises.update(id, { name, mediaUrl, categoryIds: input.categoryIds ?? [] })
+  return d.transaction('rw', d.exercises, d.days, async () => {
+    const before = await d.exercises.get(id)
+    const kind = input.kind ?? before?.kind ?? 'strength'
+    await d.exercises.update(id, { name, kind, mediaUrl, categoryIds: input.categoryIds ?? [] })
+
+    let leftDays: Day[] = []
+    if (kind === 'cardio') {
+      leftDays = await d.days.filter((day) => day.exerciseIds.includes(id)).toArray()
+      if (leftDays.length) {
+        await d.days
+          .filter((day) => day.exerciseIds.includes(id))
+          .modify((day) => {
+            day.exerciseIds = day.exerciseIds.filter((x) => x !== id)
+          })
+      }
+    }
+
     // `undefined` means "this caller isn't editing alternatives" — only an
     // explicit list (including `[]`, which clears the set) touches them.
     if (input.alternativeIds !== undefined) await setAlternatives(id, input.alternativeIds, d)
+    return leftDays
   })
 }
 
@@ -757,6 +813,7 @@ export async function startSession(
 
     const sessionId = await d.sessions.add({
       gymId,
+      kind: 'strength',
       dayId,
       dayName: day.name,
       startedAt: Date.now(),
@@ -772,6 +829,54 @@ export async function startSession(
         done: false,
       })
     }
+    return sessionId
+  })
+}
+
+/**
+ * Start a **cardio** session: one exercise, one entry, no day.
+ *
+ * Cardio is loose — you do 30 minutes on the treadmill because you felt like
+ * it, not because it was "treadmill day" — so it starts from the exercise
+ * rather than from a routine. The session snapshots the exercise's name into
+ * `dayName` (it is what the history has to show) and its own `kind`.
+ *
+ * The one-active-session-per-gym rule is shared with strength on purpose: the
+ * app already tells the user "there is a workout in progress", and a second,
+ * parallel invariant just for cardio would make that same screen answer two
+ * different questions.
+ */
+export async function startCardioSession(
+  gymId: number,
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<number> {
+  return d.transaction('rw', d.sessions, d.sessionEntries, d.exercises, async () => {
+    const active = await d.sessions
+      .where('gymId')
+      .equals(gymId)
+      .filter((s) => s.status === 'active')
+      .first()
+    if (active) {
+      throw new ValidationError('Já existe um treino em andamento nesta academia.')
+    }
+    const ex = await d.exercises.get(exerciseId)
+    if (!ex) throw new ValidationError('Exercício não encontrado.')
+    if (ex.kind !== 'cardio') throw new ValidationError('Este exercício não é de cardio.')
+
+    const sessionId = await d.sessions.add({
+      gymId,
+      kind: 'cardio',
+      dayName: ex.name,
+      startedAt: Date.now(),
+      status: 'active',
+    })
+    await d.sessionEntries.add({
+      sessionId,
+      exerciseId,
+      exerciseName: ex.name,
+      done: false,
+    })
     return sessionId
   })
 }
@@ -873,8 +978,22 @@ export async function swapEntryExercise(
 }
 
 /** Mark an in-progress session completed, stamping the completion time. */
+/**
+ * Complete a session.
+ *
+ * A **cardio** session has a single entry, so concluding it marks that entry
+ * done as well: asking the user to tick the one item and then press Concluir
+ * would be asking for the same fact twice. A strength session is untouched here
+ * — its runner already governs which entries are done.
+ */
 export async function completeSession(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.sessions.update(id, { status: 'completed', completedAt: Date.now() })
+  await d.transaction('rw', d.sessions, d.sessionEntries, async () => {
+    const session = await d.sessions.get(id)
+    if (session?.kind === 'cardio') {
+      await d.sessionEntries.where('sessionId').equals(id).modify({ done: true })
+    }
+    await d.sessions.update(id, { status: 'completed', completedAt: Date.now() })
+  })
 }
 
 /** Delete a session and all of its entries. Does not affect other data. */
