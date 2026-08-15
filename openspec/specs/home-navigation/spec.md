@@ -349,7 +349,7 @@ accessibility tree.
 
 Tapping an exercise on Home MUST open its detail view showing the **rendered
 media** (a static image or an animated GIF, played back animated) and the
-**editable per-gym weight** (see weights spec).
+**editable target weight** — global, or this gym's exception (see weights spec).
 
 The detail MUST **remember the training day it was opened from** — an exercise
 may belong to several days, so the day cannot be inferred from the exercise. That

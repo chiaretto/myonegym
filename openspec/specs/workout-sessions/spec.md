@@ -3,12 +3,12 @@
 ## Purpose
 Record and review **workout sessions** — a single training visit, scoped to a
 gym like weights. A session lists a training day's exercises, lets the user run
-through them (mark done, and adjust each exercise's **per-gym target weight** via
+through them (mark done, and adjust each exercise's **target weight** via
 the same editor as the catalog), complete the session, and review, **share**, or
 delete past sessions per gym. A completed session can be shared to other apps as
 an **image**, with or without weights and duration. The session stores **no
 independent weight** — the weight shown and edited is always the exercise's
-per-gym target.
+target weight resolved for that gym.
 
 ## Requirements
 
@@ -19,7 +19,7 @@ session is created in the **active gym** and captures that day's active exercise
 as **session entries**, one per exercise, each snapshotting the exercise **name**
 (for durability if the source exercise is later renamed/deleted). Entries do
 **NOT** store a weight — the weight shown and edited for an entry is always the
-exercise's **per-gym target weight** for the session's gym (see the `weights`
+exercise's **target weight** resolved for the session's gym (see the `weights`
 capability). A session starts **in-progress** and records its **start time**.
 Starting a session MUST require an active gym.
 
@@ -67,14 +67,14 @@ While a session is in progress, the user MUST be able to **mark each entry as
 done** (and toggle it back). Each entry MUST be presented as a **Home-style row**
 — a **media thumbnail**, the exercise **name** and **category**, a **done
 checkbox**, and a compact **read-only weight badge** showing the exercise's
-**current per-gym target weight** for the session's gym (or a "definir" hint when
+**current target weight** resolved for the session's gym (or a "definir" hint when
 unset). Each row MUST end with an **icon-only navigation indicator** (a chevron,
 no label), so that "tapping opens the detail" is visible rather than something
 the user has to discover. Tapping the row (outside the checkbox) MUST open that
 entry's **detail** (see Session Exercise Detail). Marking an entry done MUST be
 possible from the list checkbox **or** from the detail, and the session's
 progress MUST reflect either. **Adjusting the weight** for an entry happens on
-the detail screen and updates the **exercise's per-gym target weight** (and its
+the detail screen and updates the **exercise's target weight** in the saved scope (and its
 history) — there is no separate per-session weight. Changes to the done state
 persist immediately and are local.
 
@@ -209,7 +209,7 @@ runner e das linhas de exercício da Home.
 ### Requirement: View Session Detail
 
 Opening a session from history MUST show its entries: each exercise's **name**
-(from the entry snapshot) and the exercise's **current per-gym target weight** for
+(from the entry snapshot) and the exercise's **current target weight** resolved for
 the session's gym (live — or a "definir"/empty indicator when unset or the source
 was deleted), plus its done state. The recap does **not** store or show a frozen
 per-session weight.
@@ -236,11 +236,13 @@ the runner or the completed-session recap), showing the exercise's **media**
 (static image or animated GIF, played animated), the exercise **name — once, in
 the screen's top bar** — its **category** context, and — for the weight — the
 **same "Peso alvo" editor used on the catalog exercise detail** (see the
-`weights` capability), scoped to the **session's gym**: the per-gym **target
-weight** (edit → save, value + unit KG/LB/#) together with the per-gym
-**weight-history timeline** (with per-entry delete). Saving the weight MUST
-update the exercise's **per-gym target weight** and append a **history** entry —
-the session stores no independent weight.
+`weights` capability), resolvido para a **academia da sessão**: o **peso
+global** do exercício, ou a **exceção** daquela academia quando existe (edit →
+save, valor + unidade KG/LB/#), junto da **linha do tempo do histórico** do
+escopo resolvido (com exclusão por registro). Salvar MUST gravar no escopo
+indicado pela flag **"Só nessa academia"** — peso global por padrão, exceção da
+academia da sessão quando marcada — e anexar um registro de **histórico** na
+mesma chave. A sessão não guarda peso próprio.
 
 The detail MUST present its content in **tabs**, and the tabs MUST be the
 **first control below the top bar** — before the media, before the weight,
@@ -273,11 +275,12 @@ previewing an alternative, the **"Alternativa de X"** label — MUST sit **above
 the tabs**, visible on every tab. They describe the **entry**, not a section of
 it, exactly like the fixed stepper bar at the bottom.
 
-Both the note and the photos are **durable and per `(gym, exercise)`**, so they
-are shared with the catalog exercise detail and with future sessions of the same
-exercise in the same gym. Enquanto uma **alternativa** está sendo vista, as três
-abas MUST refletir o exercício **exibido**, não o da entrada — é a nota e a foto
-daquele aparelho que ajudam a decidir. When the entry has no linked exercise
+A **nota** e as **fotos** continuam **duráveis e por `(academia, exercício)`**,
+compartilhadas com o detalhe do catálogo e com sessões futuras do mesmo
+exercício na mesma academia — diferentemente do **peso**, que é do exercício e
+só é da academia quando há exceção. Enquanto uma **alternativa** está sendo
+vista, as três abas MUST refletir o exercício **exibido**, não o da entrada — é
+a nota e a foto daquele aparelho que ajudam a decidir. When the entry has no linked exercise
 (`exerciseId` absent because the source exercise was deleted), the Observações
 **and Foto** tabs MUST show an empty/disabled state (nothing can be attached to
 a missing exercise).
@@ -295,9 +298,10 @@ session's **training-day** name — see the `exercises` capability's *Single
 Exercise Title on Detail Views*, which governs the header of both detail views.
 
 While the session is **in progress** the Peso alvo editor and its history delete
-MUST be **editable**. When the parent session is **completed**, the weight card
-MUST be **read-only** — it shows the gym's **current** target for reference (no
-edit, no history delete).
+MUST be **editable**, incluindo a flag "Só nessa academia". When the parent
+session is **completed**, the weight card MUST be **read-only** — mostra o peso
+**vigente** resolvido para a academia da sessão, para referência (sem edição,
+sem exclusão de histórico, sem flag).
 
 Unlike the Peso alvo editor, the Observações and Foto tabs MUST remain
 **editable even when the parent session is completed** — a note and a photo
@@ -443,17 +447,28 @@ a placeholder and the live target/history are empty).
 - THEN "Voltar" is disabled
 - AND GIVEN the detail of the last exercise, "Avançar" is disabled
 
-#### Scenario: Edit the weight from the session detail updates the target
-- GIVEN an in-progress session in gym "A" on the detail of "Rosca Direta" (target 20 KG)
-- WHEN the user edits the weight to 22.5 KG and saves
-- THEN the exercise's **target weight** for gym "A" becomes 22.5 KG
-- AND a weight-history entry is appended for `(A, Rosca Direta)`
-- AND the catalog exercise detail for "Rosca Direta" in gym "A" shows 22.5 KG
+#### Scenario: Weight editor on the session detail edits the global weight
+- GIVEN uma sessão em andamento na academia "A" e "Rosca Direta" com peso global 20 KG
+- WHEN o usuário abre o detalhe da entrada, edita para 22,5 KG e salva com a flag desmarcada
+- THEN o peso global passa a 22,5 KG e um registro de histórico global é anexado
+- AND o detalhe do exercício no catálogo mostra 22,5 KG
+
+#### Scenario: Weight editor on the session detail creates a gym exception
+- GIVEN uma sessão em andamento na academia "A" e peso global 22,5 KG
+- WHEN o usuário salva 18 KG com a flag "Só nessa academia" marcada
+- THEN a academia "A" passa a ter exceção de 18 KG, com rótulo da academia
+- AND o peso global permanece 22,5 KG
+
+#### Scenario: Completed session shows the resolved weight without the flag
+- GIVEN uma sessão **concluída** na academia "B", onde "Supino" tem exceção de 30 KG
+- WHEN o usuário abre o detalhe daquela entrada
+- THEN o cartão de peso mostra 30 KG somente-leitura, com o rótulo da academia "B"
+- AND nenhuma flag de escopo é oferecida
 
 #### Scenario: Setting a weight when none existed
-- GIVEN an in-progress session in gym "A" on the detail of "Agachamento" with no target in "A"
-- WHEN the user sets the weight to 60 KG and saves
-- THEN the target `(A, Agachamento) = 60 KG` is created (with a first history entry)
+- GIVEN an in-progress session in gym "A" on the detail of "Agachamento" with no weight yet
+- WHEN the user sets the weight to 60 KG and saves with the flag unchecked
+- THEN the global weight for "Agachamento" is created as 60 KG (with a first history entry)
 - AND the runner row for "Agachamento" now shows "60 KG" instead of "definir"
 
 #### Scenario: Add a note from the Observações tab
@@ -667,7 +682,7 @@ Both images MUST resemble the session detail screen and MUST contain: the
 session's **day name**, its **gym**, the **date**, the **exercise list** (media
 thumbnail, name, category, done state) taken from the entry's **name snapshot**,
 and the **done count**. The detailed variant additionally shows a **weight badge**
-per entry — the exercise's **current per-gym target weight** for the session's
+per entry — the exercise's **current target weight** resolved for the session's
 gym, read **live** (consistent with View Session Detail — the session stores no
 weight of its own) — and the **duration** (`completedAt − startedAt`).
 
@@ -792,4 +807,4 @@ and the weight history are untouched.
 #### Scenario: Sharing changes no data
 - GIVEN a completed session in gym "A"
 - WHEN the user shares it with details
-- THEN the session, its entries, the per-gym target weights, and the weight history are unchanged
+- THEN the session, its entries, the target weights, and the weight history are unchanged

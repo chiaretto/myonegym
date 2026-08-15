@@ -130,7 +130,7 @@ duplication of the underlying exercise record.
 - GIVEN exercise "Rosca Direta" exists
 - WHEN the user adds it to both "Dia 1" and "Dia 3"
 - THEN both days reference the same exercise record
-- AND its per-gym weight is shared across both days
+- AND its target weight is shared across both days
 
 ### Requirement: Alternative Exercises
 
