@@ -81,8 +81,11 @@ A photo whose image file cannot be read MUST NOT abort the export: the rest of
 the backup is far more valuable than one unreadable image, and the user MUST be
 told how many photos could not be included.
 
-Device-local **UI preferences** — the font-size setting and the first-launch
-"already asked" flag — are NOT user data and MUST remain outside the backup.
+Device-local **UI preferences** — the font-size setting, the **accent colour**
+and the first-launch "already asked" flag — are NOT user data and MUST remain
+outside the backup. They describe how this device paints the app, not what the
+user recorded in it; carrying them in the file would make a restore repaint a
+device that was already set up the way its owner wanted.
 
 #### Scenario: Export the whole database
 - GIVEN the user has gyms, exercises, days, weights, weight history, notes, workout sessions, and photos
@@ -138,6 +141,17 @@ Device-local **UI preferences** — the font-size setting and the first-launch
 - WHEN o usuário exporta o backup
 - THEN o arquivo contém as linhas de peso e de histórico dos dois escopos
 - AND a versão do documento indica que ele já usa o modelo global
+
+#### Scenario: The accent colour is not exported
+- GIVEN o usuário escolheu uma cor de destaque diferente do padrão
+- WHEN exporta o backup completo
+- THEN o documento não contém a cor escolhida
+
+#### Scenario: Restoring does not repaint the device
+- GIVEN o dispositivo A está em "Verde" e o dispositivo B em "Roxo"
+- WHEN um backup de A é restaurado em B
+- THEN B continua em "Roxo"
+- AND todos os dados do usuário foram substituídos normalmente
 
 ### Requirement: Backups Carry Global Weights
 
@@ -315,8 +329,8 @@ all local data is erased immediately; declining or dismissing the
 confirmation MUST leave all existing data unchanged. After a reset, the app
 MUST behave like a fresh install — including re-arming the first-launch
 sample-data prompt (see app-foundation) so the user may choose to reload the
-sample data again. Device-local **presentation** preferences (e.g. the
-font-size setting) are unaffected by a reset.
+sample data again. Device-local **presentation** preferences (the font-size
+setting and the accent colour) are unaffected by a reset.
 
 #### Scenario: Reset requires confirmation and warns it is irreversible
 - GIVEN the user has gyms, exercises, days, and weights registered
