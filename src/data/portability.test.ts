@@ -12,6 +12,7 @@ import {
   createDay,
   createExercise,
   createGym,
+  createWarmup,
   createCategory,
   getNote,
   listHistory,
@@ -304,7 +305,7 @@ describe('exercise kind travels through a backup', () => {
   it('a cardio session keeps its kind through a round-trip', async () => {
     const g = await createGym('A', d)
     const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
-    const sid = await startCardioSession(g, esteira, d)
+    const { sessionId: sid } = await startCardioSession(g, esteira, d)
     await completeSession(sid, d)
 
     const doc = parseBackup(JSON.stringify(await exportBackup(d)))
@@ -352,6 +353,57 @@ describe('exercise kind travels through a backup', () => {
   })
 })
 
+describe('warmups travel through a backup', () => {
+  it('round-trips the records and the links, shared by two exercises', async () => {
+    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    const other = await createWarmup({ name: 'Outro', url: 'https://youtube.com/watch?v=a' }, d)
+    await createExercise({ name: 'Supino', warmupIds: [other, w] }, d)
+    await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    // One record, two users, and the order each exercise chose.
+    expect(await d.warmups.count()).toBe(2)
+    const byName = new Map((await d.exercises.toArray()).map((e) => [e.name, e.warmupIds]))
+    expect(byName.get('Supino')).toEqual([other, w])
+    expect(byName.get('Desenvolvimento')).toEqual([w])
+  })
+
+  it('a backup made before warmups existed imports as none', async () => {
+    await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    await createExercise({ name: 'Supino' }, d)
+
+    // Strip what an older export simply would not have had.
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    delete raw.warmups
+    for (const e of raw.exercises as Record<string, unknown>[]) delete e.warmupIds
+
+    const doc = parseBackup(JSON.stringify(raw))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    expect(await d.warmups.count()).toBe(0)
+    expect((await d.exercises.toArray()).every((e) => e.warmupIds.length === 0)).toBe(true)
+  })
+
+  it('drops a link to a warmup the document does not carry', async () => {
+    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    await createExercise({ name: 'Supino', warmupIds: [w] }, d)
+
+    // A document whose exercise points at a record that is not in it.
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    raw.warmups = []
+
+    await resetAll(d)
+    await importBackupReplaceAll(parseBackup(JSON.stringify(raw)), d)
+
+    // Restored without the dangling link, rather than with a broken reference.
+    expect((await d.exercises.toArray())[0].warmupIds).toEqual([])
+  })
+})
+
 describe('device-local UI preferences stay out of the backup', () => {
   it('does not carry the accent colour', async () => {
     const g = await createGym('Academia A', d)
@@ -378,7 +430,8 @@ describe('full backup is a complete snapshot', () => {
   async function seedEverything() {
     const g = await createGym('Academia A', d)
     const cat = await createCategory('Peito', d)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
+    const warmup = await createWarmup({ name: 'Rotação de ombro', url: 'https://x.com/w.gif' }, d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat], warmupIds: [warmup] }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 40, 'KG', 'global', d)
     await saveWeight(g, ex, 42.5, 'KG', 'global', d) // history

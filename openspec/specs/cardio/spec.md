@@ -58,6 +58,15 @@ Enquanto existe uma **sessão em andamento** na academia ativa, os controles
 "Iniciar" MUST ser apresentados **indisponíveis**, pelo mesmo motivo e com o
 mesmo tratamento visual que a Home já aplica aos dias.
 
+Tocar um deles MUST **explicar** que já existe sessão aberta, e MUST NOT navegar
+para lugar nenhum — nem para a sessão que bloqueia. Quem tocou "Iniciar" na
+Bicicleta pediu para começar a Bicicleta; abrir outra coisa é um terceiro
+desfecho que ninguém pediu. A explicação MUST nomear o **tipo** da sessão em
+andamento (treino ou cardio): é essa palavra que diz em qual aba procurá-la.
+
+A única linha que abre a sessão é a **dona** dela, e ela não se apresenta como
+"Iniciar" — se apresenta como "Continuar".
+
 #### Scenario: A lista mostra só cardio
 - GIVEN o catálogo tem "Supino" (Força) e "Esteira" e "Bicicleta" (Cardio)
 - WHEN o usuário abre a aba Cardio
@@ -91,6 +100,18 @@ mesmo tratamento visual que a Home já aplica aos dias.
 - WHEN o usuário abre a aba Cardio
 - THEN os controles "Iniciar" aparecem indisponíveis
 
+#### Scenario: Tocar um Iniciar indisponível explica, e não navega
+- GIVEN existe um **cardio** da "Esteira" em andamento na academia ativa
+- WHEN o usuário toca "Iniciar" na linha da Bicicleta
+- THEN é exibida uma explicação de que já há um **cardio** em andamento
+- AND nenhuma sessão nova é criada
+- AND o usuário permanece na aba Cardio, sem ser levado à sessão da Esteira
+
+#### Scenario: A explicação nomeia o tipo que está rodando
+- GIVEN existe um **treino de musculação** em andamento na academia ativa
+- WHEN o usuário toca "Iniciar" em um exercício de cardio
+- THEN a explicação fala de um **treino** em andamento, não de um cardio
+
 #### Scenario: O cardio em andamento é alcançável a partir da sua linha
 - GIVEN existe um **cardio** em andamento na academia ativa
 - WHEN o usuário abre a aba Cardio
@@ -101,7 +122,16 @@ mesmo tratamento visual que a Home já aplica aos dias.
 ### Requirement: Start and Complete a Cardio
 
 Tocar **Iniciar** em um exercício de cardio MUST criar uma **sessão de cardio**
-na academia ativa contendo **aquele exercício apenas**, e abrir essa sessão.
+na academia ativa contendo **aquele exercício apenas**, e abrir a **tela da
+sessão** — a mesma de um treino de musculação. Retomar um cardio em andamento
+MUST levar ao mesmo lugar.
+
+Pular direto para o detalhe do exercício pouparia um toque numa lista de um
+item, mas deixaria a sessão sem nenhuma tela que o usuário tivesse visto: nada
+para onde voltar, nada para onde retomar, e uma fileira de exceções só-de-cardio
+rio abaixo para manter isso coerente. Uma forma só para os dois tipos de treino
+vale o toque.
+
 A sessão MUST guardar o próprio **tipo** e o **nome do exercício**, para que o
 histórico continue correto se o exercício mudar de tipo, for renomeado ou for
 excluído.
@@ -109,17 +139,39 @@ excluído.
 Iniciar MUST exigir academia ativa e MUST respeitar **uma sessão ativa por
 academia** — a mesma regra dos dias de treino, valendo entre os dois tipos.
 
+Do detalhe de um exercício em sessão de cardio, **voltar** MUST devolver o
+usuário à **tela da sessão**, refazendo o caminho de entrada como em qualquer
+outro treino.
+
+O detalhe de um exercício em sessão de cardio MUST NOT oferecer os controles
+**Voltar/Avançar** entre exercícios: há um só, e dois controles permanentemente
+mortos dizem menos que controle nenhum.
+
 **Concluir** MUST encerrar a sessão de cardio diretamente, sem exigir que a
 única entrada seja marcada antes: com um item só, pedir a marcação e depois a
 conclusão seria pedir a mesma informação duas vezes. A sessão concluída MUST
-entrar no histórico como qualquer outra.
+entrar no histórico como qualquer outra, e o usuário MUST chegar ao **resumo da
+sessão**, com o compartilhamento à mão (ver *Complete a Session*, em
+`workout-sessions`).
 
 #### Scenario: Iniciar um cardio
 - GIVEN "Esteira" é um exercício de Cardio e há academia ativa
 - WHEN o usuário toca "Iniciar" na linha da Esteira
 - THEN uma sessão de cardio é criada na academia ativa, com a Esteira como
   único item
-- AND a sessão é aberta
+- AND a **tela da sessão** é aberta, com a Esteira como sua única entrada
+
+#### Scenario: Voltar devolve à tela da sessão
+- GIVEN o usuário iniciou um cardio e abriu o detalhe do exercício a partir da
+  tela da sessão
+- WHEN toca voltar
+- THEN a tela da sessão é exibida de novo
+
+#### Scenario: Sem Voltar/Avançar numa sessão de um exercício só
+- GIVEN o detalhe de um exercício numa sessão de cardio
+- WHEN o usuário observa a barra inferior
+- THEN não há controles de exercício anterior nem de próximo exercício
+- AND a ação de concluir continua disponível
 
 #### Scenario: Concluir encerra direto
 - GIVEN uma sessão de cardio da Esteira está em andamento
@@ -128,17 +180,17 @@ entrar no histórico como qualquer outra.
 - AND não foi preciso marcar o item antes
 
 #### Scenario: Um cardio em andamento nunca fica sem caminho de volta
-- GIVEN existe um cardio em andamento
+- GIVEN existe um cardio da "Esteira" em andamento
 - WHEN o usuário tenta iniciar um treino a partir de um dia na Home
-- THEN ele é levado à sessão em andamento
-- AND o app MUST NOT recusar sem oferecer caminho: um cardio não tem dia, então
-  não existe card próprio para retomá-lo
+- THEN nenhuma sessão nova é criada e ele permanece na Home
+- AND a explicação nomeia o **cardio** em andamento, e é isso que aponta para a
+  aba Cardio — onde a linha da Esteira oferece "Continuar"
 
 #### Scenario: Uma sessão ativa por academia vale entre os tipos
 - GIVEN há um treino de musculação em andamento na academia ativa
 - WHEN o usuário tenta iniciar um cardio
 - THEN o início é bloqueado
-- AND o usuário é direcionado a retomar ou concluir a sessão em andamento
+- AND a tela explica que já há um treino em andamento, sem levá-lo até ele
 
 #### Scenario: Sem academia não se inicia
 - GIVEN nenhuma academia existe (ou nenhuma está ativa)

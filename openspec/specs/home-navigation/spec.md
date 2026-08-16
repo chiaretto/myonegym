@@ -496,6 +496,12 @@ o treino do Dia 1. O caminho para retomar é a affordance de **"Continuar"** —
 MUST permanecer com a aparência de ação e, sendo a única assim na tela, aponta
 para si.
 
+Isso vale igualmente quando a sessão que bloqueia é um **cardio**, que não tem
+dia e portanto não tem card próprio nesta tela: a Home também MUST NOT levar o
+usuário até ele. A explicação MUST nomear o **tipo** em andamento, e é essa
+palavra que aponta para a aba Cardio, onde a linha daquele exercício oferece o
+"Continuar" (ver a capability `cardio`).
+
 O bloqueio MUST ser aplicado apenas quando a existência da sessão em andamento já
 é **conhecida**. Enquanto a leitura não responde, nenhuma affordance MUST ser
 apresentada como desabilitada — pintar e despintar os botões faz a Home piscar a
@@ -538,6 +544,13 @@ as affordances ao estado normal.
 - THEN é exibida uma explicação de que já há um treino em andamento
 - AND nenhuma sessão nova é criada
 - AND o usuário permanece na Home, sem ser levado para a sessão do "Dia 1"
+
+#### Scenario: Um cardio em andamento também só é explicado, nunca aberto
+- GIVEN a academia "A" tem um **cardio** em andamento, que não tem card na Home
+- WHEN o usuário toca na affordance de iniciar de "Dia 1"
+- THEN é exibida uma explicação de que já há um **cardio** em andamento
+- AND nenhuma sessão nova é criada
+- AND o usuário permanece na Home, sem ser levado para a sessão de cardio
 
 #### Scenario: O botão desabilitado não expande o dia
 - GIVEN "Dia 3" está recolhido e sua affordance de iniciar está desabilitada

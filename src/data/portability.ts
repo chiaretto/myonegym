@@ -11,6 +11,7 @@ import type {
   Session,
   SessionEntry,
   Unit,
+  Warmup,
   Weight,
   WeightHistory,
 } from '../db/types'
@@ -94,6 +95,7 @@ export interface BackupDoc {
   weights: Weight[]
   weightHistory: WeightHistory[]
   sessions: Session[]
+  warmups: Warmup[]
   sessionEntries: SessionEntry[]
   exerciseNotes: ExerciseNote[]
   exercisePhotos: SerializedPhoto[]
@@ -113,6 +115,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos,
+    warmups,
   ] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
@@ -124,6 +127,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     d.sessionEntries.toArray(),
     d.exerciseNotes.toArray(),
     d.exercisePhotos.toArray(),
+    d.warmups.toArray(),
   ])
   return {
     app: APP_TAG,
@@ -140,6 +144,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos: await serializePhotos(exercisePhotos),
+    warmups,
   }
 }
 
@@ -210,6 +215,7 @@ export function parseBackup(json: string): BackupDoc {
   }
   normalizeCategories(obj)
   normalizeKinds(obj)
+  normalizeWarmups(obj)
   normalizeAlternatives(obj)
   return obj as unknown as BackupDoc
 }
@@ -285,6 +291,24 @@ function normalizeCategories(obj: Record<string, unknown>): void {
  * unrestorable — the whole point of a safety-net backup is that old files still
  * open.
  */
+/**
+ * Back-compat for backups made before warm-ups existed: no `warmups` list and
+ * no `warmupIds` on an exercise. Both mean "none" — an older app simply had
+ * none — so they default to empty instead of being rejected.
+ *
+ * A link pointing at a warm-up the document does not carry is dropped rather
+ * than restored: a reference to a record that will not exist is worse than no
+ * reference at all.
+ */
+function normalizeWarmups(obj: Record<string, unknown>): void {
+  const warmups = (obj.warmups ?? []) as Record<string, unknown>[]
+  const known = new Set(warmups.map((w) => w.id))
+  for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
+    const ids = Array.isArray(ex.warmupIds) ? (ex.warmupIds as number[]) : []
+    ex.warmupIds = ids.filter((id) => known.has(id))
+  }
+}
+
 function normalizeKinds(obj: Record<string, unknown>): void {
   for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
     if (ex.kind !== 'cardio') ex.kind = 'strength'
@@ -342,6 +366,7 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await Promise.all(allTables(d).map((t) => t.clear()))
     await d.gyms.bulkAdd(doc.gyms)
     await d.categories.bulkAdd(doc.categories)
+    if (doc.warmups?.length) await d.warmups.bulkAdd(doc.warmups)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
@@ -408,6 +433,7 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
       mediaUrl: e.mediaUrl,
       categoryIds,
       alternativeIds: [],
+      warmupIds: [],
     })
     if (e.id != null) exRemap.set(e.id, id)
   }

@@ -40,6 +40,8 @@ no server** — all data lives in the browser.
 - **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL, categories
   and a **kind**: *Força* or *Cardio*.
 - **Training Day (Dia de Treino)** — e.g. "Dia 1"; optional category; ordered list of exercises.
+- **Warmup (Aquecimento)** — a name and one piece of media (image, video file or
+  external link), linked to many exercises and shared by them.
 - **Weight (Peso)** — target load for a **strength** exercise; value + unit
   (KG/LB/#). **Global** by default; a gym may hold an **exception** that wins
   inside it. Cardio exercises have none.
@@ -76,19 +78,44 @@ no server** — all data lives in the browser.
    would rewrite itself the moment one of them changes kind or is deleted.
    Cardio counts as a workout in every Consistência aggregate — the calendar's
    star says *which kind* it was, not *whether it counted*.
-5. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
-6. **Local-only, no auth.** Sharing happens through JSON export/import.
-7. **Category deletion reassigns** affected exercises to a reserved "Sem
+5. **A warm-up's media type is read from its URL, never stored.** Video file,
+   embeddable provider or **image** is decided by `lib/warmupMedia.ts`, and the
+   same function backs validation and rendering so the two cannot disagree.
+   Image is the default rather than an "unknown" case: plenty of real image URLs
+   carry no extension, and the viewer's failure state — which keeps the address
+   openable — is what makes guessing optimistically safe. A `kind`
+   column would be a second source of truth about the same string; the
+   durability argument that makes `Session.kind` a snapshot does not apply,
+   because nothing is rewritten retroactively if the classification improves.
+
+   A provider that publishes a **player URL** (YouTube, Vimeo) is embedded, via
+   that URL — the watch page itself refuses to be framed. Nothing else is ever
+   framed: most sites refuse it, so guessing an iframe would render a blank box
+   with nothing to explain it.
+
+   Embedding is a **deliberate trade**, revisited once and decided by the owner:
+   it puts a third party's player inside an otherwise local-only app, and that
+   provider sees the request. The app gives back what it can — the no-cookie
+   host where one exists, no autoplay, lazy loading — and does not pretend that
+   makes it private.
+
+   Exercise ↔ warm-up is many-to-many through `Exercise.warmupIds` with a
+   multiEntry index — the shape `categoryIds` already uses, and the array order
+   IS the order the viewer pages through. Unlike `alternativeIds` the relation
+   is **asymmetric**, so there is no symmetry for a repository to maintain.
+6. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
+7. **Local-only, no auth.** Sharing happens through JSON export/import.
+8. **Category deletion reassigns** affected exercises to a reserved "Sem
    categoria" category (never blocks; never orphans).
-8. **Full-backup import replaces all** local data (with an overwrite warning).
+9. **Full-backup import replaces all** local data (with an overwrite warning).
    Importing *shared exercises* JSON instead merges/adds without touching gyms or
    weights.
-9. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
+10. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
    sends categories, exercises and days to the Gemini API to reorganize them.
    It is opt-in (needs a token the user supplies), it never sends gyms, weights,
    notes, photos or sessions, and its client is loaded on demand so the offline
    bundle does not carry it. Everything else in the app remains local-only.
-10. **The accent colour is the user's, and it is governed by a list.** The app is
+11. **The accent colour is the user's, and it is governed by a list.** The app is
    dark-only, but the accent is chosen in Settings → Aparência from a curated
    set of 16 (`src/state/accents.ts`) — brand red by default. There is exactly
    **one** accent: the gradient's far stop derives from it by the brand's
@@ -105,7 +132,7 @@ no server** — all data lives in the browser.
    accent literal, and never add an accent token that does not derive. Canvas
    cannot read custom properties, so the shared session card takes the colour
    as an argument.
-11. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
+12. **Photo images live in OPFS, their metadata in IndexedDB.** A photo's bytes
    are a file in the origin's private file system (`src/data/photoStore.ts`);
    the `exercisePhotos` row keeps only metadata plus the file name. Two
    consequences to respect: no transaction spans a record and its file (write

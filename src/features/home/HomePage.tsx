@@ -18,7 +18,7 @@ import {
 } from '../../lib/days'
 import { muscleAvatarClass } from '../../lib/muscleAvatar'
 import logoMark from '../../assets/logo-mark.png'
-import { fmtWeight } from '../../lib/format'
+import { busySessionMessage, fmtWeight } from '../../lib/format'
 import {
   buildWeekTrack,
   currentStreak,
@@ -93,21 +93,22 @@ export function HomePage() {
     // on the floor for the millisecond it takes to know.
     if (activeSession === undefined) return
     if (activeSession) {
-      // Only one active session per gym. CHANGED: a day that is NOT the session's
-      // no longer navigates there. This button is drawn disabled (see isBlocked),
-      // and taking someone who tapped "Iniciar" on Dia 3 into the Dia 1 workout
-      // was a third outcome they asked for neither. It still answers the tap —
-      // a control that goes dead under the finger reads as a frozen app — but it
-      // answers with the reason, and "Continuar" is a tap away on its own card.
-      // ...unless the running session belongs to no day at all (a cardio). Then
-      // there IS no card of its own to tap, so refusing would leave the user
-      // blocked everywhere with nowhere to go — which is exactly the trap this
-      // branch was written to avoid.
-      if (activeSession.dayId !== dayId && activeSession.dayId != null) {
-        toast('Você já tem um treino em andamento.')
+      // Only one active session per gym, and a day that is NOT the session's
+      // says exactly that and nothing else. This button is drawn disabled (see
+      // isBlocked), and taking someone who tapped "Iniciar" on Dia 3 into the
+      // Dia 1 workout was a third outcome they asked for neither. It still
+      // answers the tap — a control that goes dead under the finger reads as a
+      // frozen app — but it answers with the reason alone.
+      //
+      // CHANGED: that now holds for a running CARDIO too, which used to be
+      // ferried to from here because it owns no day card. Its own row on the
+      // Cardio tab offers "Continuar", so the way back exists; naming the kind
+      // in the message is what points at it.
+      if (activeSession.dayId !== dayId) {
+        toast(busySessionMessage(activeSession.kind))
         return
       }
-      if (activeSession.dayId == null) toast('Você tem um cardio em andamento.')
+      // This day's own session: the button reads "Continuar", and it resumes.
       nav(`/session/${activeSession.id}`)
       return
     }

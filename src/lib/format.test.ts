@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtNumber, historyDelta, relativeDate } from './format'
+import { fmtClock, fmtNumber, historyDelta, relativeDate } from './format'
 import type { WeightHistory } from '../db/types'
 
 const h = (over: Partial<WeightHistory>): WeightHistory => ({
@@ -24,6 +24,28 @@ describe('relativeDate', () => {
   it('labels today and weeks', () => {
     expect(relativeDate(now, now)).toBe('Hoje')
     expect(relativeDate(now - 15 * 86_400_000, now)).toBe('Há 2 semanas')
+  })
+})
+
+describe('fmtClock', () => {
+  it('pads every field to two digits', () => {
+    expect(fmtClock(0)).toBe('00:00:00')
+    expect(fmtClock(754_000)).toBe('00:12:34')
+    expect(fmtClock(3_847_000)).toBe('01:04:07')
+  })
+
+  it('truncates the seconds instead of rounding them', () => {
+    // 0.9 s in has not been a second yet, so the clock must not claim one.
+    expect(fmtClock(900)).toBe('00:00:00')
+    expect(fmtClock(59_999)).toBe('00:00:59')
+  })
+
+  it('lets the hours grow past a day rather than wrapping', () => {
+    expect(fmtClock(26 * 3_600_000)).toBe('26:00:00')
+  })
+
+  it('clamps a negative span to zero', () => {
+    expect(fmtClock(-5_000)).toBe('00:00:00')
   })
 })
 

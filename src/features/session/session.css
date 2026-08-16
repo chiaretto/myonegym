@@ -20,6 +20,17 @@
   position: relative; }
 .start-time { font-size: var(--fs-2xs); color: var(--text-secondary); display: inline-flex;
   align-items: center; gap: 5px; }
+/* Bigger than the line it sits on: it is a counter to be read at a glance,
+   mid-set, at arm's length — the "iniciado hoje" beside it is a footnote.
+   Tabular figures because it repaints every second, and proportional digits
+   would make the whole line twitch sideways as 1s and 0s trade places. */
+.session-clock { font-size: var(--fs-lg); font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--text-primary); }
+
+/* Same clock on the session's exercise screen, above the tabs — cardio only,
+   where that screen IS the session (see SessionEntryPage). */
+.entry-duration { display: flex; align-items: center; gap: 6px; margin-bottom: 14px;
+  font-size: var(--fs-2xs); color: var(--text-secondary); }
 
 /* Progress */
 .progress-row { padding: 12px 2px 16px; display: flex; flex-direction: column; gap: 8px; }

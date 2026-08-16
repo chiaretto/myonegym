@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, setEntryDone, swapEntryExercise, ValidationError } from '../../db/repos'
+import { useElapsed } from '../../lib/elapsed'
+import { fmtClock } from '../../lib/format'
 import {
   useCategoryMap,
   useExerciseMap,
@@ -20,6 +22,7 @@ import { PhotoTab } from '../exercise/photo/PhotoTab'
 import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
+import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from '../exercise/WeightEditor'
 import '../exercise/exercise.css'
 import './session.css'
@@ -42,7 +45,17 @@ export function SessionEntryPage() {
 
   const [tab, setTab] = useState<EntryTab>('exec')
 
+  // CHANGED: the session, whichever kind it is. A cardio used to go back to
+  // /cardio instead, because Iniciar jumped straight here and the overview was
+  // a list of one the user had never passed through. Now they do pass through
+  // it, so back retraces the way in like everywhere else.
   const backTo = `/session/${sessionId}`
+  // Cardio only: it is one exercise, so this screen is where the whole run is
+  // spent and the clock belongs under the eyes that are on it. A strength entry
+  // is a step the user passes through on the way to the next one, and its
+  // runner — one tap up, and the screen they keep coming back to — has it.
+  const showClock = session?.kind === 'cardio' && session.status === 'active'
+  const elapsed = useElapsed(showClock && session ? session.startedAt : null)
   // `entries` joins the wait: it drives the stepper, and an empty list would
   // render this exercise as the only one in the session.
   if (session === undefined || entry === undefined || entries === undefined)
@@ -116,11 +129,17 @@ export function SessionEntryPage() {
       if (ok) {
         await completeSession(sessionId, db)
         toast('Treino concluído.')
-        nav('/sessions')
+        // The session's own screen, which on a completed session IS the summary
+        // — with the share buttons. Same destination whichever kind of workout
+        // this was, and whichever screen finished it.
+        nav(`/session/${sessionId}`, { replace: true })
         return
       }
     }
-    nav(`/session/${sessionId}`) // declined, or not all done → back to the runner
+    // Declined, or some entries skipped → back to the runner. A cardio has no
+    // runner worth returning to (a list of one, never passed through), so it
+    // simply stays on the exercise the user is looking at.
+    if (session.kind !== 'cardio') nav(`/session/${sessionId}`)
   }
 
   return (
@@ -149,6 +168,15 @@ export function SessionEntryPage() {
                 </span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Above the tabs, like the status chip: how long this cardio has been
+            running is true on Execução, Observações and Foto alike. */}
+        {showClock && (
+          <div className="entry-duration">
+            <Icon name="clock" size={12} /> Duração:{' '}
+            <span className="session-clock">{fmtClock(elapsed)}</span>
           </div>
         )}
 
@@ -184,6 +212,9 @@ export function SessionEntryPage() {
             <div className="hero">
               <Media url={exercise?.mediaUrl} alt={shownName} className="hero-media" />
             </div>
+            {/* Warm-ups of the exercise being SHOWN — while previewing an
+                alternative, it is that movement's warm-up that matters. */}
+            <WarmupButton exercise={exercise} />
             {/* Per-gym target weight (same editor as the catalog); read-only once
                 completed. Absent for cardio — there is no load to show. */}
             {exercise?.kind !== 'cardio' && (
@@ -236,8 +267,11 @@ export function SessionEntryPage() {
               </button>
             )
           }
-          onPrev={() => prevId != null && goTo(prevId)}
-          onNext={() => nextId != null && goTo(nextId)}
+          // No Voltar/Avançar when there is nowhere to step: a cardio session
+          // holds a single exercise, and two permanently dead controls say less
+          // than no controls at all.
+          onPrev={entries.length > 1 ? () => prevId != null && goTo(prevId) : undefined}
+          onNext={entries.length > 1 ? () => nextId != null && goTo(nextId) : undefined}
           prevDisabled={prevId == null}
           nextDisabled={nextId == null}
         />

@@ -59,6 +59,27 @@ function renderAt(path: string) {
   )
 }
 
+/**
+ * Finish the cardio from its session screen — where Iniciar now lands. The
+ * button is not gated on ticking the single entry: `completeSession` ticks it,
+ * rather than asking the user for the same fact twice.
+ */
+async function completeTheCardio(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: /Concluir treino/ }))
+}
+
+/**
+ * Iniciar lands on the session; the exercise is one tap further in. Waiting for
+ * the session screen first is not decoration: Iniciar navigates asynchronously,
+ * and the Cardio list has a link to the very same exercise, so a click issued
+ * too early lands on the catalog instead.
+ */
+async function openTheExercise(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await screen.findByRole('heading', { name: 'Treino em andamento' })
+  await user.click(await screen.findByRole('link', { name: new RegExp(name) }))
+  await screen.findByRole('tab', { name: /Observações/ })
+}
+
 describe('Cardio tab', () => {
   it('is offered next to Treinos and opens /cardio', async () => {
     await seed()
@@ -116,7 +137,7 @@ describe('Cardio tab', () => {
     expect(screen.getByRole('button', { name: 'Iniciar Bicicleta' })).toBeInTheDocument()
   })
 
-  it('starts a cardio and completes it into the history', async () => {
+  it('starts a cardio on its session screen, and completes from there', async () => {
     await seed()
     const user = userEvent.setup()
     renderAt('/cardio')
@@ -129,28 +150,88 @@ describe('Cardio tab', () => {
     expect(session.kind).toBe('cardio')
     expect(session.dayName).toBe('Esteira')
     expect(session.dayId).toBeUndefined()
-    expect(await listSessionEntries(session.id!, db)).toHaveLength(1)
+    const entries = await listSessionEntries(session.id!, db)
+    expect(entries).toHaveLength(1)
 
-    // No gym chip either: which gym you ran in is not a property of the run.
+    // CHANGED: the session screen, same as a strength workout — it used to jump
+    // straight to the exercise.
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
+    expect(screen.getByText(/de 1 concluídos/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Esteira/ })).toBeInTheDocument()
+
+    // No gym chip though: which gym you ran in is not a property of the run.
     expect(screen.queryByText('Academia A')).not.toBeInTheDocument()
-
-    // The runner row shows no weight badge — not even the "definir" hint, which
-    // would nag for a number a treadmill cannot have. (Caught in the browser,
-    // not here: the detail hid the card but the row still had the badge.)
+    // And nothing asks for a weight a treadmill cannot have.
     expect(screen.queryByText('definir')).not.toBeInTheDocument()
-    expect(document.querySelector('.used-weight')).toBeNull()
 
-    // And no hint telling the user to tick something first: the button is
-    // enabled, so that sentence would contradict it.
-    expect(screen.queryByText(/Marque ao menos um exercício/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Concluir treino/ })).toBeEnabled()
-
-    // Concluding needs no ticking first — there is one item.
-    await user.click(await screen.findByRole('button', { name: /Concluir treino/ }))
+    await completeTheCardio(user)
     await waitFor(async () => {
       expect((await db.sessions.get(session.id!))?.status).toBe('completed')
     })
     expect((await listSessionEntries(session.id!, db)).every((e) => e.done)).toBe(true)
+
+    // A cardio ends where a strength workout ends: on the summary, with the
+    // share buttons.
+    expect(await screen.findByRole('heading', { name: 'Sessão' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Compartilhar$/ })).toBeInTheDocument()
+  })
+
+  it('carries the workout clock above the tabs on the exercise screen', async () => {
+    await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await openTheExercise(user, 'Esteira')
+
+    expect(screen.getByText(/Duração:/)).toBeInTheDocument()
+    const clock = screen.getByText(/^\d\d:\d\d:\d\d$/)
+
+    // Above the tabs, so it holds on Execução, Observações and Foto alike…
+    const tablist = screen.getByRole('tablist')
+    expect(clock.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // …and switching tab does not take it away.
+    await user.click(screen.getByRole('tab', { name: /Foto/ }))
+    expect(screen.getByText(/Duração:/)).toBeInTheDocument()
+  })
+
+  it('leaves the strength exercise screen alone — its session screen already counts', async () => {
+    // Not a cardio: this is one step inside a session whose own screen carries
+    // the clock, and two counters for one workout is one too many.
+    const { gym, day } = await seed()
+    const sid = await startSession(gym, day, db)
+    const entry = (await listSessionEntries(sid, db))[0]
+    renderAt(`/session/${sid}/entry/${entry.id}`)
+
+    await screen.findByRole('tab', { name: /Observações/ })
+    expect(screen.queryByText(/Duração:/)).toBeNull()
+  })
+
+  it('offers no Voltar/Avançar — a cardio session holds one exercise', async () => {
+    await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await openTheExercise(user, 'Esteira')
+
+    // Two permanently dead controls say less than no controls at all.
+    expect(screen.queryByRole('button', { name: 'Exercício anterior' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Próximo exercício' })).toBeNull()
+    // The one thing there IS to do is still there.
+    expect(screen.getByRole('button', { name: /Concluir/ })).toBeInTheDocument()
+  })
+
+  it('goes back to the session, which is now on the way in', async () => {
+    await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await openTheExercise(user, 'Esteira')
+
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
+
+    // CHANGED: it used to jump to /cardio, because Iniciar skipped the session
+    // screen and back had nowhere else to go. Now it retraces the way in.
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
   })
 
   it('keeps the gym chip on a strength session', async () => {
@@ -195,13 +276,12 @@ describe('Cardio tab', () => {
     expect(esteira).toBeGreaterThan(0)
 
     await user.click(resume)
-    await waitFor(() => expect(window.location.pathname === '/' || true).toBe(true))
-    // The runner for that very session is on screen.
-    expect(await screen.findByText(/Treino em andamento/)).toBeInTheDocument()
+    // The session screen, the same place Iniciar leads to.
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
     expect(await db.sessions.get(sid)).toBeDefined()
   })
 
-  it('Home leads to a running cardio instead of refusing, having no card for it', async () => {
+  it("Home's Iniciar only says a cardio is running — it does not open it", async () => {
     await seed()
     const user = userEvent.setup()
     renderAt('/cardio')
@@ -211,13 +291,50 @@ describe('Cardio tab', () => {
     cleanup()
     renderAt('/')
 
-    // Tapping a day's Iniciar must not dead-end: there is no card of its own to
-    // send the user to, so this tap is the way back into the session.
     const head = await screen.findByText(/^Dia 1/)
     await user.click(head)
-    const start = await screen.findByRole('button', { name: /Iniciar|Continuar/ })
+    const start = await screen.findByRole('button', { name: 'Iniciar' })
     await user.click(start)
-    expect(await screen.findByText(/Treino em andamento/)).toBeInTheDocument()
+
+    // It names the KIND that is running, which is what says where to find it —
+    // the Cardio tab, where that exercise's own row offers Continuar.
+    expect(await screen.findByText('Você já tem um cardio em andamento.')).toBeInTheDocument()
+    // And that is all: still on Home, no second session, not inside the run.
+    expect(screen.getByText('Dia 1')).toBeInTheDocument()
+    expect(screen.queryByText(/Treino em andamento/)).toBeNull()
+    expect(await db.sessions.count()).toBe(1)
+  })
+
+  it('another row only says a cardio is running — it does not open it either', async () => {
+    await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await waitFor(async () => expect(await db.sessions.count()).toBe(1))
+
+    cleanup()
+    renderAt('/cardio')
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Bicicleta' }))
+
+    expect(await screen.findByText('Você já tem um cardio em andamento.')).toBeInTheDocument()
+    // Still on the list, and no second session was opened.
+    expect(screen.getByRole('button', { name: 'Continuar Esteira' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /Observações/ })).toBeNull()
+    expect(await db.sessions.count()).toBe(1)
+  })
+
+  it('a cardio row says a STRENGTH workout is running, naming that kind', async () => {
+    const { gym, day } = await seed()
+    await startSession(gym, day, db)
+    const user = userEvent.setup()
+    renderAt('/cardio')
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+
+    expect(await screen.findByText('Você já tem um treino em andamento.')).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: /Observações/ })).toBeNull()
+    expect(await db.sessions.count()).toBe(1)
   })
 
   it('offers an empty state that leads to creating one', async () => {
@@ -264,7 +381,7 @@ describe('Cardio tab', () => {
     const user = userEvent.setup()
     renderAt('/cardio')
     await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
-    await user.click(await screen.findByRole('button', { name: /Concluir treino/ }))
+    await completeTheCardio(user)
     await waitFor(async () => {
       expect((await db.sessions.toArray()).filter((s) => s.status === 'completed')).toHaveLength(2)
     })

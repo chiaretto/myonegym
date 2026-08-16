@@ -1,4 +1,5 @@
 import { readImage, removeImage, sweepOrphans, writeImage } from '../data/photoStore'
+import { isValidWarmupUrl } from '../lib/warmupMedia'
 import { db, type MyOneGymDB } from './db'
 import {
   GLOBAL_GYM_ID,
@@ -12,6 +13,7 @@ import {
   type Session,
   type SessionEntry,
   type Unit,
+  type Warmup,
   type Weight,
   type WeightHistory,
   type WeightScope,
@@ -175,6 +177,18 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
   return clean
 }
 
+/** Validate a warm-up URL: http(s) is the whole rule. Unlike an exercise's
+ *  media, a warm-up may point at a page — the viewer decides how to present it
+ *  from the URL (see lib/warmupMedia). */
+function requireWarmupUrl(url: string): string {
+  const clean = (url ?? '').trim()
+  if (!clean) throw new ValidationError('Informe a URL do aquecimento.')
+  if (!isValidWarmupUrl(clean)) {
+    throw new ValidationError('URL inválida (use http:// ou https://).')
+  }
+  return clean
+}
+
 export async function createExercise(
   input: {
     name: string
@@ -182,6 +196,7 @@ export async function createExercise(
     mediaUrl?: string
     categoryIds?: number[]
     alternativeIds?: number[]
+    warmupIds?: number[]
   },
   d: MyOneGymDB = db,
 ): Promise<number> {
@@ -196,6 +211,8 @@ export async function createExercise(
       mediaUrl,
       categoryIds: input.categoryIds ?? [],
       alternativeIds: [],
+      // Order is meaning here: it is the order the warm-up viewer pages through.
+      warmupIds: input.warmupIds ?? [],
     })
     // Through setAlternatives, never by writing the field: the set has to stay
     // symmetric on the peers too.
@@ -224,6 +241,7 @@ export async function updateExercise(
     mediaUrl?: string
     categoryIds?: number[]
     alternativeIds?: number[]
+    warmupIds?: number[]
   },
   d: MyOneGymDB = db,
 ): Promise<Day[]> {
@@ -232,7 +250,15 @@ export async function updateExercise(
   return d.transaction('rw', d.exercises, d.days, async () => {
     const before = await d.exercises.get(id)
     const kind = input.kind ?? before?.kind ?? 'strength'
-    await d.exercises.update(id, { name, kind, mediaUrl, categoryIds: input.categoryIds ?? [] })
+    await d.exercises.update(id, {
+      name,
+      kind,
+      mediaUrl,
+      categoryIds: input.categoryIds ?? [],
+      // `undefined` means "this caller isn't editing warm-ups" — the same
+      // contract `alternativeIds` uses just below.
+      ...(input.warmupIds !== undefined ? { warmupIds: input.warmupIds } : {}),
+    })
 
     let leftDays: Day[] = []
     if (kind === 'cardio') {
@@ -251,6 +277,61 @@ export async function updateExercise(
     if (input.alternativeIds !== undefined) await setAlternatives(id, input.alternativeIds, d)
     return leftDays
   })
+}
+
+/* -------------------------------------------------------------- warm-ups */
+
+export async function listWarmups(d: MyOneGymDB = db): Promise<Warmup[]> {
+  return d.warmups.orderBy('name').toArray()
+}
+
+export async function createWarmup(
+  input: { name: string; url: string },
+  d: MyOneGymDB = db,
+): Promise<number> {
+  return d.warmups.add({
+    name: requireName(input.name, 'nome do aquecimento'),
+    url: requireWarmupUrl(input.url),
+  })
+}
+
+export async function updateWarmup(
+  id: number,
+  input: { name: string; url: string },
+  d: MyOneGymDB = db,
+): Promise<void> {
+  await d.warmups.update(id, {
+    name: requireName(input.name, 'nome do aquecimento'),
+    url: requireWarmupUrl(input.url),
+  })
+}
+
+/**
+ * Delete a warm-up and unlink it from every exercise that listed it.
+ *
+ * Deleting is never blocked by being in use — the app fixes the reference
+ * instead of forbidding the action, the same call category deletion and
+ * exercise deletion already make. The multiEntry `*warmupIds` index is what
+ * makes "who points at me" a query rather than a scan of the catalogue.
+ */
+export async function deleteWarmup(id: number, d: MyOneGymDB = db): Promise<void> {
+  await d.transaction('rw', d.warmups, d.exercises, async () => {
+    await d.exercises
+      .where('warmupIds')
+      .equals(id)
+      .modify((ex) => {
+        ex.warmupIds = (ex.warmupIds ?? []).filter((x) => x !== id)
+      })
+    await d.warmups.delete(id)
+  })
+}
+
+/** The exercises currently linked to `warmupId` — what the list counts. */
+export async function exercisesUsingWarmup(
+  warmupId: number,
+  d: MyOneGymDB = db,
+): Promise<Exercise[]> {
+  return d.exercises.where('warmupIds').equals(warmupId).toArray()
 }
 
 /**
@@ -845,12 +926,14 @@ export async function startSession(
  * app already tells the user "there is a workout in progress", and a second,
  * parallel invariant just for cardio would make that same screen answer two
  * different questions.
+ *
+ * Returns both ids: the session, and the single entry the caller opens.
  */
 export async function startCardioSession(
   gymId: number,
   exerciseId: number,
   d: MyOneGymDB = db,
-): Promise<number> {
+): Promise<{ sessionId: number; entryId: number }> {
   return d.transaction('rw', d.sessions, d.sessionEntries, d.exercises, async () => {
     const active = await d.sessions
       .where('gymId')
@@ -871,13 +954,16 @@ export async function startCardioSession(
       startedAt: Date.now(),
       status: 'active',
     })
-    await d.sessionEntries.add({
+    // Returned alongside the session: a cardio has exactly one entry, and the
+    // caller goes straight to it — re-querying for something we just wrote
+    // would be a round trip to learn what we already knew.
+    const entryId = await d.sessionEntries.add({
       sessionId,
       exerciseId,
       exerciseName: ex.name,
       done: false,
     })
-    return sessionId
+    return { sessionId, entryId }
   })
 }
 

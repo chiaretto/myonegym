@@ -13,6 +13,7 @@ import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { PhotoTab } from './photo/PhotoTab'
 import { NoteEditor } from './NoteEditor'
+import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from './WeightEditor'
 import './exercise.css'
 
@@ -103,6 +104,7 @@ export function ExerciseDetailPage() {
             <div className="hero">
               <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
             </div>
+            <WarmupButton exercise={exercise} />
             {/* Cardio has no target load — a treadmill has nothing to define,
                 so the card is absent rather than empty. */}
             {exercise.kind !== 'cardio' && (

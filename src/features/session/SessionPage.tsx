@@ -4,7 +4,8 @@ import { db } from '../../db/db'
 import { completeSession, deleteSession, setEntryDone } from '../../db/repos'
 import type { SessionEntry } from '../../db/types'
 import { exerciseCategoryNames } from '../../lib/days'
-import { fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
+import { useElapsed } from '../../lib/elapsed'
+import { fmtClock, fmtDuration, fmtNumber, relativeDate } from '../../lib/format'
 import { useSettings } from '../../state/settings'
 import { renderCard } from './share/renderCard'
 import { shareFilename, shareSessionImage } from './share/shareCard'
@@ -39,6 +40,10 @@ export function SessionPage() {
   const confirm = useConfirm()
   const nav = useNavigate()
   const [sharing, setSharing] = useState<ShareVariant | null>(null)
+  // Only an open session runs a clock — a completed one has a fixed duration,
+  // printed with the rest of its summary at the bottom of the screen. Called
+  // above the early returns, where every hook on this screen has to live.
+  const elapsed = useElapsed(session?.status === 'active' ? session.startedAt : null)
 
   // `entries` joins the wait: the progress row counts them, and "0 de 0
   // concluídos" is a claim about the workout, not about the loading.
@@ -76,7 +81,11 @@ export function SessionPage() {
   const onComplete = async () => {
     await completeSession(sessionId, db)
     toast('Treino concluído.')
-    nav('/sessions')
+    // Stay on this session, which is now its own summary: the share buttons
+    // appear the moment it is completed, and the history is one tap away.
+    // Jumping to the list buried the one thing the user is most likely to want
+    // right after finishing.
+    nav(`/session/${sessionId}`, { replace: true })
   }
 
   const onShare = async (variant: ShareVariant) => {
@@ -135,6 +144,13 @@ export function SessionPage() {
             )}
             <span className="start-time">
               <Icon name="clock" size={12} /> iniciado {relativeDate(session.startedAt).toLowerCase()}
+              {/* The counter sits with the start time because it says the same
+                  thing twice over: when this began, and how long ago that was. */}
+              {!readOnly && (
+                <>
+                  {' · '}Duração: <span className="session-clock">{fmtClock(elapsed)}</span>
+                </>
+              )}
             </span>
           </div>
         </div>
