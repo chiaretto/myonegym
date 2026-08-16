@@ -1,4 +1,4 @@
-import type { Unit, WeightHistory } from '../db/types'
+import type { ExerciseKind, Unit, WeightHistory } from '../db/types'
 
 /** pt-BR number: drop trailing zeros, comma decimal. 22.5 -> "22,5". */
 export function fmtNumber(value: number): string {
@@ -46,6 +46,40 @@ export function fmtDuration(ms: number): string {
   const h = Math.floor(min / 60)
   const m = min % 60
   return m ? `${h} h ${m} min` : `${h} h`
+}
+
+/**
+ * A *running* duration as a clock: "00:12:34", "01:04:07".
+ *
+ * Sibling of `fmtDuration`, not a replacement: that one rounds to the minute,
+ * which is what a finished session wants ("48 min"). This one keeps the seconds
+ * because it is read while it ticks — a counter that only moved once a minute
+ * would look stopped.
+ *
+ * Seconds are truncated, never rounded: a session that started 0.9 s ago reads
+ * 00:00:00, so the clock never shows a second that has not elapsed yet. Hours
+ * grow past two digits rather than wrapping — a session left open overnight
+ * should read as absurd, not as 00:03:00.
+ */
+export function fmtClock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  const s = total % 60
+  return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':')
+}
+
+/**
+ * The whole answer a blocked play button gives: there is already a session
+ * open, so this one cannot start. It names the kind that is running, not the
+ * kind that was tapped — "cardio" on Home is the useful half of the sentence,
+ * because it says where to go look for it.
+ *
+ * One function rather than a literal per screen: Home and Cardio both say this,
+ * and two wordings would read as two different rules.
+ */
+export function busySessionMessage(kind: ExerciseKind): string {
+  return `Você já tem um ${kind === 'cardio' ? 'cardio' : 'treino'} em andamento.`
 }
 
 export interface DeltaLabel {

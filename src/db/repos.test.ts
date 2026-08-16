@@ -9,6 +9,11 @@ import {
   createCategory,
   createDay,
   createExercise,
+  updateWarmup,
+  listWarmups,
+  exercisesUsingWarmup,
+  deleteWarmup,
+  createWarmup,
   daysContaining,
   createGym,
   deleteCategory,
@@ -237,6 +242,94 @@ describe('exercise kind', () => {
     await updateExercise(ex, { name: 'Esteira', kind: 'strength' }, d)
     expect((await getWeight(g, ex, d))?.value).toBe(5)
     expect(await listHistory(g, ex, d)).toHaveLength(1)
+  })
+})
+
+describe('warmups', () => {
+  it('creates, lists by name and updates', async () => {
+    await createWarmup({ name: 'Rotação de ombro', url: 'https://x.com/b.gif' }, d)
+    const a = await createWarmup({ name: 'Alongamento', url: 'https://x.com/a.png' }, d)
+    expect((await listWarmups(d)).map((w) => w.name)).toEqual(['Alongamento', 'Rotação de ombro'])
+
+    await updateWarmup(a, { name: 'Alongamento de peito', url: 'https://x.com/a2.png' }, d)
+    expect((await d.warmups.get(a))?.name).toBe('Alongamento de peito')
+    expect((await d.warmups.get(a))?.url).toBe('https://x.com/a2.png')
+  })
+
+  it('requires a name and an http(s) url', async () => {
+    await expect(createWarmup({ name: '', url: 'https://x.com/a.png' }, d)).rejects.toBeInstanceOf(
+      ValidationError,
+    )
+    await expect(createWarmup({ name: 'A', url: '' }, d)).rejects.toBeInstanceOf(ValidationError)
+    await expect(createWarmup({ name: 'A', url: 'x.com/a.png' }, d)).rejects.toBeInstanceOf(
+      ValidationError,
+    )
+  })
+
+  it('accepts a page URL, not just media — the viewer decides how to show it', async () => {
+    const id = await createWarmup({ name: 'Vídeo', url: 'https://youtube.com/watch?v=a' }, d)
+    expect((await d.warmups.get(id))?.url).toBe('https://youtube.com/watch?v=a')
+  })
+
+  it('links the same warmup to several exercises, keeping one record', async () => {
+    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    const supino = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
+    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
+
+    expect((await d.exercises.get(supino))?.warmupIds).toEqual([w])
+    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([w])
+    expect(await d.warmups.count()).toBe(1)
+    expect((await exercisesUsingWarmup(w, d)).map((e) => e.name).sort()).toEqual([
+      'Desenvolvimento',
+      'Supino',
+    ])
+  })
+
+  it('preserves the order they were linked in — it is the paging order', async () => {
+    const a = await createWarmup({ name: 'A', url: 'https://x.com/a.png' }, d)
+    const b = await createWarmup({ name: 'B', url: 'https://x.com/b.png' }, d)
+    const c = await createWarmup({ name: 'C', url: 'https://x.com/c.png' }, d)
+    const ex = await createExercise({ name: 'Supino', warmupIds: [c, a, b] }, d)
+    expect((await d.exercises.get(ex))?.warmupIds).toEqual([c, a, b])
+
+    await updateExercise(ex, { name: 'Supino', warmupIds: [b, c] }, d)
+    expect((await d.exercises.get(ex))?.warmupIds).toEqual([b, c])
+  })
+
+  it('defaults to no warmups, and an update that omits them leaves them alone', async () => {
+    const w = await createWarmup({ name: 'A', url: 'https://x.com/a.png' }, d)
+    const plain = await createExercise({ name: 'Rosca' }, d)
+    expect((await d.exercises.get(plain))?.warmupIds).toEqual([])
+
+    const ex = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
+    // No `warmupIds` key: this caller is not editing them.
+    await updateExercise(ex, { name: 'Supino Reto' }, d)
+    expect((await d.exercises.get(ex))?.warmupIds).toEqual([w])
+  })
+
+  it('deleting a warmup unlinks it from every exercise instead of blocking', async () => {
+    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    const other = await createWarmup({ name: 'Outro', url: 'https://x.com/b.png' }, d)
+    const supino = await createExercise({ name: 'Supino', warmupIds: [w, other] }, d)
+    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
+
+    await deleteWarmup(w, d)
+
+    expect(await d.warmups.get(w)).toBeUndefined()
+    // The other link survives, and nothing points at the deleted record.
+    expect((await d.exercises.get(supino))?.warmupIds).toEqual([other])
+    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([])
+  })
+
+  it('deleting an exercise leaves the warmup for the others', async () => {
+    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+    const supino = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
+    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
+
+    await deleteExercise(supino, d)
+
+    expect(await d.warmups.get(w)).toBeDefined()
+    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([w])
   })
 })
 
@@ -917,7 +1010,7 @@ describe('cardio sessions', () => {
 
   it('starts a one-entry session that records its own kind and name', async () => {
     const { g, esteira } = await seedCardio()
-    const sid = await startCardioSession(g, esteira, d)
+    const { sessionId: sid, entryId } = await startCardioSession(g, esteira, d)
 
     const session = await getSession(sid, d)
     expect(session?.kind).toBe('cardio')
@@ -925,6 +1018,8 @@ describe('cardio sessions', () => {
     expect(session?.dayId).toBeUndefined() // cardio has no day
     const entries = await listSessionEntries(sid, d)
     expect(entries.map((e) => e.exerciseName)).toEqual(['Esteira'])
+    // The caller opens this entry directly, so the id it got back must be it.
+    expect(entries[0].id).toBe(entryId)
   })
 
   it('refuses a strength exercise', async () => {
@@ -953,7 +1048,7 @@ describe('cardio sessions', () => {
 
   it('completing marks the single entry done — no ticking first', async () => {
     const { g, esteira } = await seedCardio()
-    const sid = await startCardioSession(g, esteira, d)
+    const { sessionId: sid } = await startCardioSession(g, esteira, d)
     await completeSession(sid, d)
 
     const session = await getSession(sid, d)
@@ -972,9 +1067,12 @@ describe('cardio sessions', () => {
 
   it('frees the gym once completed', async () => {
     const { g, esteira } = await seedCardio()
-    const first = await startCardioSession(g, esteira, d)
+    const { sessionId: first } = await startCardioSession(g, esteira, d)
     await completeSession(first, d)
-    await expect(startCardioSession(g, esteira, d)).resolves.toBeGreaterThan(0)
+    await expect(startCardioSession(g, esteira, d)).resolves.toMatchObject({
+      sessionId: expect.any(Number),
+      entryId: expect.any(Number),
+    })
   })
 })
 

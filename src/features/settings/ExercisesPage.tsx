@@ -16,10 +16,16 @@ import {
   useDays,
   useExerciseMap,
   useExercises,
+  useWarmups,
 } from '../../lib/hooks'
 import { alternativesOf } from '../../lib/alternatives'
 import { dayNamesForExercise, exerciseCategoryLabel } from '../../lib/days'
-import { filterExercises, type CategoryFilter, type DayFilter } from '../../lib/exerciseFilters'
+import {
+  filterExercises,
+  normalizeForSearch,
+  type CategoryFilter,
+  type DayFilter,
+} from '../../lib/exerciseFilters'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
@@ -242,6 +248,7 @@ export function ExerciseFormPage() {
 function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const cats = useCategories()
   const exs = useExercises()
+  const warmups = useWarmups()
   const toast = useToast()
   const confirm = useConfirm()
   const nav = useNavigate()
@@ -250,6 +257,8 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
   const [mediaUrl, setMediaUrl] = useState(exercise?.mediaUrl ?? '')
   const [categoryIds, setCategoryIds] = useState<number[]>(exercise?.categoryIds ?? [])
   const [alternativeIds, setAlternativeIds] = useState<number[]>(exercise?.alternativeIds ?? [])
+  const [warmupIds, setWarmupIds] = useState<number[]>(exercise?.warmupIds ?? [])
+  const [wuSearch, setWuSearch] = useState('')
   const [altSearch, setAltSearch] = useState('')
   const [err, setErr] = useState('')
 
@@ -258,11 +267,24 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
     setCategoryIds((cur) => (cur.includes(id) ? cur.filter((c) => c !== id) : [...cur, id]))
   const toggleAlt = (id: number) =>
     setAlternativeIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+  // Appending, not sorting: the order chosen here is the order the warm-up
+  // viewer pages through.
+  const toggleWarmup = (id: number) =>
+    setWarmupIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
 
   // Every other exercise is a candidate; the selected ones stay visible whatever
   // the search says, so unchecking never requires finding them again.
   const others = (exs ?? []).filter((e) => e.id !== exercise?.id)
   const chosen = others.filter((e) => alternativeIds.includes(e.id!))
+  // In the exercise's own order, so the picker shows what the viewer will page.
+  const chosenWarmups = warmupIds
+    .map((id) => (warmups ?? []).find((w) => w.id === id))
+    .filter((w): w is NonNullable<typeof w> => w != null)
+  const offeredWarmups = (warmups ?? []).filter(
+    (w) =>
+      !warmupIds.includes(w.id!) &&
+      normalizeForSearch(w.name).includes(normalizeForSearch(wuSearch)),
+  )
   const offered = filterExercises(
     others.filter((e) => !alternativeIds.includes(e.id!)),
     { search: altSearch },
@@ -277,6 +299,7 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
         mediaUrl: mediaUrl || undefined,
         categoryIds,
         alternativeIds,
+        warmupIds,
       }
       if (exercise) {
         // Becoming cardio takes the exercise out of every day, so the user is
@@ -421,6 +444,56 @@ function ExerciseForm({ exercise }: { exercise: Exercise | null }) {
               </div>
               {offered.length === 0 && altSearch.trim() !== '' && (
                 <p className="note-empty">Nenhum exercício encontrado.</p>
+              )}
+            </>
+          )}
+        </div>
+        <div className="field">
+          <label htmlFor="ex-wu-search">Aquecimentos</label>
+          <p className="note-empty">
+            Preparo para este exercício — imagens, vídeos ou links. O mesmo aquecimento pode servir
+            vários exercícios, e a ordem escolhida aqui é a ordem em que eles aparecem.
+          </p>
+          {(warmups ?? []).length === 0 ? (
+            <p className="note-empty">
+              Nenhum aquecimento cadastrado ainda. Crie em Configurações → Aquecimentos.
+            </p>
+          ) : (
+            <>
+              <input
+                id="ex-wu-search"
+                value={wuSearch}
+                onChange={(e) => setWuSearch(e.target.value)}
+                placeholder="Buscar por nome"
+              />
+              <div className="chip-select" role="group" aria-label="Aquecimentos">
+                {/* Chosen first and always visible, like the alternatives picker:
+                    a search that hid them would make unchecking a hunt. */}
+                {chosenWarmups.map((w) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    className="chip-toggle on"
+                    aria-pressed={true}
+                    onClick={() => toggleWarmup(w.id!)}
+                  >
+                    <Icon name="check" size={12} /> {w.name}
+                  </button>
+                ))}
+                {offeredWarmups.map((w) => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    className="chip-toggle"
+                    aria-pressed={false}
+                    onClick={() => toggleWarmup(w.id!)}
+                  >
+                    {w.name}
+                  </button>
+                ))}
+              </div>
+              {offeredWarmups.length === 0 && wuSearch.trim() !== '' && (
+                <p className="note-empty">Nenhum aquecimento encontrado.</p>
               )}
             </>
           )}

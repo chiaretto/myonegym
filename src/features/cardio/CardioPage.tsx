@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { db } from '../../db/db'
 import { startCardioSession, ValidationError } from '../../db/repos'
 import { exerciseCategoryNames } from '../../lib/days'
+import { busySessionMessage } from '../../lib/format'
 import {
   useActiveSession,
   useCardioExercises,
@@ -53,16 +54,34 @@ export function CardioPage() {
     }
     // `undefined` is "still loading" — starting now could open a second session.
     if (activeSession === undefined) return
+    // Same reason, one level deeper: until the running cardio's entries are
+    // known, no row can tell whether it is the one that owns the session, and
+    // answering "you already have one" to its own Continuar would be a lie.
+    if (activeSession?.kind === 'cardio' && runningEntries === undefined) return
     if (activeSession) {
-      // Whatever row was tapped, the only thing to do is go to the session that
-      // is already running — this screen is the one place it can be reached.
-      if (exerciseId !== runningExerciseId) toast('Você já tem um treino em andamento.')
+      // CHANGED: a row that does NOT own the running session says so and stops
+      // there. It used to navigate into the session anyway, right after saying
+      // it could not start — two answers to one tap, and the second was never
+      // asked for. Reaching the session is what its own "Continuar" is for, and
+      // that is the branch below.
+      if (exerciseId !== runningExerciseId) {
+        toast(busySessionMessage(activeSession.kind))
+        return
+      }
+      // The running cardio's own row: back to the session, which is where
+      // Iniciar led in the first place.
       nav(`/session/${activeSession.id}`)
       return
     }
     try {
-      const id = await startCardioSession(activeGymId, exerciseId, db)
-      nav(`/session/${id}`)
+      // CHANGED: the session screen, not the exercise inside it. Skipping
+      // straight to the entry saved a tap on a list of one, but it also meant
+      // the session had no screen the user had ever seen — nothing to go back
+      // to, nothing to resume to, and a whole set of cardio-only exceptions
+      // downstream to keep that consistent. One shape for both kinds of workout
+      // is worth the tap.
+      const { sessionId } = await startCardioSession(activeGymId, exerciseId, db)
+      nav(`/session/${sessionId}`)
     } catch (e) {
       toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar.')
     }

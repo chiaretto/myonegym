@@ -65,13 +65,15 @@ mesma tela responder duas perguntas diferentes.
 - GIVEN a academia "A" tem um treino de musculação em andamento
 - WHEN o usuário tenta iniciar um cardio na aba Cardio
 - THEN nenhuma sessão nova é criada
-- AND ele é direcionado a retomar ou concluir a sessão em andamento
+- AND a tela explica que já há um **treino** em andamento, sem levá-lo até ele
 
 #### Scenario: Toda sessão em andamento tem um caminho visível de volta
 - GIVEN existe uma sessão em andamento, de qualquer tipo
 - WHEN o usuário percorre as telas de onde se inicia um treino
-- THEN pelo menos uma delas oferece retomá-la explicitamente
-- AND nenhuma tela recusa o início sem levar o usuário à sessão que bloqueia
+- THEN exatamente uma affordance — a **dona** daquela sessão — se apresenta como
+  "Continuar" e a abre
+- AND as demais recusam o início explicando, e nomeiam o **tipo** em andamento,
+  que é o que diz em qual tela está o "Continuar"
 
 #### Scenario: Um treino não começa durante um cardio
 - GIVEN a academia "A" tem um cardio em andamento
@@ -108,6 +110,62 @@ Uma sessão de **musculação** MUST continuar exibindo o rótulo.
 - THEN o cabeçalho exibe o rótulo "A"
 
 *(o início e a conclusão de um cardio estão na capability `cardio`.)*
+
+### Requirement: A Running Session Shows Its Duration
+
+Enquanto a sessão está **em andamento**, a tela da sessão MUST exibir, junto de
+quando ela começou, há **quanto tempo** ela dura, no formato `HH:MM:SS`,
+atualizado a cada segundo. Um contador que só se mexesse a cada minuto pareceria
+parado.
+
+A duração MUST ser contada a partir do **início gravado na sessão**, nunca do
+momento em que a tela foi montada: recarregar o app, fechá-lo ou abri-lo em outro
+aparelho MUST NOT reiniciar a contagem. Nenhum "tempo decorrido" MUST ser
+gravado — o início já é o fato, e um segundo valor guardado divergiria dele assim
+que o app fosse fechado.
+
+Os segundos MUST ser **truncados**, nunca arredondados: o contador nunca mostra
+um segundo que ainda não passou. As horas MUST crescer além de duas casas em vez
+de dar a volta — uma sessão esquecida aberta a noite inteira deve parecer
+absurda, não parecer recém-começada.
+
+Numa sessão **concluída** o contador MUST dar lugar à duração fixa do resumo,
+arredondada ao minuto (ver *Complete a Session*): uma duração por tela, nunca
+duas.
+
+Numa sessão de **cardio**, a tela do exercício MUST exibir o mesmo contador,
+**acima das abas** — um cardio é um exercício só, então é ali que a corrida
+inteira é passada, e é onde os olhos estão. A tela do exercício num treino de
+**musculação** MUST NOT exibi-lo: ali o usuário está de passagem para o próximo,
+e o runner — um toque acima, e a tela para a qual ele volta sempre — já conta.
+
+#### Scenario: O contador anda enquanto o treino corre
+- GIVEN uma sessão em andamento
+- WHEN o usuário observa a tela da sessão
+- THEN ao lado de quando ela começou aparece a duração em `HH:MM:SS`
+- AND ela avança a cada segundo
+
+#### Scenario: Recarregar não reinicia a contagem
+- GIVEN uma sessão iniciada há 12 minutos e 34 segundos
+- WHEN o usuário abre (ou reabre) a tela da sessão
+- THEN a duração exibida é `00:12:34`, e não `00:00:00`
+
+#### Scenario: A sessão concluída mostra a duração fixa
+- GIVEN uma sessão que durou 12 minutos e 34 segundos foi concluída
+- WHEN o usuário a abre
+- THEN o contador em andamento não é mais exibido
+- AND o resumo informa a duração arredondada ao minuto
+
+#### Scenario: O cardio conta na tela do exercício
+- GIVEN uma sessão de cardio em andamento, com o detalhe do exercício aberto
+- WHEN o usuário observa a tela
+- THEN a duração aparece acima das abas
+- AND continua visível ao trocar de aba
+
+#### Scenario: A musculação não repete o contador no exercício
+- GIVEN um treino de musculação em andamento, com o detalhe de uma entrada aberto
+- WHEN o usuário observa a tela
+- THEN nenhuma duração é exibida ali
 
 ### Requirement: Run a Session
 
@@ -163,11 +221,31 @@ done (even if not all are). The **"Concluir treino"** action MUST be **disabled
 when no entry is marked done**, so a session cannot be completed empty; an empty
 session is instead abandoned via delete.
 
+Concluir MUST levar o usuário ao **resumo daquela sessão** — a própria tela da
+sessão, que ao ser concluída passa a oferecer o **compartilhamento da imagem** —
+e não à lista do histórico. Compartilhar o treino recém-terminado é o que a
+maioria quer fazer em seguida, e mandá-la para a lista enterrava exatamente
+isso. Vale para **os dois tipos** de treino e para as duas telas de onde se
+conclui (a da sessão e a do exercício). O histórico continua a um toque, pelo
+voltar.
+
 #### Scenario: Complete a session
 - GIVEN gym "A" has an in-progress session with some entries done
 - WHEN the user completes the session
 - THEN the session is stamped with a completion time and marked completed
 - AND gym "A" has no in-progress session afterward
+
+#### Scenario: Concluir leva ao resumo, com o compartilhamento à mão
+- GIVEN uma sessão em andamento com ao menos uma entrada concluída
+- WHEN o usuário conclui o treino
+- THEN a tela daquela sessão é exibida, já em modo somente-leitura
+- AND as ações de compartilhar a imagem estão disponíveis ali
+- AND o histórico continua acessível pelo voltar
+
+#### Scenario: O mesmo destino a partir do detalhe do exercício
+- GIVEN o usuário concluiu o último exercício e aceitou encerrar o treino
+- WHEN a sessão é concluída
+- THEN ele chega ao mesmo resumo, com as mesmas ações de compartilhar
 
 #### Scenario: Complete with unfinished entries
 - GIVEN an in-progress session where only one of three entries is done
@@ -242,6 +320,42 @@ mídia (e as alternativas, se houver). "Observações" e "Foto" MUST continuar
 funcionando exatamente como para um exercício de Força: nota e fotos são por
 `(academia, exercício)` e são justamente o que ajuda num cardio (a tela da
 esteira, o ajuste do banco da bike).
+
+A aba **"Execução"** MUST oferecer, quando o exercício tem aquecimentos
+vinculados, o mesmo controle de **aquecimento** do detalhe do catálogo (ver a
+capability `warmups` e *Warmup Button on the Exercise Detail*, em `exercises`).
+É durante o treino que se aquece: obrigar a sair da sessão para consultar
+derrotaria o propósito.
+
+Fechar o visualizador MUST devolver o usuário **à mesma entrada e à mesma aba**,
+com a sessão inalterada — abrir um aquecimento MUST NOT marcar nada como feito,
+nem avançar o stepper.
+
+Enquanto uma **alternativa** está sendo vista, o controle MUST refletir o
+exercício **exibido**, como as três abas já fazem: é o aquecimento daquele
+movimento que interessa a quem está decidindo fazê-lo.
+
+#### Scenario: Aquecimento a partir da sessão
+- GIVEN uma sessão em andamento e "Supino", que tem dois aquecimentos
+- WHEN o usuário abre o detalhe da entrada e toca o controle de aquecimento
+- THEN o visualizador abre com os aquecimentos do "Supino"
+
+#### Scenario: Fechar não mexe na sessão
+- GIVEN o visualizador aberto a partir de uma entrada de sessão
+- WHEN o usuário fecha
+- THEN volta à mesma entrada, na aba "Execução"
+- AND nada foi marcado como concluído e o stepper não avançou
+
+#### Scenario: A alternativa traz o próprio aquecimento
+- GIVEN o usuário está vendo uma alternativa dentro da sessão
+- WHEN observa a aba "Execução"
+- THEN o controle de aquecimento reflete o exercício **exibido**, não o da
+  entrada
+
+#### Scenario: Sem aquecimento, sem controle
+- GIVEN a entrada é de um exercício sem aquecimentos
+- WHEN o usuário abre o detalhe
+- THEN nenhum controle de aquecimento é exibido
 
 #### Scenario: Cardio sem peso na aba Execução
 - GIVEN uma sessão de cardio da "Esteira" em andamento

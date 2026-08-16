@@ -149,6 +149,7 @@ describe('Seletor de academia e contadores — nada de zero antes da resposta', 
         '0', // Categorias — contadas, e realmente zero
         '1', // Exercícios
         '1', // Dias de treino
+        '0', // Aquecimentos — contados, e realmente zero
       ]),
     )
   })

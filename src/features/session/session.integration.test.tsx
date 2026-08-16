@@ -63,9 +63,17 @@ describe('Workout session end-to-end', () => {
     await user.click(screen.getByRole('button', { name: /Supino Reto/ }))
     await waitFor(() => expect(screen.getByText('33%')).toBeInTheDocument())
 
-    // Complete → lands on the Consistência screen with the session listed.
+    // Complete → stays on this session, which is now its summary: the share
+    // buttons are right there, which is what most people want next.
     await user.click(screen.getByRole('button', { name: /Concluir treino/ }))
-    // "Consistência" is both the page heading and the bottom tab — target the heading.
+    expect(await screen.findByRole('heading', { name: 'Sessão' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Compartilhar$/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Compartilhar sem pesos/ })).toBeInTheDocument()
+    // And it is read-only now: no way to un-tick what was just recorded.
+    expect(screen.queryByRole('button', { name: /Concluir treino/ })).toBeNull()
+
+    // The history is one tap away: on a completed session, back goes there.
+    await user.click(screen.getByRole('button', { name: 'Voltar' }))
     expect(await screen.findByRole('heading', { name: 'Consistência' })).toBeInTheDocument()
     expect(await screen.findByText('1/3')).toBeInTheDocument()
 
@@ -222,10 +230,12 @@ describe('Finish-workout prompt at the end of the stepper', () => {
     expect(await screen.findByRole('heading', { name: 'Tríceps Corda', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir' })) // last → prompt
 
-    // The finish prompt appears; confirming completes the session → Consistência.
+    // The finish prompt appears; confirming completes the session → its summary.
     expect(await screen.findByText('Todos os exercícios concluídos!')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Concluir treino' }))
-    expect(await screen.findByRole('heading', { name: 'Consistência' })).toBeInTheDocument()
+    // Same destination whichever screen finished the workout.
+    expect(await screen.findByRole('heading', { name: 'Sessão' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Compartilhar$/ })).toBeInTheDocument()
     await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('completed'))
   })
 
@@ -273,5 +283,40 @@ describe('Finish-workout prompt at the end of the stepper', () => {
     expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
     expect(screen.queryByText('Todos os exercícios concluídos!')).not.toBeInTheDocument()
     await waitFor(async () => expect((await db.sessions.toArray())[0]?.status).toBe('active'))
+  })
+
+})
+
+describe('Session duration', () => {
+  it('runs a clock while the session is open, and hands over to the summary once completed', async () => {
+    const gymId = await createGym('Academia A', db)
+    const startedAt = Date.now() - 754_000 // 12 min 34 s ago
+    // Seeded straight into Dexie rather than started through the UI: the point
+    // of the test is a session that began BEFORE this mount.
+    const sessionId = (await db.sessions.add({
+      gymId,
+      kind: 'strength',
+      dayName: 'Dia 1',
+      startedAt,
+      status: 'active',
+    })) as number
+    await db.sessionEntries.add({ sessionId, exerciseName: 'Supino Reto', done: false })
+
+    render(
+      <MemoryRouter initialEntries={[`/session/${sessionId}`]}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    // Counted from `startedAt`, so reloading mid-workout does not restart it.
+    expect(await screen.findByText('00:12:34')).toBeInTheDocument()
+    expect(screen.getByText(/Duração:/)).toBeInTheDocument()
+
+    await db.sessions.update(sessionId, { status: 'completed', completedAt: startedAt + 754_000 })
+
+    // Completed: the running clock stops being shown and the fixed, rounded
+    // duration in the summary takes over — one duration on screen, never two.
+    await waitFor(() => expect(screen.queryByText(/Duração:/)).toBeNull())
+    expect(screen.getByText(/13 min/)).toBeInTheDocument()
   })
 })

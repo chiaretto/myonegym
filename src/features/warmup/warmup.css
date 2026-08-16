@@ -1,0 +1,90 @@
+/* Full-screen warm-up viewer.
+
+   Fixed rather than a sheet: this is content with its own navigation, not a
+   drawer of actions. It sits above the tab bar (z 999) so nothing of the screen
+   behind competes with it. */
+
+/* grid-template-columns: 100% is load-bearing. Without it the implicit column
+   sizes to max-content — the media at its NATURAL width — and the whole overlay
+   grows past the viewport: the close button walks off the right edge and the
+   arrows land on top of the image. Being `position: fixed`, that overflow does
+   not show up in the document's scrollWidth, which is why it survived the first
+   look. Same family as the tab bar's missing `min-width: 0`. */
+.wu-viewer {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--surface-0);
+  display: grid; grid-template-rows: auto 1fr; grid-template-columns: 100%;
+  overflow: hidden;
+}
+
+.wu-bar {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 10px 12px; border-bottom: 0.5px solid var(--border);
+}
+.wu-title { flex: 1; min-width: 0; font-family: var(--font-title); font-weight: 600;
+  font-size: var(--fs-lg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wu-count { flex: none; font-size: var(--fs-xs); color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wu-close { flex: none; }
+
+/* The media area. The arrows float above it now, so the side padding is small:
+   the media gets the full width, which is what a vertical Short needs most. */
+.wu-stage {
+  min-height: 0; min-width: 0; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px;
+}
+/* object-fit keeps the aspect ratio while both limits apply — without it a tall
+   image satisfies max-height by stretching, not by scaling. */
+.wu-media { max-width: 100%; max-height: 100%; object-fit: contain;
+  border-radius: var(--r-ctl); }
+/* An iframe has no intrinsic size, so max-* alone would collapse it. Landscape
+   is the default: the width fills the stage and the height follows. */
+.wu-embed { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0;
+  background: var(--surface-1); }
+/* A Short is vertical, and a vertical video inside a 16:9 box is a thin strip
+   with black on both sides. Here height leads instead: the player takes the
+   stage's full height, and the width follows — clamped by max-width on a narrow
+   screen, which is the one case where it cannot have both. */
+.wu-embed.portrait { height: 100%; width: auto; aspect-ratio: 9 / 16;
+  max-width: 100%; max-height: 100%; }
+
+/* Over the media, not beside it. Translucent with a blur so the arrow reads on
+   a bright photo and on a dark one without hiding what is under it. */
+.wu-nav {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 1;
+  width: 44px; height: 44px; display: grid; place-items: center;
+  border: 0.5px solid rgba(255, 255, 255, 0.18); border-radius: var(--r-pill);
+  background: rgba(5, 6, 7, 0.55); backdrop-filter: blur(6px);
+  color: var(--text-primary); font-size: var(--fs-xl); cursor: pointer;
+}
+.wu-nav.prev { left: 8px; }
+.wu-nav.next { right: 8px; }
+.wu-nav:active { background: rgba(5, 6, 7, 0.75); }
+
+/* The failure state: media that will not load, or a URL that was never an image
+   (which is what anything unrecognised is optimistically tried as). It keeps the
+   address reachable instead of dead-ending. */
+.wu-failed {
+  display: grid; justify-items: center; gap: 10px; text-align: center;
+  padding: 24px; color: var(--text-secondary);
+}
+.wu-failed .ti { font-size: var(--fs-6xl); color: var(--text-muted); }
+.wu-failed .btn { width: auto; }
+
+/* The opener, sitting in the Execução tab with the weight card and the
+   alternatives. Auto width: it is one action, not a full-width primary. */
+.wu-open { width: auto; justify-self: start; }
+.wu-open-count {
+  min-width: 1.6em; padding: 1px 6px; border-radius: var(--r-pill);
+  background: var(--bg-accent); color: var(--text-accent);
+  font-size: var(--fs-2xs); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+/* Narrow phones: the arrows pull in a little, but keep a 40px target. */
+@media (max-width: 360px) {
+  .wu-stage { padding: 10px; }
+  .wu-nav { width: 40px; height: 40px; }
+  .wu-nav.prev { left: 4px; }
+  .wu-nav.next { right: 4px; }
+}

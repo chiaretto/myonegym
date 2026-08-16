@@ -9,6 +9,7 @@ import type {
   Gym,
   Session,
   SessionEntry,
+  Warmup,
   Weight,
   WeightHistory,
 } from './types'
@@ -24,6 +25,7 @@ export class MyOneGymDB extends Dexie {
   sessionEntries!: Table<SessionEntry, number>
   exerciseNotes!: Table<ExerciseNote, number>
   exercisePhotos!: Table<ExercisePhoto, number>
+  warmups!: Table<Warmup, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -164,6 +166,25 @@ export class MyOneGymDB extends Dexie {
             if (s.kind !== 'cardio') s.kind = 'strength'
           })
       })
+    // v11 — warm-ups: a small catalogue of their own, linked from exercises by
+    // a multiEntry list (the same shape `*categoryIds` uses). The index is what
+    // answers "which exercises use this warm-up" when one is deleted.
+    //
+    // Nothing existed before, so the upgrade only gives every exercise the empty
+    // list. Re-running it changes nothing.
+    this.version(11)
+      .stores({
+        warmups: '++id, name',
+        exercises: '++id, name, kind, *categoryIds, *warmupIds',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            if (!Array.isArray(e.warmupIds)) e.warmupIds = []
+          })
+      })
   }
 }
 
@@ -244,5 +265,6 @@ export function allTables(database: MyOneGymDB = db) {
     // outside the database, so an import/reset must drop those too (see
     // `clearImages` in data/photoStore).
     database.exercisePhotos,
+    database.warmups,
   ]
 }

@@ -14,9 +14,10 @@ import {
   listPhotos,
   listSessionEntries,
   listSessionSummaries,
+  listWarmups,
   weightsForGym,
 } from '../db/repos'
-import type { Category, Exercise, Weight } from '../db/types'
+import type { Category, Exercise, Warmup, Weight } from '../db/types'
 
 /**
  * ## `undefined` means "still asking", never "there is nothing"
@@ -105,6 +106,15 @@ export function useCardioExercises() {
 export function useExerciseMap(): Map<number, Exercise> {
   const list = useExercises()
   return new Map((list ?? []).filter((e) => e.id != null).map((e) => [e.id!, e]))
+}
+
+export function useWarmups() {
+  return useCachedLiveQuery('warmups', () => listWarmups(db))
+}
+
+export function useWarmupMap(): Map<number, Warmup> {
+  const list = useWarmups()
+  return new Map((list ?? []).filter((w) => w.id != null).map((w) => [w.id!, w]))
 }
 
 export function useDays() {
