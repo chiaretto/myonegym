@@ -118,9 +118,9 @@ It is not persisted across app restarts: reloading starts a new conversation.
 
 ### Requirement: The Assistant Asks Only What It Needs, and Confirms Before Generating
 
-When the request does not carry enough to decide well — how many days a week,
-how long a session, an injury to work around, what to prioritise — the assistant
-MUST **ask** instead of guessing. Questions MUST be limited to what would change
+The assistant MUST **ask** instead of guessing when the request does not carry
+enough to decide well — how many days a week, how long a session, an injury to
+work around, what to prioritise. Questions MUST be limited to what would change
 the proposal, MUST be grouped into as few turns as possible, and MUST NOT cover
 anything already answerable from the catalog it was given.
 
@@ -163,10 +163,10 @@ confirmation it has already been given.
 
 ### Requirement: A Proposal Is Repaired Before It Is Shown
 
-The model's answer can arrive carrying defects that express no intention at all:
-an image URL serialized as the *text* `"null"`, an exercise still pointing at a
-category the same proposal dropped. Before it becomes a card, a proposal MUST go
-through a conservative repair against the current catalog.
+A proposal MUST go through a conservative repair against the current catalog
+before it becomes a card. The model's answer can arrive carrying defects that
+express no intention at all: an image URL serialized as the *text* `"null"`, an
+exercise still pointing at a category the same proposal dropped.
 
 The repair MUST be limited to:
 
@@ -245,11 +245,11 @@ whole, inside the transaction, against the catalog read there.
 
 ### Requirement: The History Returns the Model's Call Untouched
 
-The conversation continues after a proposal — the user rejects it and says what
-to adjust, or accepts and asks for something else — and every turn re-sends the
-whole history. The turn in which the model proposed MUST go back **exactly as it
-arrived**, in the same part: the function call, its arguments, and the reasoning
-signature that accompanies it.
+The turn in which the model proposed MUST go back **exactly as it arrived**, in
+the same part: the function call, its arguments, and the reasoning signature
+that accompanies it. The conversation continues after a proposal — the user
+rejects it and says what to adjust, or accepts and asks for something else — and
+every turn re-sends the whole history.
 
 That signature is an opaque token the model emits alongside the call and
 requires back on subsequent turns. A history rebuilt from the call alone — name

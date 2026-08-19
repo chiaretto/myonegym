@@ -46,7 +46,7 @@ Starting a session MUST require an active gym.
 
 ### Requirement: Single Active Session Per Gym
 
-At most **one in-progress session** MAY exist for a gym at a time, **de
+A gym MUST have at most **one in-progress session** at a time, **de
 qualquer tipo**. While a session is active for the gym, starting another MUST be
 prevented — seja um dia de treino, seja um cardio; the user resumes the existing
 session instead.

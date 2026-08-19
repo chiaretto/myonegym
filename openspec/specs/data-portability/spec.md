@@ -345,9 +345,9 @@ backup) MUST be rejected with a clear message **before** any data is touched.
 
 ### Requirement: Restoring a Pre-Global Backup Promotes Weights
 
-Restaurar um backup **anterior** a esta mudança — em que todo peso é de uma
-academia e nenhuma linha global existe — MUST aplicar, ao final da restauração,
-a mesma promoção da migração do banco: para cada exercício, o peso e o
+A restauração de um backup **anterior** a esta mudança MUST aplicar, ao final,
+a mesma promoção da migração do banco — trata-se de um arquivo em que todo peso
+é de uma academia e nenhuma linha global existe. Para cada exercício, o peso e o
 histórico da academia mais antiga que o tenha viram **globais**, e os demais
 permanecem como exceções.
 
