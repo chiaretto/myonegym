@@ -312,9 +312,9 @@ escopo de exceção.
 
 ### Requirement: Weight Badges Resolve Global Plus Exceptions
 
-Toda leitura de peso em lote — os badges da Home, a lista de exercícios da
-sessão e o card de compartilhamento — MUST usar o peso **resolvido** para a
-academia em questão: exceção quando existe, global caso contrário. Exercícios de
+Toda leitura de peso em lote MUST usar o peso **resolvido** para a academia em
+questão: exceção quando existe, global caso contrário. Isso vale para os badges
+da Home, a lista de exercícios da sessão e o card de compartilhamento. Exercícios de
 **Cardio** MUST ser omitidos dessas leituras: eles não têm peso a resolver.
 
 #### Scenario: Home badges show global weights

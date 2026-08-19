@@ -92,7 +92,7 @@ pesos e no histórico **globais**.
 
 ## Deprecated
 
-### Requirement: Copy Weights When Creating a Gym (Removed: 2026-08-15)
+### Copy Weights When Creating a Gym (Removed: 2026-08-15)
 
 O formulário de criação de academia deixou de oferecer "Copiar pesos de
 (opcional)", e `createGym` deixou de aceitar uma academia de origem.

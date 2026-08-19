@@ -762,9 +762,9 @@ scrolled out of reach.
 
 ### Requirement: Create and Edit on Dedicated Pages
 
-Creating or editing a catalog entity — a **gym**, **category**, **exercise**, or
-**training day** — MUST happen on a **dedicated page (its own route)**, not in a
-modal. Each entity MUST expose a **create** route and an **edit** route; opening a
+Creating or editing a catalog entity MUST happen on a **dedicated page (its own
+route)**, not in a modal. This covers a **gym**, a **category**, an **exercise**
+and a **training day**. Each entity MUST expose a **create** route and an **edit** route; opening a
 create/edit flow navigates to it, and the list's create control and each row's
 edit control navigate there rather than opening an overlay.
 

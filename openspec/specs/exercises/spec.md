@@ -35,10 +35,10 @@ encontrá-los de novo — o mesmo comportamento do seletor de alternativas. A
 
 ### Requirement: Warmup Button on the Exercise Detail
 
-Todo **detalhe de exercício** — o do catálogo (`/exercise/:id`) e o de uma
-entrada de sessão — MUST oferecer, no corpo da aba de execução, um controle que
-abre os **aquecimentos** daquele exercício no visualizador de tela cheia (ver a
-capability `warmups`).
+Todo **detalhe de exercício** MUST oferecer, no corpo da aba de execução, um
+controle que abre os **aquecimentos** daquele exercício no visualizador de tela
+cheia (ver a capability `warmups`) — tanto o detalhe do catálogo
+(`/exercise/:id`) quanto o de uma entrada de sessão.
 
 O controle MUST NOT ser exibido quando o exercício não tem aquecimento algum:
 não ter é o caso normal, e um botão que só abre um vazio é ruído — a mesma
@@ -363,10 +363,10 @@ A indicação MUST atualizar automaticamente quando as alternativas mudam.
 
 ### Requirement: Alternatives Section on the Exercise Detail
 
-Todo **detalhe de exercício** — o do catálogo (`/exercise/:id`) e o de uma
-entrada de sessão — MUST apresentar uma seção **"Alternativas"** listando os
-exercícios alternativos, cada um com sua **miniatura** e seu **nome**, e cada um
-**tocável** para abrir o detalhe correspondente.
+Todo **detalhe de exercício** MUST apresentar uma seção **"Alternativas"**
+listando os exercícios alternativos, cada um com sua **miniatura** e seu
+**nome**, e cada um **tocável** para abrir o detalhe correspondente — tanto o
+detalhe do catálogo (`/exercise/:id`) quanto o de uma entrada de sessão.
 
 A seção MUST ficar no corpo da tela (junto do peso alvo), não na faixa de
 rótulos do cabeçalho: é um lugar para onde ir, não um rótulo, e cresce com o
@@ -529,15 +529,14 @@ target-weight editor — and nothing can be saved.
 
 ### Requirement: Exercise Media Display on Detail Views
 
-On every **exercise detail view** (the exercise detail page, the in-session
-exercise detail, and the day-form exercise preview), the exercise's media
-(static image or animated GIF) MUST be shown **whole and at its natural
-proportions** — the full image at at least its proportional height, never
-cropped by a fixed-height container. Very tall media MUST be capped to a
-screen-friendly height while remaining fully visible (contained, not cropped).
-When the media is missing or fails to load, a placeholder MUST render as a tidy
-box. This applies uniformly across all detail views (they share one media
-presentation).
+Every **exercise detail view** MUST show the exercise's media (static image or
+animated GIF) **whole and at its natural proportions** — the full image at at
+least its proportional height, never cropped by a fixed-height container. Very
+tall media MUST be capped to a screen-friendly height while remaining fully
+visible (contained, not cropped). When the media is missing or fails to load, a
+placeholder MUST render as a tidy box. This applies uniformly to the exercise
+detail page, the in-session exercise detail and the day-form exercise preview
+(they share one media presentation).
 
 #### Scenario: Portrait image shows at full height
 - GIVEN an exercise whose image is taller than it is wide
