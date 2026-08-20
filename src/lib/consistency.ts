@@ -75,8 +75,19 @@ export interface MonthCell {
   /** False for the leading/trailing cells that pad the grid to full weeks. */
   inMonth: boolean
   state: MonthCellState
-  /** Completed sessions that day. >1 renders the "2+" badge. */
+  /** Completed sessions that day, of any kind. Kept for the cell's tooltip;
+   *  nothing visual counts it. */
   sessions: number
+  /**
+   * At least one of that day's sessions was a strength workout.
+   *
+   * Paired with `cardio`, and read the same way: two independent signals ADDED
+   * to the cell, each answering "was there one of these", while `state` still
+   * answers "was there a workout at all". A day carries one mark, the other, or
+   * both — and since every session is one kind or the other, a done day always
+   * carries at least one.
+   */
+  strength: boolean
   /**
    * At least one of that day's sessions was cardio.
    *
@@ -102,9 +113,10 @@ export function buildMonthGrid(
   cardioAt: readonly number[] = [],
 ): MonthCell[] {
   const counts = dayCountsForMonth(completedAt, ref)
-  const cardioDays = new Set(
-    [...dayCountsForMonth(cardioAt, ref).keys()],
-  )
+  // Counted, not just flagged: `cardioAt` is a subset of `completedAt`, so the
+  // strength tally is the difference — no second input, and no matching
+  // timestamps back to sessions to work out which is which.
+  const cardioCounts = dayCountsForMonth(cardioAt, ref)
   const first = new Date(ref.year, ref.month, 1).getTime()
   const daysInMonth = new Date(ref.year, ref.month + 1, 0).getDate()
   const lead = dayIndexInWeek(first)
@@ -122,12 +134,14 @@ export function buildMonthGrid(
     else if (startOfDay(dayTs) === today) state = 'today'
     else if (dayTs > now) state = 'future'
     else state = 'past'
+    const cardioSessions = inMonth ? (cardioCounts.get(d.getDate()) ?? 0) : 0
     cells.push({
       day: d.getDate(),
       inMonth,
       state,
       sessions,
-      cardio: inMonth && cardioDays.has(d.getDate()),
+      strength: sessions - cardioSessions > 0,
+      cardio: cardioSessions > 0,
     })
   }
   return cells

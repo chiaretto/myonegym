@@ -67,10 +67,18 @@ export function HomePage() {
   // not an empty one: deriving from `[]` would paint "0 / 7 treinos" and put
   // "Próximo treino" on the first day, then correct both a frame later.
   const now = Date.now()
+  const completed = (summaries ?? []).filter((s) => s.session.completedAt != null)
+  // A subset of the completions, same as the Consistência calendar builds: it
+  // decides where the star goes and nothing else — a cardio still counts in the
+  // number and in the streak like any other workout.
+  const cardioAt = completed
+    .filter((s) => s.session.kind === 'cardio')
+    .map((s) => s.session.completedAt!)
   const weekCells = summaries
     ? buildWeekTrack(
-        summaries.map((s) => s.session.completedAt ?? 0).filter((ts) => ts > 0),
+        completed.map((s) => s.session.completedAt!),
         now,
+        cardioAt,
       )
     : null
   const streak = weekCells ? currentStreak(weekCells, now) : 0
@@ -79,8 +87,19 @@ export function HomePage() {
   // are newest-first, across every gym), wrapping to the first day. Training
   // days are global — useDays() takes no gym — so the rotation has no reason to
   // restart when the user trains somewhere else.
+  //
+  // The most recent STRENGTH one, specifically. A cardio session carries no
+  // `dayId` (it belongs to no day), so feeding it here handed nextWorkoutDayId a
+  // null — which it correctly reads as "no history" and answers with the first
+  // day. The rotation would jump back to Dia 1 after every cardio, losing the
+  // user's place. Filtering here rather than inside nextWorkoutDayId keeps that
+  // function taking a dayId and knowing nothing about sessions: the bug was in
+  // *which* session was picked, not in how the rotation advances.
+  const lastStrength = completed.find(
+    (s) => s.session.kind === 'strength' && s.session.dayId != null,
+  )
   const nextDayId = summaries
-    ? nextWorkoutDayId(days ?? [], summaries[0]?.session.dayId ?? null)
+    ? nextWorkoutDayId(days ?? [], lastStrength?.session.dayId ?? null)
     : null
 
   const onStart = async (dayId: number) => {

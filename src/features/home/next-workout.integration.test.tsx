@@ -10,6 +10,7 @@ import {
   createGym,
   listSessionEntries,
   setEntryDone,
+  startCardioSession,
   startSession,
 } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
@@ -49,6 +50,12 @@ async function completeDay(gym: number, dayId: number) {
   const entries = await listSessionEntries(sid, db)
   await setEntryDone(entries[0].id!, true, db)
   await completeSession(sid, db)
+}
+
+/** Start and complete a cardio on the given exercise — no day involved. */
+async function completeCardio(gym: number, exerciseId: number) {
+  const { sessionId } = await startCardioSession(gym, exerciseId, db)
+  await completeSession(sessionId, db)
 }
 
 /** The day-name that carries the "Próximo treino" eyebrow. */
@@ -104,6 +111,58 @@ describe('Home "Próximo treino" selection', () => {
     )
     expect(await screen.findByText('Dia 1')).toBeInTheDocument()
     await waitFor(() => expect(featuredDayName()).toBe('Dia 2'))
+  })
+
+  it('is not moved by a cardio completed after a workout', async () => {
+    // A cardio carries no dayId. Feeding it to the rotation handed it a null,
+    // which reads as "no history" and snapped the marker back to Dia 1 — the
+    // user losing their place every time they did a cardio.
+    const { gym, d1 } = await seedThreeDays()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    await completeDay(gym, d1)
+    await completeCardio(gym, esteira)
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
+    await waitFor(() => expect(featuredDayName()).toBe('Dia 2'))
+  })
+
+  it('is not moved by a run of cardios', async () => {
+    const { gym, d2 } = await seedThreeDays()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    await completeDay(gym, d2)
+    await completeCardio(gym, esteira)
+    await completeCardio(gym, esteira)
+    await completeCardio(gym, esteira)
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
+    await waitFor(() => expect(featuredDayName()).toBe('Dia 3'))
+  })
+
+  it('features the first day when the history holds cardio only', async () => {
+    // The rotation never started, so the first day is the right answer — the
+    // same one an empty history gets, and for the same reason.
+    const { gym } = await seedThreeDays()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    await completeCardio(gym, esteira)
+    await completeCardio(gym, esteira)
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Dia 1')).toBeInTheDocument()
+    await waitFor(() => expect(featuredDayName()).toBe('Dia 1'))
   })
 
   it('does not restart the rotation when the user switches gyms', async () => {

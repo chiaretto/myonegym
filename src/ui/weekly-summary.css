@@ -89,15 +89,35 @@
 /* future — empty and dashed, so it reads as "not yet" rather than "missed". */
 .wd.future .wd-dot { background: transparent; border: 1.5px dashed var(--border-strong); }
 
-/* multi — more than one session on the same day. The count sums SESSIONS, so two
-   on Tuesday count twice; without this the number and the track disagree and it
-   looks like a bug. Open question in README.md: sessions or days? */
-.wd.multi .wd-dot { position: relative; }
-.wd.multi .wd-dot::after {
+/* strength — a musculação workout happened that day. Bottom-right, opposite the
+   cardio star at top-left, so a day with both carries both and neither moves.
+
+   CHANGED: this used to mean "more than one session that day". Counting had
+   nothing left to explain — the card's number counts DAYS, not sessions — while
+   "which kind was it" had no answer on this track at all. The mark kept its
+   shape and corner and took the useful question. */
+.wd.strength .wd-dot { position: relative; }
+.wd.strength .wd-dot::after {
   content: ''; position: absolute; right: -1px; bottom: -1px;
   width: 0.62em; height: 0.62em; border-radius: 50%;
   background: var(--accent); border: 2px solid var(--surface-1);
 }
+
+/* cardio — at least one of the day's sessions was a cardio. Deliberately the
+   same mark as the Consistência calendar's `.cal-cell.cardio` (see
+   features/consistency/consistency.css): same glyph, same top-left corner —
+   opposite the 2+ badge at bottom-right, so a day with both shows both — and the
+   same flip to --on-accent once it sits on a filled disc. The two rules stay
+   separate because the cells differ (1.9em with an icon here, 2.3em with a
+   number there); a shared mixin for seven lines of ::before would cost more in
+   indirection than it saves. Keep them in step. */
+.wd.cardio .wd-dot { position: relative; }
+.wd.cardio .wd-dot::before {
+  content: '★'; position: absolute; left: -3px; top: -4px;
+  font-size: 0.62em; line-height: 1; color: var(--accent);
+  text-shadow: 0 0 2px var(--surface-1), 0 0 2px var(--surface-1);
+}
+.wd.done.cardio .wd-dot::before { color: var(--on-accent); text-shadow: none; }
 
 /* Narrow phones: the cells are em-based and the grid fractional, so seven fit at
    360px, but the gap gets tight — pull it in. */

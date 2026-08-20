@@ -40,7 +40,9 @@ export function WeeklySummary({ cells, streak }: { cells: WeekDayCell[]; streak:
         {cells.map((cell) => (
           <li
             key={cell.index}
-            className={`wd ${cell.state}${cell.sessions > 1 ? ' multi' : ''}`}
+            className={`wd ${cell.state}${cell.strength ? ' strength' : ''}${
+              cell.cardio ? ' cardio' : ''
+            }`}
             aria-label={weekCellLabel(cell)}
           >
             <span className="wd-dot">{cell.state === 'done' && <Icon name="check" />}</span>
@@ -52,12 +54,20 @@ export function WeeklySummary({ cells, streak }: { cells: WeekDayCell[]; streak:
   )
 }
 
-/** Spoken description of one cell — the visual states are colour-only otherwise. */
+/** Spoken description of one cell — the visual states are colour-only otherwise,
+ *  and so are the two marks: a mark nobody can hear is a mark half the users do
+ *  not get. The kinds are appended rather than substituted, because "what kind"
+ *  never replaces "was there a workout", and the session count stays honest even
+ *  though nothing on screen draws it any more. */
 function weekCellLabel(cell: WeekDayCell): string {
   const day = WEEKDAY_LABELS[cell.index]
-  if (cell.sessions > 1) return `${day}: ${cell.sessions} treinos`
-  if (cell.state === 'done') return `${day}: treino concluído`
   if (cell.state === 'today') return `${day}: hoje, sem treino ainda`
   if (cell.state === 'future') return `${day}: ainda não chegou`
-  return `${day}: sem treino`
+  if (cell.state !== 'done') return `${day}: sem treino`
+
+  const kinds = [cell.strength ? 'musculação' : null, cell.cardio ? 'cardio' : null]
+    .filter(Boolean)
+    .join(' e ')
+  const count = cell.sessions > 1 ? `${cell.sessions} treinos` : 'treino concluído'
+  return `${day}: ${count} — ${kinds}`
 }

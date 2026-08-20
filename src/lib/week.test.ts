@@ -65,12 +65,13 @@ describe('buildWeekTrack', () => {
     expect(cells[6].sessions).toBe(1)
   })
 
-  it('flags more than one session on the same day', () => {
+  it('keeps two workouts on the same day in one cell', () => {
     const cells = buildWeekTrack([TUE, at(2026, 7, 21, 19)], FRI)
     expect(cells[1].sessions).toBe(2)
     expect(cells[1].state).toBe('done')
-    // The count sums sessions (2) while only one cell is filled — the caller
-    // needs `sessions` to explain the difference rather than look broken.
+    expect(cells[1].strength).toBe(true)
+    // Two sessions, one filled cell: the count is kept for the spoken label,
+    // which is now the only place it surfaces.
     expect(cells.filter((c) => c.state === 'done')).toHaveLength(1)
   })
 
@@ -100,6 +101,66 @@ describe('buildWeekTrack', () => {
     const cells = buildWeekTrack([WED], WED)
     expect(cells).toHaveLength(7)
     expect(cells.map((c) => c.index)).toEqual([0, 1, 2, 3, 4, 5, 6])
+  })
+
+  it('leaves every cell free of the cardio mark when cardioAt is omitted', () => {
+    // The argument is optional precisely so the calls that predate the star keep
+    // behaving as they did.
+    const cells = buildWeekTrack([MON, TUE], FRI)
+    expect(cells.every((c) => c.cardio === false)).toBe(true)
+  })
+
+  it('marks the day a cardio happened', () => {
+    const cells = buildWeekTrack([TUE], FRI, [TUE])
+    expect(cells[1].state).toBe('done')
+    expect(cells[1].cardio).toBe(true)
+  })
+
+  it('does not mark a strength-only day', () => {
+    const cells = buildWeekTrack([MON, TUE], FRI, [TUE])
+    expect(cells[0].cardio).toBe(false)
+    expect(cells[1].cardio).toBe(true)
+  })
+
+  it('carries both marks on a day that had both kinds', () => {
+    const cardio = at(2026, 7, 22, 19)
+    const cells = buildWeekTrack([WED, cardio], FRI, [cardio])
+    expect(cells[2].state).toBe('done')
+    expect(cells[2].sessions).toBe(2)
+    expect(cells[2]).toMatchObject({ strength: true, cardio: true })
+  })
+
+  it('marks a cardio-only day as cardio and nothing else', () => {
+    const c1 = at(2026, 7, 22, 7)
+    const c2 = at(2026, 7, 22, 19)
+    const cells = buildWeekTrack([c1, c2], FRI, [c1, c2])
+    expect(cells[2].sessions).toBe(2)
+    expect(cells[2]).toMatchObject({ strength: false, cardio: true })
+  })
+
+  it('marks a strength-only day as strength and nothing else', () => {
+    const cells = buildWeekTrack([WED], FRI)
+    expect(cells[2]).toMatchObject({ strength: true, cardio: false })
+  })
+
+  it('never leaves a done day without at least one kind', () => {
+    // Every session is one kind or the other, so a filled cell that carried
+    // neither mark would mean the caller dropped one of the two lists.
+    const cardio = at(2026, 7, 21, 8)
+    const cells = buildWeekTrack([MON, TUE, cardio], FRI, [cardio])
+    expect(cells.filter((c) => c.state === 'done').every((c) => c.strength || c.cardio)).toBe(true)
+  })
+
+  it('counts a cardio in the tally like any other session', () => {
+    // The star says what kind, never how many — the number is the same number.
+    const cells = buildWeekTrack([MON, TUE], FRI, [TUE])
+    expect(cells.filter((c) => c.state === 'done')).toHaveLength(2)
+  })
+
+  it('ignores a cardio from another week', () => {
+    const lastWeek = at(2026, 7, 15)
+    const cells = buildWeekTrack([lastWeek, MON], FRI, [lastWeek])
+    expect(cells.every((c) => c.cardio === false)).toBe(true)
   })
 })
 

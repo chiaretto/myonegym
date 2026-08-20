@@ -118,9 +118,39 @@ A past day with no session MUST render as **empty**, and MUST NOT be marked as a
 failure. The app stores no weekday expectation per training day, so "no session
 here" is the only claim the data supports.
 
+Uma célula **done** MUST dizer também **de que tipo** foi o treino, com dois
+sinais somados ao estado — os **mesmos** que o calendário mensal da Consistência
+usa, com o mesmo símbolo e a mesma posição relativa (ver "Calendário Mensal de
+Treinos"):
+
+- houve **musculação** naquele dia → um **ponto** de canto
+- houve **cardio** naquele dia → uma **estrela**
+- houve os **dois** → os dois sinais, em cantos distintos
+
+Os sinais respondem **"houve um destes"**, e MUST NOT contar: dois treinos de
+musculação no mesmo dia MUST parecer iguais a um. Contar era o que o ponto fazia
+antes — ele marcava "mais de uma sessão" —, e não sobrou nada para essa contagem
+explicar: o número do card conta **dias**, não sessões. A pergunta que faltava
+resposta era a do tipo, e é ela que o ponto passou a responder.
+
+Como toda sessão é de um tipo ou do outro, uma célula **done** MUST carregar ao
+menos um dos dois sinais.
+
+Os sinais MUST ser **anunciados** à tecnologia assistiva na descrição da célula,
+junto do que ela já anuncia. A descrição MUST continuar informando o **número
+real de sessões** do dia — nada mais o desenha, e essa é a única forma que resta
+de saber que houve duas. As duas telas que montam este resumo — a lista de dias
+de treino e a aba **Cardio** — MUST mostrar os sinais igualmente: é um widget só,
+e a semana é a mesma vista de qualquer aba.
+
+A trilha MUST NOT ganhar uma legenda para explicar os sinais. São dois numa faixa
+de sete células, ao lado de um número; a legenda existe no calendário porque lá
+convivem com os estados de dia passado, futuro e hoje numa grade densa, e
+repeti-la aqui custaria mais altura do que informa.
+
 All values MUST be **derived** from the existing completed-session history —
-`Session.completedAt` is already persisted and indexed. No new persisted state is
-introduced and no migration is required.
+`Session.completedAt` e `Session.kind` já estão persistidos. No new persisted
+state is introduced and no migration is required.
 
 When there is no session history for the current week, the summary MUST render a
 valid zero state (0 completed, all cells empty or future) rather than being absent
@@ -136,12 +166,13 @@ que o resumo responde é "eu treinei esta semana?", não "eu treinei esta semana
 academias diferentes na mesma semana MUST somar, e MUST marcar seus respectivos
 dias na trilha.
 
+O cardio MUST continuar contando na contagem e na sequência como qualquer outro
+treino. A estrela distingue o **tipo**, e MUST NOT ser lida como uma contagem à
+parte: o app afirma em todo lugar que um cardio é um treino, e este card não é a
+exceção.
+
 Sessões cuja academia foi excluída MUST contar como qualquer outra: o treino
 aconteceu.
-
-Where the count and the track can disagree — more than one session on the same
-calendar day — the day MUST be marked so the difference is legible rather than
-looking like a defect.
 
 O **zero state** é uma afirmação sobre os dados, e não sobre o carregamento:
 "0 / 7 treinos" MUST ser exibido apenas quando o histórico já foi lido. Enquanto
@@ -154,6 +185,50 @@ depois corrigi-lo faz a Home piscar um número falso a cada navegação. Ver
 - WHEN the user opens Home
 - THEN the summary shows the text "3 / 7 treinos"
 - AND exactly 3 cells of the seven-day track are marked done
+
+#### Scenario: Um dia só de cardio ganha a estrela
+- GIVEN o usuário concluiu um cardio na terça desta semana
+- WHEN o usuário abre a Home
+- THEN a célula de terça aparece como dia treinado, com a estrela
+- AND ela não traz o ponto de musculação
+
+#### Scenario: Um dia só de musculação ganha o ponto
+- GIVEN o usuário concluiu apenas um treino de força na quarta
+- WHEN o usuário abre a Home
+- THEN a célula de quarta aparece como dia treinado, com o ponto de musculação
+- AND ela não traz a estrela
+
+#### Scenario: Um dia com os dois tipos carrega os dois sinais
+- GIVEN na quinta o usuário concluiu um treino de força e um cardio
+- WHEN o usuário abre a Home
+- THEN a célula de quinta traz o ponto de musculação e a estrela
+- AND sua descrição falada informa as duas sessões e os dois tipos
+
+#### Scenario: Repetir o mesmo tipo não acrescenta sinal
+- GIVEN na quinta o usuário concluiu dois treinos de força e nenhum cardio
+- WHEN o usuário abre a Home
+- THEN a célula de quinta traz o ponto de musculação e nada mais
+- AND ela está igual à de um dia com um único treino de força
+
+#### Scenario: Nenhum dia treinado fica sem sinal
+- GIVEN a semana tem dias de musculação, dias de cardio e dias com os dois
+- WHEN o usuário abre a Home
+- THEN toda célula marcada como treinada carrega ao menos um dos dois sinais
+
+#### Scenario: A estrela aparece igual na aba Cardio
+- GIVEN o usuário concluiu um cardio na terça desta semana
+- WHEN o usuário abre a aba Cardio
+- THEN o resumo da semana mostra a célula de terça com a estrela, como na Home
+
+#### Scenario: A estrela é anunciada
+- GIVEN a célula de terça tem a estrela
+- WHEN um leitor de tela lê a célula
+- THEN a descrição informa que houve cardio naquele dia
+
+#### Scenario: O cardio continua somando na contagem
+- GIVEN o usuário concluiu um treino de força na segunda e um cardio na terça
+- WHEN o usuário abre a Home
+- THEN o resumo mostra "2 / 7 treinos"
 
 #### Scenario: Treinos em academias diferentes somam
 - GIVEN o usuário treinou segunda na academia "A" e terça na academia "B"
@@ -200,10 +275,11 @@ depois corrigi-lo faz a Home piscar um número falso a cada navegação. Ver
 - THEN Wednesday renders as an empty cell
 - AND it carries no failure marker
 
-#### Scenario: Two sessions on the same day stay legible
+#### Scenario: Two sessions on the same day are still one cell
 - GIVEN the user completed two sessions on Tuesday
 - WHEN the user opens Home
-- THEN Tuesday is marked as done and additionally flagged as having more than one session
+- THEN Tuesday is one cell marked as done, carrying the marks of the kinds it held
+- AND its spoken description reports both sessions
 
 ### Requirement: Training Day Card
 
@@ -588,6 +664,17 @@ the first** day when there are **no completed sessions**, when the most recent
 session's day was the **last** in the list, or when that day is **no longer in
 the list** (e.g. it was deleted).
 
+A sessão que orienta a rotação MUST ser a sessão de **força** concluída mais
+recente. Um **cardio** MUST NOT ter efeito algum sobre o marcador: a rotação é a
+dos **dias de treino**, e um cardio não pertence a dia nenhum — ele não avança a
+rotação, e tampouco a reinicia. Concluir um cardio depois de um treino de força
+MUST deixar o marcador exatamente onde o treino de força o deixou.
+
+Quando o histórico não contém **nenhuma sessão de força**, o marcador MUST voltar
+ao primeiro dia — o mesmo comportamento de um histórico vazio, e pela mesma
+razão: a rotação nunca começou. Um histórico feito só de cardios MUST se comportar
+como um histórico sem sessão alguma, para efeito desta marcação.
+
 A sessão mais recente MUST ser tomada entre **todas as academias**, e não apenas
 a da academia ativa. Os dias de treino são **globais** — não pertencem a academia
 nenhuma —, então a rotação "treinou o Dia 1, o próximo é o Dia 2" MUST NOT se
@@ -616,6 +703,23 @@ retomada (ver "Single Active Session Per Gym").
 - GIVEN the user completed "Dia 3" and then later completed "Dia 1"
 - WHEN the user views Home
 - THEN "Dia 2" is marked "Próximo treino" (based on the most recent session, "Dia 1")
+
+#### Scenario: Um cardio não reinicia a rotação
+- GIVEN os dias são "Dia 1", "Dia 2", "Dia 3", o treino de força concluído mais
+  recente foi o "Dia 1", e depois dele o usuário concluiu um cardio
+- WHEN o usuário abre a Home
+- THEN "Dia 2" segue marcado como "Próximo treino"
+- AND o marcador não volta para o "Dia 1"
+
+#### Scenario: Vários cardios seguidos não movem o marcador
+- GIVEN o último treino de força foi o "Dia 2" e o usuário concluiu três cardios depois
+- WHEN o usuário abre a Home
+- THEN "Dia 3" segue marcado como "Próximo treino"
+
+#### Scenario: Histórico só de cardio se comporta como histórico vazio
+- GIVEN o usuário nunca concluiu um treino de força e concluiu dois cardios
+- WHEN o usuário abre a Home
+- THEN "Dia 1" é marcado como "Próximo treino"
 
 #### Scenario: A rotação não se reinicia ao trocar de academia
 - GIVEN o treino concluído mais recente foi o "Dia 2", na academia "A", e a
