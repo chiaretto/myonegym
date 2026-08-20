@@ -77,7 +77,7 @@ async function completeTheCardio(user: ReturnType<typeof userEvent.setup>) {
 async function openTheExercise(user: ReturnType<typeof userEvent.setup>, name: string) {
   await screen.findByRole('heading', { name: 'Treino em andamento' })
   await user.click(await screen.findByRole('link', { name: new RegExp(name) }))
-  await screen.findByRole('tab', { name: /Observações/ })
+  await screen.findByRole('tab', { name: /Notas/ })
 }
 
 describe('Cardio tab', () => {
@@ -186,7 +186,7 @@ describe('Cardio tab', () => {
     expect(screen.getByText(/Duração:/)).toBeInTheDocument()
     const clock = screen.getByText(/^\d\d:\d\d:\d\d$/)
 
-    // Above the tabs, so it holds on Execução, Observações and Foto alike…
+    // Above the tabs, so it holds on Execução, Notas and Foto alike…
     const tablist = screen.getByRole('tablist')
     expect(clock.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // …and switching tab does not take it away.
@@ -202,7 +202,7 @@ describe('Cardio tab', () => {
     const entry = (await listSessionEntries(sid, db))[0]
     renderAt(`/session/${sid}/entry/${entry.id}`)
 
-    await screen.findByRole('tab', { name: /Observações/ })
+    await screen.findByRole('tab', { name: /Notas/ })
     expect(screen.queryByText(/Duração:/)).toBeNull()
   })
 
@@ -320,7 +320,7 @@ describe('Cardio tab', () => {
     expect(await screen.findByText('Você já tem um cardio em andamento.')).toBeInTheDocument()
     // Still on the list, and no second session was opened.
     expect(screen.getByRole('button', { name: 'Continuar Esteira' })).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /Observações/ })).toBeNull()
+    expect(screen.queryByRole('tab', { name: /Notas/ })).toBeNull()
     expect(await db.sessions.count()).toBe(1)
   })
 
@@ -333,7 +333,7 @@ describe('Cardio tab', () => {
     await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
 
     expect(await screen.findByText('Você já tem um treino em andamento.')).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /Observações/ })).toBeNull()
+    expect(screen.queryByRole('tab', { name: /Notas/ })).toBeNull()
     expect(await db.sessions.count()).toBe(1)
   })
 
@@ -416,6 +416,6 @@ describe('Cardio tab', () => {
     expect(await screen.findByRole('heading', { name: 'Esteira' })).toBeInTheDocument()
     // …and it has notes/photos but nothing about load.
     expect(screen.queryByText('Peso alvo')).not.toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /Observações/ })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /Notas/ })).toBeInTheDocument()
   })
 })

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
-import { useCategoryMap, useDays } from '../../lib/hooks'
+import { useCategoryMap, useDays, usePhotos } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
 import { AlternativesSection } from './AlternativesSection'
 import { CategoryChips } from './CategoryChips'
@@ -13,11 +13,12 @@ import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { PhotoTab } from './photo/PhotoTab'
 import { NoteEditor } from './NoteEditor'
+import { VideosTab } from './VideosTab'
 import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from './WeightEditor'
 import './exercise.css'
 
-type DetailTab = 'detail' | 'notes' | 'photo'
+type DetailTab = 'detail' | 'notes' | 'videos' | 'photo'
 
 export function ExerciseDetailPage() {
   const { id } = useParams()
@@ -30,6 +31,11 @@ export function ExerciseDetailPage() {
   const [params] = useSearchParams()
 
   const [tab, setTab] = useState<DetailTab>('detail')
+
+  // Counted for the tab strip, so the user knows whether a tab is worth a tap
+  // before spending one. `usePhotos` is undefined until it answers — the strip
+  // shows nothing then, rather than claiming zero.
+  const photos = usePhotos(activeGymId ?? null, exerciseId)
 
   // The training day this exercise was opened from. An exercise can belong to
   // several days, so it cannot be inferred — it is carried in the URL, which is
@@ -86,16 +92,20 @@ export function ExerciseDetailPage() {
     <>
       <BackBar title={exercise.name} to={backTo} />
       <main className={`screen${fromDay ? ' has-action-bar' : ''}`}>
-        {/* Tabs first, meeting the top bar: which of the three things the user
+        {/* Tabs first, meeting the top bar: which of the four things the user
             came to look at is the first decision on this screen. No title (the
             name is in the top bar), no training day, and no categories — those
-            now read with the note, inside "Observações". Same arrangement as
-            the in-session detail; only this tab's label differs. */}
+            now read with the note, inside "Notas". Same arrangement as the
+            in-session detail; only this tab's label differs.
+
+            "Notas" was "Observações": the shorter word is what pays for the
+            fourth tab without cramping the strip on a narrow phone. */}
         <Tabs<DetailTab>
           tabs={[
             { id: 'detail', label: 'Detalhe' },
-            { id: 'notes', label: 'Observações' },
-            { id: 'photo', label: 'Foto' },
+            { id: 'notes', label: 'Notas' },
+            { id: 'videos', label: 'Vídeos', count: exercise.videos?.length },
+            { id: 'photo', label: 'Foto', count: photos?.length },
           ]}
           active={tab}
           onChange={setTab}
@@ -103,6 +113,9 @@ export function ExerciseDetailPage() {
 
         {tab === 'photo' ? (
           <PhotoTab gymId={activeGymId ?? null} exerciseId={exerciseId} />
+        ) : tab === 'videos' ? (
+          // No gym prompt: the videos are the exercise's, not the gym's.
+          <VideosTab exercise={exercise} />
         ) : tab === 'notes' ? (
           <>
             <CategoryChips names={catNames} />

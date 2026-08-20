@@ -6,7 +6,7 @@ import { useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 
 /**
- * Editor for the per-gym exercise note (Observações tab). One note per
+ * Editor for the per-gym exercise note (Notas tab). One note per
  * `(gymId, exerciseId)`; saving blank text clears it. Shows a hint instead of
  * the field when the gym or exercise is unavailable (no active gym / deleted
  * source exercise).
@@ -61,7 +61,7 @@ export function NoteEditor({
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Ex.: manter cotovelo fixo, usar pegada aberta…"
-        aria-label="Observações"
+        aria-label="Notas"
       />
       <div className="sheet-actions">
         <button className="btn primary" onClick={onSave} disabled={!dirty}>

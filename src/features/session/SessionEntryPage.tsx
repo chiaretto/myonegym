@@ -7,6 +7,7 @@ import { fmtClock } from '../../lib/format'
 import {
   useCategoryMap,
   useExerciseMap,
+  usePhotos,
   useSession,
   useSessionEntries,
   useSessionEntry,
@@ -22,12 +23,13 @@ import { PhotoTab } from '../exercise/photo/PhotoTab'
 import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
+import { VideosTab } from '../exercise/VideosTab'
 import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from '../exercise/WeightEditor'
 import '../exercise/exercise.css'
 import './session.css'
 
-type EntryTab = 'exec' | 'notes' | 'photo'
+type EntryTab = 'exec' | 'notes' | 'videos' | 'photo'
 
 export function SessionEntryPage() {
   const { id, entryId } = useParams()
@@ -56,6 +58,32 @@ export function SessionEntryPage() {
   // runner — one tap up, and the screen they keep coming back to — has it.
   const showClock = session?.kind === 'cardio' && session.status === 'active'
   const elapsed = useElapsed(showClock && session ? session.startedAt : null)
+  // Derived ABOVE the guards below, because `usePhotos` is a hook and a hook
+  // may not sit behind an early return — React counts them by call order. The
+  // ids are read defensively for that reason; the guards still decide whether
+  // any of it gets rendered.
+  const entryExercise = entry?.exerciseId != null ? exMap.get(entry.exerciseId) : undefined
+
+  // Previewing one of the entry's alternatives, addressed as `?alt=`. The
+  // preview stays INSIDE the session — the whole point of getting here is to
+  // say "I did this one instead", which needs a session to act on. An `alt`
+  // that is not (or is no longer) an alternative of the current exercise falls
+  // back to the entry itself rather than showing something arbitrary.
+  const altParam = Number(params.get('alt'))
+  const previewing =
+    Number.isInteger(altParam) && entryExercise?.alternativeIds?.includes(altParam)
+      ? exMap.get(altParam)
+      : undefined
+
+  // Everything the screen shows follows the exercise being LOOKED AT; only the
+  // done state and the stepper follow the entry.
+  const exercise = previewing ?? entryExercise
+  const shownId = previewing?.id ?? entry?.exerciseId ?? null
+  // For the tab strip's count, of the exercise being SHOWN — the same one the
+  // panel below would list. Undefined until it answers, so the strip shows
+  // nothing rather than claiming zero.
+  const photos = usePhotos(session?.gymId ?? null, shownId)
+
   // `entries` joins the wait: it drives the stepper, and an empty list would
   // render this exercise as the only one in the session.
   if (session === undefined || entry === undefined || entries === undefined)
@@ -72,23 +100,6 @@ export function SessionEntryPage() {
   }
 
   const readOnly = session.status === 'completed'
-  const entryExercise = entry.exerciseId != null ? exMap.get(entry.exerciseId) : undefined
-
-  // Previewing one of the entry's alternatives, addressed as `?alt=`. The
-  // preview stays INSIDE the session — the whole point of getting here is to
-  // say "I did this one instead", which needs a session to act on. An `alt`
-  // that is not (or is no longer) an alternative of the current exercise falls
-  // back to the entry itself rather than showing something arbitrary.
-  const altParam = Number(params.get('alt'))
-  const previewing =
-    Number.isInteger(altParam) && entryExercise?.alternativeIds?.includes(altParam)
-      ? exMap.get(altParam)
-      : undefined
-
-  // Everything the screen shows follows the exercise being LOOKED AT; only the
-  // done state and the stepper follow the entry.
-  const exercise = previewing ?? entryExercise
-  const shownId = previewing?.id ?? entry.exerciseId ?? null
   const shownName = previewing?.name ?? entry.exerciseName
   const catNames = exerciseCategoryNames(exercise, catMap)
 
@@ -172,7 +183,7 @@ export function SessionEntryPage() {
         )}
 
         {/* Above the tabs, like the status chip: how long this cardio has been
-            running is true on Execução, Observações and Foto alike. */}
+            running is true on every tab alike. */}
         {showClock && (
           <div className="entry-duration">
             <Icon name="clock" size={12} /> Duração:{' '}
@@ -185,20 +196,29 @@ export function SessionEntryPage() {
         <Tabs<EntryTab>
           tabs={[
             { id: 'exec', label: 'Execução' },
-            { id: 'notes', label: 'Observações' },
-            { id: 'photo', label: 'Foto' },
+            { id: 'notes', label: 'Notas' },
+            // Of the exercise being SHOWN, like the panels below: while
+            // previewing an alternative, it is that movement's tally that means
+            // anything.
+            { id: 'videos', label: 'Vídeos', count: exercise?.videos?.length },
+            { id: 'photo', label: 'Foto', count: photos?.length },
           ]}
           active={tab}
           onChange={setTab}
         />
 
-        {/* All three read `shownId`: while previewing an alternative, its OWN
-            per-gym weight, note and photos are what the user needs to see —
-            that is how they decide whether to do it instead. */}
+        {/* All four read the exercise being SHOWN: while previewing an
+            alternative, its OWN per-gym weight, note, videos and photos are what
+            the user needs to see — that is how they decide whether to do it
+            instead. */}
         {tab === 'photo' ? (
           /* Photos stay editable on a completed session: unlike the weight, a
              photo describes the exercise in this gym, not this session. */
           <PhotoTab gymId={session.gymId} exerciseId={shownId} />
+        ) : tab === 'videos' ? (
+          /* Opening one changes nothing about the session: the viewer is local
+             state, so closing it lands back on this entry, on this tab. */
+          <VideosTab exercise={exercise} />
         ) : tab === 'notes' ? (
           <>
             <CategoryChips names={catNames} />
@@ -233,7 +253,7 @@ export function SessionEntryPage() {
       </main>
 
       {/* Outside <main> and outside the tab panels: the stepper is fixed chrome,
-          so it stays put on Execução, Observações and Foto alike.
+          so it stays put on every tab alike.
 
           While previewing an alternative the bar carries the one decision that
           matters here — "I did this one instead" — and no Voltar/Avançar:

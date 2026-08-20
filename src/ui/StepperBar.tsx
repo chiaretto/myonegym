@@ -18,7 +18,7 @@ interface StepperBarProps {
  * height; this just lays out the stepper's controls inside it.
  *
  * Chrome, not tab content: it renders as a sibling of the tab panels so it
- * survives tab switches — a bar that vanished when you opened Observações
+ * survives tab switches — a bar that vanished when you opened Notas
  * wouldn't read as fixed, it would read as a bug.
  */
 export function StepperBar({

@@ -188,6 +188,16 @@ O visualizador MUST ser um diálogo modal (`role="dialog"`, `aria-modal`): a
 rolagem da tela de trás MUST ficar travada enquanto ele está aberto. Ele MUST
 responder ao **teclado** — setas para navegar, `Esc` para fechar.
 
+Este paginador MUST ser o **mesmo** que apresenta os **vídeos de execução** de um
+exercício (ver a capability `exercise-videos`), e não um par de telas gêmeas: as
+duas fazem exatamente a mesma coisa, e uma cópia divergiria na primeira correção.
+
+O que os dois clientes escolhem é a **apresentação**. O aquecimento MUST continuar
+em **sobreposição** — diálogo modal, fechar no topo, rolagem de trás travada,
+teclado —, exatamente como descrito acima; a aba de vídeos, que já **é** o
+paginador, o apresenta na própria página. O aquecimento MUST NOT mudar de
+comportamento: ele passa a ser um dos dois clientes, e não o objeto da mudança.
+
 Uma mídia que **falhe ao carregar** MUST degradar para um estado legível, com o
 nome do aquecimento visível, em vez de uma tela quebrada ou vazia. Esse estado
 MUST oferecer **abrir o endereço fora do app**: ele atende dois casos — mídia
@@ -235,3 +245,14 @@ imagem, já que é assim que o app trata o que não reconhece.
 - WHEN ele é exibido no visualizador
 - THEN um estado de falha é mostrado, com o nome do aquecimento legível
 - AND a navegação e o fechar continuam funcionando
+
+#### Scenario: O visualizador é um só
+- GIVEN um exercício com aquecimentos e com vídeos
+- WHEN o usuário abre um e depois o outro
+- THEN os dois são apresentados pelo mesmo visualizador, com os mesmos controles
+
+#### Scenario: O aquecimento continua em sobreposição
+- GIVEN um exercício com três aquecimentos
+- WHEN o usuário toca o controle de aquecimento
+- THEN o visualizador abre **sobre** a tela, no primeiro, com "1 de 3"
+- AND o fechar, o `Esc` e a trava de rolagem seguem valendo

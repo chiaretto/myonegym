@@ -6,7 +6,7 @@
    catalog detail, where the tabs meet the top bar directly. */
 .ex-head { margin-bottom: 16px; }
 .ex-chips { display: flex; gap: 7px; flex-wrap: wrap; }
-/* Category labels at the top of the "Observações" panel — same chips, but they
+/* Category labels at the top of the "Notas" panel — same chips, but they
    need their own gap to the note card below (the header supplied it before). */
 .ex-chips-tab { margin-bottom: 16px; }
 
@@ -86,3 +86,40 @@
 /* CHANGED: pressing delete used to tint the button with the BRAND accent. It now
    uses the danger tint, so the destructive intent is what lights up. */
 .tl-delete:active { color: var(--danger); border-color: var(--border-danger); background: var(--bg-danger); }
+
+/* --------------------------------------------------------------- Vídeos -- */
+/* Shared by the exercise form (where they are edited) and the Vídeos tab
+   (where they are opened), so the same video reads the same in both places. */
+.video-list { list-style: none; margin: 0 0 10px; padding: 0;
+  display: flex; flex-direction: column; gap: 8px; }
+
+/* A row in the FORM: label and address on the left, the controls on the right. */
+.video-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface-2); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); padding: 10px 12px;
+}
+/* min-width: 0 is load-bearing — without it a long URL refuses to ellipsize and
+   pushes the buttons off the row. Same family as the tab bar's. */
+.video-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.video-row-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.video-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.video-row-actions .icon-btn[disabled] { opacity: 0.3; }
+
+/* Two clock fields side by side — they are one thought, and stacking them made
+   the form read as four unrelated inputs. */
+.video-range { display: flex; gap: 8px; }
+.video-range input { flex: 1; min-width: 0; }
+
+/* A row in the TAB: the whole thing is the target — mid-workout, a small
+   chevron is not a tap target. */
+.video-open {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--surface-2); border: 0.5px solid var(--border);
+  border-radius: var(--r-card); padding: 12px; color: inherit; font: inherit;
+}
+.video-open-icon {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 2.2em; height: 2.2em; border-radius: 50%;
+  background: var(--bg-accent); color: var(--text-accent);
+}

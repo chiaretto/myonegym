@@ -85,6 +85,23 @@ export interface Exercise {
    */
   alternativeIds: number[]
   /**
+   * Execution videos of this exercise, in the order the viewer pages through
+   * them — like `warmupIds`, the array order IS the presentation order.
+   *
+   * The videos are stored **inside** the exercise, as values rather than as
+   * records of their own. That is the difference from a warm-up: "Rotação de
+   * ombro" serves ten exercises and earns a table, a name and a screen in
+   * Settings; "Supino — pegada fechada, 2:10 a 2:45" serves exactly one and has
+   * no life outside it. A table here would buy a CRUD nobody asked for plus
+   * referential integrity to maintain on delete — and deleting the exercise
+   * already takes these with it.
+   *
+   * Deliberately NOT indexed: a video is not shared, is never deleted from
+   * outside, and nothing ever asks "which exercises use this video". An index
+   * would be write cost with no read behind it.
+   */
+  videos: ExerciseVideo[]
+  /**
    * Warm-ups linked to this exercise, in the order the viewer pages through
    * them — like `Day.exerciseIds`, the array order IS the presentation order.
    *
@@ -104,7 +121,7 @@ export interface Exercise {
  *
  * Deliberately NOT carrying the media's type. How the URL is presented (image,
  * video, external link) is derived from the URL itself — see
- * `lib/warmupMedia.ts`. A stored `kind` would be a second source of truth about
+ * `lib/embedMedia.ts`. A stored `kind` would be a second source of truth about
  * the same string, free to drift from it, and nothing here needs the durability
  * argument that makes `Session.kind` a snapshot.
  *
@@ -152,6 +169,28 @@ export interface Weight {
  * like a target weight. Durable and independent of any workout session; shared
  * across sessions and the catalog exercise detail for that gym.
  */
+/**
+ * One execution video of an exercise — a value inside `Exercise.videos`, not a
+ * record: no id, no table, no screen of its own.
+ *
+ * `startSec`/`endSec` are the user's own data and ARE stored: unlike the media
+ * kind, which is read off the URL (see `lib/embedMedia`), the interesting stretch
+ * is nowhere in the address and cannot be derived from it. They are kept even
+ * when the current URL's provider cannot honour them — throwing away typed
+ * numbers because an address was edited is the worse of the two surprises.
+ */
+export interface ExerciseVideo {
+  /** http(s) URL — a YouTube or Instagram address is what plays embedded. */
+  url: string
+  /** Seconds from the start. Absent = play from the beginning. */
+  startSec?: number
+  /** Seconds from the start. Absent = play to the end. */
+  endSec?: number
+  /** Short label — "pegada fechada", "erro comum". Optional: a single video in a
+   *  one-item list identifies itself, unlike a warm-up hunted for in a picker. */
+  title?: string
+}
+
 export interface ExerciseNote {
   id?: number
   gymId: number

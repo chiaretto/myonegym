@@ -3,8 +3,8 @@ import type { Exercise } from '../../db/types'
 import { useWarmupMap } from '../../lib/hooks'
 import { warmupsOf } from '../../lib/warmups'
 import { Icon } from '../../ui/Icon'
-import { WarmupViewer } from './WarmupViewer'
-import './warmup.css'
+import { MediaViewer } from '../../ui/MediaViewer'
+import '../../ui/media-viewer.css'
 
 /**
  * Opens the exercise's warm-ups, from either exercise detail (catalogue and
@@ -29,7 +29,15 @@ export function WarmupButton({ exercise }: { exercise: Exercise | undefined }) {
         <Icon name="stretching" /> Aquecimento
         <span className="wu-open-count">{warmups.length}</span>
       </button>
-      {open && <WarmupViewer warmups={warmups} onClose={() => setOpen(false)} />}
+      {open && (
+        // A warm-up carries no time range and always opens at the first: it is
+        // reached by one button, not from a list.
+        <MediaViewer
+          items={warmups.map((w) => ({ url: w.url, name: w.name }))}
+          onClose={() => setOpen(false)}
+          title="Aquecimento"
+        />
+      )}
     </>
   )
 }

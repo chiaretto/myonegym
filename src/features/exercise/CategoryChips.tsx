@@ -1,7 +1,7 @@
 import { Icon } from '../../ui/Icon'
 
 /**
- * The exercise's categories, as labels at the top of the "Observações" tab.
+ * The exercise's categories, as labels at the top of the "Notas" tab.
  *
  * They used to sit in the screen header, above the tabs. They read with the
  * note instead: both describe the exercise rather than the set being done, and

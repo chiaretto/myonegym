@@ -5,7 +5,7 @@ import { createWarmup, deleteWarmup, updateWarmup, ValidationError } from '../..
 import { db } from '../../db/db'
 import type { Warmup } from '../../db/types'
 import { useExercises, useWarmups } from '../../lib/hooks'
-import { warmupLinkLabel, warmupMediaKind } from '../../lib/warmupMedia'
+import { embedLinkLabel, embedMediaKind } from '../../lib/embedMedia'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { useConfirm, useToast } from '../../ui/Feedback'
@@ -14,7 +14,7 @@ import { Media } from '../../ui/Media'
 
 /** The glyph that stands for a warm-up whose media is not an image. */
 function KindIcon({ url }: { url: string }) {
-  const kind = warmupMediaKind(url)
+  const kind = embedMediaKind(url)
   // Anything not playable is tried as an image; `Media` falls back to its own
   // placeholder when the URL turns out not to be one.
   if (kind === 'image') return <Media className="thumb" url={url} alt="" />
@@ -77,7 +77,7 @@ export function WarmupsPage() {
                 <KindIcon url={w.url} />
                 <span className="row-body">
                   <span className="row-title">{w.name}</span>
-                  <span className="row-sub">{warmupLinkLabel(w.url)}</span>
+                  <span className="row-sub">{embedLinkLabel(w.url)}</span>
                   <span className="row-sub" style={{ color: 'var(--text-muted)' }}>
                     {n === 0
                       ? 'Nenhum exercício'
@@ -144,7 +144,7 @@ function WarmupForm({ warmup }: { warmup: Warmup | null }) {
   const [err, setErr] = useState('')
 
   const back = () => nav('/settings/warmups')
-  const kind = url.trim() ? warmupMediaKind(url) : null
+  const kind = url.trim() ? embedMediaKind(url) : null
 
   const submit = async () => {
     try {
@@ -190,7 +190,7 @@ function WarmupForm({ warmup }: { warmup: Warmup | null }) {
             <small className="hint">
               {kind === 'image' && 'Imagem — será exibida no visualizador.'}
               {kind === 'video' && 'Vídeo — será tocado no visualizador, sem começar sozinho.'}
-              {kind === 'embed' && `Vídeo do ${warmupLinkLabel(url)} — será embutido no visualizador.`}
+              {kind === 'embed' && `Vídeo do ${embedLinkLabel(url)} — será embutido no visualizador.`}
             </small>
           )}
           {err && <span className="err">{err}</span>}

@@ -216,6 +216,7 @@ export function parseBackup(json: string): BackupDoc {
   normalizeCategories(obj)
   normalizeKinds(obj)
   normalizeWarmups(obj)
+  normalizeVideos(obj)
   normalizeAlternatives(obj)
   return obj as unknown as BackupDoc
 }
@@ -306,6 +307,24 @@ function normalizeWarmups(obj: Record<string, unknown>): void {
   for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
     const ids = Array.isArray(ex.warmupIds) ? (ex.warmupIds as number[]) : []
     ex.warmupIds = ids.filter((id) => known.has(id))
+  }
+}
+
+/**
+ * Back-compat for backups made before an exercise carried videos: no `videos`
+ * field means none, exactly as an older app had none.
+ *
+ * Unlike the warm-ups, there is no link to validate and no orphan possible: a
+ * video lives INSIDE its exercise, so it arrives and leaves with it. That is a
+ * direct consequence of it not being a record of its own.
+ *
+ * No document version bump, for the same reason `warmups` needed none: an
+ * absent optional field that defaults to empty leaves every older file
+ * restorable.
+ */
+function normalizeVideos(obj: Record<string, unknown>): void {
+  for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
+    if (!Array.isArray(ex.videos)) ex.videos = []
   }
 }
 
@@ -425,8 +444,8 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
   for (const e of EXAMPLE_DATA.exercises) {
     const mapped = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
     const categoryIds = mapped != null ? [mapped] : []
-    // The sample routine declares no alternatives — it is a starting point, not
-    // a showcase of every feature.
+    // The sample routine declares no alternatives, warm-ups or videos — it is a
+    // starting point, not a showcase of every feature.
     const id = await d.exercises.add({
       name: e.name,
       kind: e.kind ?? 'strength',
@@ -434,6 +453,7 @@ export async function generateExample(d: MyOneGymDB = db): Promise<void> {
       categoryIds,
       alternativeIds: [],
       warmupIds: [],
+      videos: [],
     })
     if (e.id != null) exRemap.set(e.id, id)
   }

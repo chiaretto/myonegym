@@ -8,7 +8,7 @@ const ex = (id: number, name: string, alts: number[] = []): Exercise => ({
   kind: 'strength',
   categoryIds: [],
   alternativeIds: alts,
-  warmupIds: [],
+  warmupIds: [], videos: [],
 })
 
 const catalog = (...list: Exercise[]) => new Map(list.map((e) => [e.id!, e]))

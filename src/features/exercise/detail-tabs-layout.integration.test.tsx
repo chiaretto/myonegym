@@ -94,22 +94,22 @@ describe('In-session exercise detail — tabs first', () => {
     const user = await openEntry()
     expect(media()).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Observações' }))
+    await user.click(screen.getByRole('tab', { name: 'Notas' }))
     expect(media()).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Foto' }))
+    await user.click(screen.getByRole('tab', { name: /^Foto/ }))
     expect(media()).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Execução' }))
     expect(media()).toBeInTheDocument()
   })
 
-  it('shows the categories inside "Observações", not above the tabs', async () => {
+  it('shows the categories inside "Notas", not above the tabs', async () => {
     const user = await openEntry()
     expect(screen.queryByText('Peito')).not.toBeInTheDocument()
     expect(screen.queryByText('Tríceps')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Observações' }))
+    await user.click(screen.getByRole('tab', { name: 'Notas' }))
 
     const peito = await screen.findByText('Peito')
     expect(screen.getByText('Tríceps')).toBeInTheDocument()
@@ -124,7 +124,7 @@ describe('In-session exercise detail — tabs first', () => {
     expect(chip()).toHaveTextContent('Concluído')
     expect(comesBefore(chip()!, tabList()!)).toBe(true)
 
-    for (const name of ['Observações', 'Foto']) {
+    for (const name of ['Notas', 'Foto']) {
       await user.click(screen.getByRole('tab', { name }))
       expect(chip()).toHaveTextContent('Concluído')
     }
@@ -151,18 +151,18 @@ describe('Catalog exercise detail — tabs first', () => {
     const user = await openExercise()
     expect(media()).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Foto' }))
+    await user.click(screen.getByRole('tab', { name: /^Foto/ }))
     expect(media()).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: 'Detalhe' }))
     expect(media()).toBeInTheDocument()
   })
 
-  it('shows the categories inside "Observações", not above the tabs', async () => {
+  it('shows the categories inside "Notas", not above the tabs', async () => {
     const user = await openExercise()
     expect(screen.queryByText('Peito')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Observações' }))
+    await user.click(screen.getByRole('tab', { name: 'Notas' }))
 
     expect(comesBefore(tabList()!, await screen.findByText('Peito'))).toBe(true)
   })

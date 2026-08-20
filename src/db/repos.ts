@@ -1,5 +1,5 @@
 import { readImage, removeImage, sweepOrphans, writeImage } from '../data/photoStore'
-import { isValidWarmupUrl } from '../lib/warmupMedia'
+import { isValidEmbedUrl } from '../lib/embedMedia'
 import { db, type MyOneGymDB } from './db'
 import {
   GLOBAL_GYM_ID,
@@ -9,6 +9,7 @@ import {
   type ExerciseKind,
   type ExerciseNote,
   type ExercisePhoto,
+  type ExerciseVideo,
   type Gym,
   type Session,
   type SessionEntry,
@@ -179,14 +180,56 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
 
 /** Validate a warm-up URL: http(s) is the whole rule. Unlike an exercise's
  *  media, a warm-up may point at a page — the viewer decides how to present it
- *  from the URL (see lib/warmupMedia). */
+ *  from the URL (see lib/embedMedia). */
 function requireWarmupUrl(url: string): string {
   const clean = (url ?? '').trim()
   if (!clean) throw new ValidationError('Informe a URL do aquecimento.')
-  if (!isValidWarmupUrl(clean)) {
+  if (!isValidEmbedUrl(clean)) {
     throw new ValidationError('URL inválida (use http:// ou https://).')
   }
   return clean
+}
+
+/**
+ * Validate and normalise one exercise video.
+ *
+ * The URL is the only required part: a video in a one-item list identifies
+ * itself, so a title would be a field asked for and rarely used — the opposite
+ * of a warm-up, hunted for by name in a picker among all the others.
+ *
+ * The seconds are stored whatever the provider does with them (see
+ * `ExerciseVideo`). What is rejected is a range that cannot mean anything: a
+ * negative second, or an end at or before its start. Either one alone is fine —
+ * "from here on" and "up to here" are both real requests.
+ */
+function requireVideo(v: ExerciseVideo): ExerciseVideo {
+  const url = (v.url ?? '').trim()
+  if (!url) throw new ValidationError('Informe a URL do vídeo.')
+  if (!isValidEmbedUrl(url)) throw new ValidationError('URL inválida (use http:// ou https://).')
+
+  const sec = (n: number | undefined, what: string) => {
+    if (n === undefined) return undefined
+    if (!Number.isFinite(n) || n < 0) throw new ValidationError(`O ${what} do vídeo é inválido.`)
+    return Math.floor(n)
+  }
+  const startSec = sec(v.startSec, 'início')
+  const endSec = sec(v.endSec, 'fim')
+  if (startSec !== undefined && endSec !== undefined && endSec <= startSec) {
+    throw new ValidationError('O fim do vídeo deve ser maior que o início.')
+  }
+
+  const title = (v.title ?? '').trim()
+  return {
+    url,
+    ...(startSec !== undefined ? { startSec } : {}),
+    ...(endSec !== undefined ? { endSec } : {}),
+    ...(title ? { title } : {}),
+  }
+}
+
+/** Order is meaning here: it is the order the viewer pages through. */
+function requireVideos(videos: ExerciseVideo[] | undefined): ExerciseVideo[] {
+  return (videos ?? []).map(requireVideo)
 }
 
 export async function createExercise(
@@ -197,11 +240,13 @@ export async function createExercise(
     categoryIds?: number[]
     alternativeIds?: number[]
     warmupIds?: number[]
+    videos?: ExerciseVideo[]
   },
   d: MyOneGymDB = db,
 ): Promise<number> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
+  const videos = requireVideos(input.videos)
   return d.transaction('rw', d.exercises, async () => {
     const id = await d.exercises.add({
       name,
@@ -213,6 +258,7 @@ export async function createExercise(
       alternativeIds: [],
       // Order is meaning here: it is the order the warm-up viewer pages through.
       warmupIds: input.warmupIds ?? [],
+      videos,
     })
     // Through setAlternatives, never by writing the field: the set has to stay
     // symmetric on the peers too.
@@ -242,11 +288,15 @@ export async function updateExercise(
     categoryIds?: number[]
     alternativeIds?: number[]
     warmupIds?: number[]
+    videos?: ExerciseVideo[]
   },
   d: MyOneGymDB = db,
 ): Promise<Day[]> {
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
+  // Validated before the transaction opens, like the name and the media URL:
+  // a bad range must not leave a half-written exercise behind.
+  const videos = input.videos !== undefined ? requireVideos(input.videos) : undefined
   return d.transaction('rw', d.exercises, d.days, async () => {
     const before = await d.exercises.get(id)
     const kind = input.kind ?? before?.kind ?? 'strength'
@@ -258,6 +308,7 @@ export async function updateExercise(
       // `undefined` means "this caller isn't editing warm-ups" — the same
       // contract `alternativeIds` uses just below.
       ...(input.warmupIds !== undefined ? { warmupIds: input.warmupIds } : {}),
+      ...(videos !== undefined ? { videos } : {}),
     })
 
     let leftDays: Day[] = []
