@@ -4,7 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
-import { completeSession, createDay, createExercise, createGym, startSession } from '../../db/repos'
+import {
+  completeSession,
+  createDay,
+  createExercise,
+  createGym,
+  startCardioSession,
+  startSession,
+} from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
 
 /**
@@ -45,6 +52,14 @@ async function completeAt(gym: number, dayId: number, completedAt: number) {
   await completeSession(sid, db)
   await db.sessions.update(sid, { completedAt })
   return sid
+}
+
+/** Complete a CARDIO stamped at `completedAt`. */
+async function completeCardioAt(gym: number, exerciseId: number, completedAt: number) {
+  const { sessionId } = await startCardioSession(gym, exerciseId, db)
+  await completeSession(sessionId, db)
+  await db.sessions.update(sessionId, { completedAt })
+  return sessionId
 }
 
 /** Local timestamp for day `d` of the current month (guarded to a valid day). */
@@ -88,10 +103,12 @@ describe('Consistência — stats and calendar', () => {
     expect(within(dayTile as HTMLElement).getByText('2')).toBeInTheDocument()
   })
 
-  it('marks trained days and 2+ days on the month calendar', async () => {
+  it('marks a trained day, with the musculação dot, on the month calendar', async () => {
     const { gym, day } = await seed()
     const today = new Date().getDate()
     await completeAt(gym, day, thisMonth(today, 7))
+    // A second workout the same day adds no second mark — the dot answers
+    // "was there musculação", not "how many".
     await completeAt(gym, day, thisMonth(today, 19))
 
     renderScreen()
@@ -100,8 +117,42 @@ describe('Consistência — stats and calendar', () => {
       const grid = document.querySelector('.cal-grid')!
       const done = grid.querySelectorAll('.cal-cell.done')
       expect(done).toHaveLength(1)
-      expect(done[0].classList.contains('multi')).toBe(true)
+      expect(done[0].classList.contains('strength')).toBe(true)
+      expect(done[0].classList.contains('cardio')).toBe(false)
       expect(done[0].textContent).toBe(String(today))
+    })
+  })
+
+  it('stars a cardio-only day, without the musculação dot', async () => {
+    const { gym } = await seed()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    const today = new Date().getDate()
+    await completeCardioAt(gym, esteira, thisMonth(today, 19))
+
+    renderScreen()
+
+    await waitFor(() => {
+      const done = document.querySelector('.cal-grid')!.querySelectorAll('.cal-cell.done')
+      expect(done).toHaveLength(1)
+      expect(done[0].classList.contains('cardio')).toBe(true)
+      expect(done[0].classList.contains('strength')).toBe(false)
+    })
+  })
+
+  it('carries both marks on a day that held both kinds', async () => {
+    const { gym, day } = await seed()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    const today = new Date().getDate()
+    await completeAt(gym, day, thisMonth(today, 7))
+    await completeCardioAt(gym, esteira, thisMonth(today, 12))
+
+    renderScreen()
+
+    await waitFor(() => {
+      const done = document.querySelector('.cal-grid')!.querySelectorAll('.cal-cell.done')
+      expect(done).toHaveLength(1)
+      expect(done[0].classList.contains('strength')).toBe(true)
+      expect(done[0].classList.contains('cardio')).toBe(true)
     })
   })
 

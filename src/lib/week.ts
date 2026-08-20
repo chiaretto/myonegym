@@ -26,9 +26,29 @@ export interface WeekDayCell {
   /** 0 = Monday … 6 = Sunday. */
   index: number
   state: WeekDayState
-  /** How many sessions were completed that day. >1 means the count and the
-   *  filled-cell tally disagree, which the UI flags rather than hiding. */
+  /** How many sessions were completed that day, of any kind. Kept for the
+   *  spoken description; nothing visual counts it. */
   sessions: number
+  /**
+   * At least one of that day's sessions was a strength workout.
+   *
+   * Paired with `cardio`, and read the same way: two independent signals ADDED
+   * to the cell, each answering "was there one of these", while `state` still
+   * answers "was there a workout at all". A day carries one mark, the other, or
+   * both — and since every session is one kind or the other, a done day always
+   * carries at least one.
+   */
+  strength: boolean
+  /**
+   * At least one of that day's sessions was cardio.
+   *
+   * A signal ADDED to the cell, not a state of its own: `state` still answers
+   * "was there a workout", this answers "what kind". Deliberately the same
+   * shape as `MonthCell.cardio` on the Consistência calendar — the two tracks
+   * mark cardio with one vocabulary, so the star a user learns in one is the
+   * star they read in the other.
+   */
+  cardio: boolean
 }
 
 /**
@@ -39,18 +59,25 @@ export interface WeekDayCell {
  * training day carries a weekday, so "no session here" is the only claim the data
  * supports — "you were supposed to train" is not.
  */
-export function buildWeekTrack(completedAt: readonly number[], now: number): WeekDayCell[] {
+export function buildWeekTrack(
+  completedAt: readonly number[],
+  now: number,
+  /** Completion times of the CARDIO sessions — a subset of `completedAt`, and
+   *  the same extra argument `buildMonthGrid` takes. Optional: omitting it
+   *  leaves every cell `cardio: false`, which is what the track showed before
+   *  the star existed. */
+  cardioAt: readonly number[] = [],
+): WeekDayCell[] {
   const weekStart = startOfWeek(now)
   const todayIndex = dayIndexInWeek(now)
 
   const counts = new Array<number>(7).fill(0)
-  for (const ts of completedAt) {
-    if (ts < weekStart) continue
-    const i = dayIndexInWeek(ts)
-    // Guard against a timestamp in a *later* week (clock skew, imported data).
-    if (startOfWeek(ts) !== weekStart) continue
-    counts[i] += 1
-  }
+  for (const i of weekdayIndices(completedAt, weekStart)) counts[i] += 1
+  // Counted, not just flagged: `cardioAt` is a subset of `completedAt`, so the
+  // strength tally is the difference — no second input, and no matching
+  // timestamps back to sessions to work out which is which.
+  const cardioCounts = new Array<number>(7).fill(0)
+  for (const i of weekdayIndices(cardioAt, weekStart)) cardioCounts[i] += 1
 
   return counts.map((sessions, index) => {
     let state: WeekDayState
@@ -58,8 +85,31 @@ export function buildWeekTrack(completedAt: readonly number[], now: number): Wee
     else if (index === todayIndex) state = 'today'
     else if (index > todayIndex) state = 'future'
     else state = 'blank'
-    return { index, state, sessions }
+    return {
+      index,
+      state,
+      sessions,
+      strength: sessions - cardioCounts[index] > 0,
+      cardio: cardioCounts[index] > 0,
+    }
   })
+}
+
+/**
+ * Monday-first indices of the timestamps landing inside `weekStart`'s week.
+ * Anything outside it is dropped — that is what lets callers pass the whole
+ * history — and the two passes above share these guards rather than each
+ * re-deriving when a timestamp counts.
+ */
+function weekdayIndices(timestamps: readonly number[], weekStart: number): number[] {
+  const out: number[] = []
+  for (const ts of timestamps) {
+    if (ts < weekStart) continue
+    // Guard against a timestamp in a *later* week (clock skew, imported data).
+    if (startOfWeek(ts) !== weekStart) continue
+    out.push(dayIndexInWeek(ts))
+  }
+  return out
 }
 
 /**

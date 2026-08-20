@@ -36,9 +36,16 @@ export function ExerciseDetailPage() {
   // also what lets Back return to Home with that day still expanded.
   const dayId = Number(params.get('day'))
   const fromDay = (days ?? []).find((d) => d.id === dayId)
-  // A stale or absent day degrades to the pre-existing behaviour: no stepper,
+  // Where the user came from, when it was not a day. The origin travels in the
+  // URL rather than through the history stack — same reason `day` does: Voltar
+  // has to survive a reload and a shared link, and nav(-1) survives neither.
+  const from = params.get('from')
+  // `day` wins when both are present. A cardio exercise may sit in a training
+  // day (see "Changing an Exercise to Cardio Leaves the Days"), so both routes
+  // into this page exist — and the day is where that visit actually started.
+  // Without either marker it degrades to the pre-existing behaviour: no stepper,
   // Back to a plain Home.
-  const backTo = fromDay ? `/?day=${fromDay.id}` : '/'
+  const backTo = fromDay ? `/?day=${fromDay.id}` : from === 'cardio' ? '/cardio' : '/'
 
   // Neighbours within that day's ordered list. Alternatives do not affect it:
   // a day lists the exercises the user put in it, and an alternative that is
@@ -56,10 +63,12 @@ export function ExerciseDetailPage() {
   // Stepping keeps the day, so the context survives across exercises.
   const goTo = (id: number) => nav(`/exercise/${id}?day=${fromDay!.id}`)
   const catNames = exerciseCategoryNames(exercise ?? undefined, catMap)
-  // Opening an alternative keeps the day in the address, so Voltar still lands
-  // on the Home the user came from — even though that alternative may not be
-  // in the day itself (its stepper is then simply absent).
-  const altHref = (id: number) => (fromDay ? `/exercise/${id}?day=${fromDay.id}` : `/exercise/${id}`)
+  // Opening an alternative keeps the origin in the address, so Voltar still
+  // lands where the user came from — even though that alternative may not be in
+  // the day itself (its stepper is then simply absent). Dropping the marker here
+  // is how the way back gets lost one hop in.
+  const originQuery = fromDay ? `?day=${fromDay.id}` : from === 'cardio' ? '?from=cardio' : ''
+  const altHref = (id: number) => `/exercise/${id}${originQuery}`
 
   if (exercise === undefined) return <BackBar title="Exercício" to={backTo} />
   if (exercise === null) {

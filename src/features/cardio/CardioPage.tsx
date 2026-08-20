@@ -94,10 +94,18 @@ export function CardioPage() {
   // the one place disagreeing. `null` until the history answers — deriving from
   // `[]` would paint "0 / 7 treinos" and correct itself a frame later.
   const now = Date.now()
+  const completed = (summaries ?? []).filter((s) => s.session.completedAt != null)
+  // The star marks the day a cardio happened — the same mark, from the same
+  // derivation, as the Treinos tab and the Consistência calendar. One widget,
+  // one vocabulary.
+  const cardioAt = completed
+    .filter((s) => s.session.kind === 'cardio')
+    .map((s) => s.session.completedAt!)
   const weekCells = summaries
     ? buildWeekTrack(
-        summaries.map((s) => s.session.completedAt ?? 0).filter((ts) => ts > 0),
+        completed.map((s) => s.session.completedAt!),
         now,
+        cardioAt,
       )
     : null
   const streak = weekCells ? currentStreak(weekCells, now) : 0
@@ -131,7 +139,10 @@ export function CardioPage() {
               const running = e.id === runningExerciseId
               return (
                 <li key={e.id} className={`cardio-row${running ? ' running' : ''}`}>
-                  <Link className="cardio-link" to={`/exercise/${e.id}`}>
+                  {/* The origin travels in the address: without it the detail
+                      page cannot know it was opened from here, and Voltar falls
+                      back to Home. */}
+                  <Link className="cardio-link" to={`/exercise/${e.id}?from=cardio`}>
                     <Media className="thumb" url={e.mediaUrl} alt={e.name} />
                     <span className="cardio-body">
                       <span className="cardio-name">{e.name}</span>

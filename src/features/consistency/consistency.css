@@ -53,13 +53,15 @@
 
 /* trained — the only filled state; a good month reads as a field of red. */
 .cal-cell.done { background: var(--accent-grad); color: var(--on-accent); font-weight: 700; }
-/* two or more sessions on the same day — same corner badge as the week track. */
-.cal-cell.multi::after { content: ''; position: absolute; right: -1px; bottom: -1px;
+/* strength — a musculação workout happened that day; same corner badge as the
+   week track, and opposite the cardio star so a day with both carries both.
+   CHANGED: this used to mean "two or more sessions". See weekly-summary.css. */
+.cal-cell.strength::after { content: ''; position: absolute; right: -1px; bottom: -1px;
   width: 0.6em; height: 0.6em; border-radius: 50%;
   background: var(--accent); border: 2px solid var(--surface-1); }
 /* Cardio that day. A mark ADDED to the cell, not a state of its own: the disc
    still says "trained", this says "and some of it was cardio". Top-left, so it
-   never collides with the 2+ badge at bottom-right, and small enough not to
+   never collides with the strength dot at bottom-right, and small enough not to
    compete with the day number. */
 .cal-cell.cardio::before { content: '★'; position: absolute; left: -2px; top: -4px;
   font-size: 0.62em; line-height: 1; color: var(--accent);

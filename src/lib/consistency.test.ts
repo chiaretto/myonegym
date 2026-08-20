@@ -86,8 +86,8 @@ describe('buildMonthGrid', () => {
 
     // Cardio IS a workout: the disc is there either way. The star only says
     // which kind it was.
-    expect(day(12)).toMatchObject({ state: 'done', sessions: 1, cardio: true })
-    expect(day(15)).toMatchObject({ state: 'done', sessions: 1, cardio: false })
+    expect(day(12)).toMatchObject({ state: 'done', strength: false, cardio: true })
+    expect(day(15)).toMatchObject({ state: 'done', strength: true, cardio: false })
   })
 
   it('a day with both kinds carries both marks', () => {
@@ -96,9 +96,41 @@ describe('buildMonthGrid', () => {
     const cells = buildMonthGrid([cardio, strength], { year: 2026, month: 6 }, NOW, [cardio])
     expect(cells.find((c) => c.inMonth && c.day === 14)!).toMatchObject({
       state: 'done',
-      sessions: 2, // the 2+ badge
+      sessions: 2,
+      strength: true, // the dot
       cardio: true, // and the star
     })
+  })
+
+  it('repeats of one kind add no second mark', () => {
+    // The marks answer "was there one of these", never "how many" — two
+    // workouts and one workout look the same, on purpose.
+    const w1 = at(2026, 6, 14, 8)
+    const w2 = at(2026, 6, 14, 19)
+    const cells = buildMonthGrid([w1, w2], { year: 2026, month: 6 }, NOW)
+    expect(cells.find((c) => c.inMonth && c.day === 14)!).toMatchObject({
+      sessions: 2,
+      strength: true,
+      cardio: false,
+    })
+  })
+
+  it('marks a cardio-only day as cardio and nothing else', () => {
+    const c1 = at(2026, 6, 12, 7)
+    const c2 = at(2026, 6, 12, 18)
+    const cells = buildMonthGrid([c1, c2], { year: 2026, month: 6 }, NOW, [c1, c2])
+    expect(cells.find((c) => c.inMonth && c.day === 12)!).toMatchObject({
+      state: 'done',
+      sessions: 2,
+      strength: false,
+      cardio: true,
+    })
+  })
+
+  it('never leaves a done day without at least one kind', () => {
+    const cardio = at(2026, 6, 12, 7)
+    const cells = buildMonthGrid([at(2026, 6, 15), cardio], { year: 2026, month: 6 }, NOW, [cardio])
+    expect(cells.filter((c) => c.state === 'done').every((c) => c.strength || c.cardio)).toBe(true)
   })
 
   it('no cardio list means no stars', () => {

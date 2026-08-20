@@ -168,15 +168,21 @@ export function ConsistencyPage() {
                       </span>
                     )
                   }
-                  const multi = cell.sessions > 1
+                  // Two marks, two questions: the dot says a strength workout
+                  // happened, the star says a cardio did, and a day with both
+                  // carries both. Neither counts — the tooltip keeps the honest
+                  // session total, which is now the only place it appears.
                   const marks = [
-                    multi ? `${cell.sessions} sessões` : null,
+                    cell.strength ? 'musculação' : null,
                     cell.cardio ? 'cardio' : null,
+                    cell.sessions > 1 ? `${cell.sessions} sessões` : null,
                   ].filter(Boolean)
                   return (
                     <span
                       key={i}
-                      className={`cal-cell ${cell.state}${multi ? ' multi' : ''}${cell.cardio ? ' cardio' : ''}`}
+                      className={`cal-cell ${cell.state}${cell.strength ? ' strength' : ''}${
+                        cell.cardio ? ' cardio' : ''
+                      }`}
                       title={marks.length ? marks.join(' · ') : undefined}
                     >
                       {cell.day}
@@ -186,13 +192,13 @@ export function ConsistencyPage() {
               </div>
               <div className="cal-legend">
                 <span>
-                  <i className="cal-cell done" /> treinou
-                </span>
-                <span>
-                  <i className="cal-cell done multi" /> 2+ sessões
+                  <i className="cal-cell done strength" /> musculação
                 </span>
                 <span>
                   <i className="cal-cell done cardio" /> cardio
+                </span>
+                <span>
+                  <i className="cal-cell done strength cardio" /> os dois
                 </span>
                 <span>
                   <i className="cal-cell today" /> hoje

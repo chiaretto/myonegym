@@ -1,36 +1,13 @@
-# cardio Specification
+# Delta: cardio
 
-## Purpose
-A aba **Cardio**: a metade avulsa do treino. Musculação é rotina e vive em dias;
-cardio não — começa a partir do próprio exercício, não tem peso, e conta como
-treino em toda a Consistência (ver a estrela do calendário, na capability
-`consistency`).
+**Change ID:** `fix-cardio-rotation-and-week-star`
+**Affects:** o resumo da semana na aba Cardio, e o efeito de concluir um cardio
+sobre o marcador "Próximo treino"
 
-## Requirements
-### Requirement: Cardio Tab
+---
 
-A barra de abas MUST oferecer uma aba **Cardio**, posicionada **ao lado de
-Treinos**, apontando para a rota `/cardio`. As demais abas MUST manter rótulo,
-ícone e ordem relativa.
 
-Com quatro abas, a barra MUST continuar legível na **tela mais estreita
-suportada** e no **maior tamanho de fonte** oferecido em Aparência: sem
-**transbordo horizontal**, sem corte e sem sobreposição. Um rótulo que não caiba
-em uma linha MUST **quebrar** — a tela tem folga vertical e nenhuma horizontal,
-então empurrar a barra para fora é o único desfecho inaceitável.
-
-#### Scenario: A aba abre a tela de cardio
-- GIVEN o app aberto na Home
-- WHEN o usuário toca a aba "Cardio"
-- THEN a rota `/cardio` é exibida
-- AND a aba Cardio aparece como ativa
-
-#### Scenario: Quatro abas cabem
-- GIVEN um aparelho estreito e a fonte no tamanho máximo
-- WHEN o usuário observa a barra de abas
-- THEN os quatro rótulos aparecem inteiros, sem corte
-- AND a barra não transborda para os lados — um rótulo longo quebra em duas
-  linhas em vez de empurrar a barra
+## MODIFIED Requirements
 
 ### Requirement: Cardio Screen
 
@@ -163,6 +140,8 @@ A única linha que abre a sessão é a **dona** dela, e ela não se apresenta co
 - AND tocá-la abre a sessão em andamento
 - AND as demais linhas seguem indisponíveis
 
+---
+
 ### Requirement: Start and Complete a Cardio
 
 Tocar **Iniciar** em um exercício de cardio MUST criar uma **sessão de cardio**
@@ -257,4 +236,3 @@ do último treino de **força** (ver *Feature the Next Training Day*, em
 - GIVEN uma sessão de cardio da "Esteira" foi concluída
 - WHEN a "Esteira" é renomeada, vira Força ou é excluída
 - THEN a sessão concluída continua registrada como cardio, com o nome que tinha
-
