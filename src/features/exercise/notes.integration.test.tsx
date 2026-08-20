@@ -33,7 +33,7 @@ async function seed() {
   return { gym, supino }
 }
 
-describe('Exercise notes (Observações tab)', () => {
+describe('Exercise notes (Notas tab)', () => {
   it('adds a note during a session, persists it, and shows it on reopen', async () => {
     const { gym, supino } = await seed()
     const user = userEvent.setup()
@@ -48,9 +48,9 @@ describe('Exercise notes (Observações tab)', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
 
-    // Switch to the Observações tab, type a note, and save it.
-    await user.click(await screen.findByRole('tab', { name: 'Observações' }))
-    const field = await screen.findByLabelText('Observações')
+    // Switch to the Notas tab, type a note, and save it.
+    await user.click(await screen.findByRole('tab', { name: 'Notas' }))
+    const field = await screen.findByLabelText('Notas')
     await user.type(field, 'manter cotovelo fixo')
     await user.click(screen.getByRole('button', { name: /Salvar/ }))
 
@@ -64,8 +64,8 @@ describe('Exercise notes (Observações tab)', () => {
     // Leave the detail and reopen it — the note is shown again (durable).
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
-    await user.click(await screen.findByRole('tab', { name: 'Observações' }))
-    expect(await screen.findByLabelText('Observações')).toHaveValue('manter cotovelo fixo')
+    await user.click(await screen.findByRole('tab', { name: 'Notas' }))
+    expect(await screen.findByLabelText('Notas')).toHaveValue('manter cotovelo fixo')
   })
 
   it('clears the note when saved blank', async () => {
@@ -80,9 +80,9 @@ describe('Exercise notes (Observações tab)', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Iniciar' }))[0])
     await user.click(await screen.findByRole('link', { name: /Supino Reto/ }))
-    await user.click(await screen.findByRole('tab', { name: 'Observações' }))
+    await user.click(await screen.findByRole('tab', { name: 'Notas' }))
 
-    const field = await screen.findByLabelText('Observações')
+    const field = await screen.findByLabelText('Notas')
     await user.type(field, 'temporária')
     await user.click(screen.getByRole('button', { name: /Salvar/ }))
     await waitFor(async () => expect(await db.exerciseNotes.count()).toBe(1))

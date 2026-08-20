@@ -1184,3 +1184,102 @@ describe('hasAnyRegisteredData', () => {
     expect(await hasAnyRegisteredData(d)).toBe(true)
   })
 })
+
+describe('exercise videos', () => {
+  const yt = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  const ig = 'https://www.instagram.com/reel/Cabc123/'
+
+  it('stores several videos on one exercise, in the order given', async () => {
+    const id = await createExercise(
+      { name: 'Supino', videos: [{ url: yt, title: 'pegada fechada' }, { url: ig }] },
+      d,
+    )
+    const ex = await d.exercises.get(id)
+    expect(ex?.videos.map((v) => v.url)).toEqual([yt, ig])
+    expect(ex?.videos[0].title).toBe('pegada fechada')
+  })
+
+  it('keeps the order across an update — it is the paging order', async () => {
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }, { url: ig }] }, d)
+    await updateExercise(id, { name: 'Supino', videos: [{ url: ig }, { url: yt }] }, d)
+    expect((await d.exercises.get(id))?.videos.map((v) => v.url)).toEqual([ig, yt])
+  })
+
+  it('defaults to none, and an update that omits them leaves them alone', async () => {
+    const plain = await createExercise({ name: 'Rosca' }, d)
+    expect((await d.exercises.get(plain))?.videos).toEqual([])
+
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }] }, d)
+    // No `videos` key: this caller is not editing them.
+    await updateExercise(id, { name: 'Supino Reto' }, d)
+    expect((await d.exercises.get(id))?.videos.map((v) => v.url)).toEqual([yt])
+  })
+
+  it('stores the time range, and keeps each end optional', async () => {
+    const id = await createExercise(
+      { name: 'Supino', videos: [{ url: yt, startSec: 130, endSec: 165 }, { url: yt, startSec: 90 }] },
+      d,
+    )
+    const ex = await d.exercises.get(id)
+    expect(ex?.videos[0]).toMatchObject({ startSec: 130, endSec: 165 })
+    // "from here on" is a real request; the missing end is not a hole.
+    expect(ex?.videos[1]).toMatchObject({ startSec: 90 })
+    expect(ex?.videos[1].endSec).toBeUndefined()
+  })
+
+  it('keeps a stored range even when the URL cannot honour it', async () => {
+    // Throwing away typed numbers because an address was edited is the worse of
+    // the two surprises — and switching back must restore the behaviour.
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt, startSec: 10, endSec: 20 }] }, d)
+    await updateExercise(id, { name: 'Supino', videos: [{ url: ig, startSec: 10, endSec: 20 }] }, d)
+    expect((await d.exercises.get(id))?.videos[0]).toMatchObject({ startSec: 10, endSec: 20 })
+  })
+
+  it('requires a URL and rejects one that is not http(s)', async () => {
+    await expect(createExercise({ name: 'A', videos: [{ url: '  ' }] }, d)).rejects.toBeInstanceOf(
+      ValidationError,
+    )
+    await expect(
+      createExercise({ name: 'A', videos: [{ url: 'javascript:alert(1)' }] }, d),
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('accepts a video with no title', async () => {
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }] }, d)
+    expect((await d.exercises.get(id))?.videos[0].title).toBeUndefined()
+  })
+
+  it('rejects an end at or before its start', async () => {
+    await expect(
+      createExercise({ name: 'A', videos: [{ url: yt, startSec: 120, endSec: 60 }] }, d),
+    ).rejects.toBeInstanceOf(ValidationError)
+    await expect(
+      createExercise({ name: 'A', videos: [{ url: yt, startSec: 60, endSec: 60 }] }, d),
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('rejects a negative second', async () => {
+    await expect(
+      createExercise({ name: 'A', videos: [{ url: yt, startSec: -1 }] }, d),
+    ).rejects.toBeInstanceOf(ValidationError)
+  })
+
+  it('leaves nothing behind when the exercise is deleted', async () => {
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }, { url: ig }] }, d)
+    await deleteExercise(id, d)
+    expect(await d.exercises.get(id)).toBeUndefined()
+    // The videos live inside the record, so there is no orphan to look for —
+    // this asserts exactly that there is no second place to check.
+    expect((await d.exercises.toArray()).flatMap((e) => e.videos)).toEqual([])
+  })
+
+  it('does not write a half-updated exercise when a video is invalid', async () => {
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }] }, d)
+    await expect(
+      updateExercise(id, { name: 'Renomeado', videos: [{ url: yt, startSec: 5, endSec: 1 }] }, d),
+    ).rejects.toBeInstanceOf(ValidationError)
+    const ex = await d.exercises.get(id)
+    expect(ex?.name).toBe('Supino')
+    expect(ex?.videos.map((v) => v.url)).toEqual([yt])
+  })
+})

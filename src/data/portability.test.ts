@@ -13,6 +13,7 @@ import {
   createExercise,
   createGym,
   createWarmup,
+  deleteExercise,
   createCategory,
   getNote,
   listHistory,
@@ -835,5 +836,65 @@ describe('weight scopes travel through a backup', () => {
     const nova = await createGym('Nova', d)
     const withWeight = (await d.weights.toArray())[0].exerciseId
     expect(await resolveWeight(nova, withWeight, d)).toMatchObject({ scope: 'global' })
+  })
+})
+
+describe('exercise videos travel through a backup', () => {
+  const yt = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
+  const ig = 'https://www.instagram.com/reel/Cabc123/'
+
+  it('round-trips the videos, in order, with label and range', async () => {
+    await createExercise(
+      {
+        name: 'Supino',
+        videos: [
+          { url: yt, title: 'pegada fechada', startSec: 130, endSec: 165 },
+          { url: ig },
+        ],
+      },
+      d,
+    )
+    await createExercise({ name: 'Rosca' }, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    const byName = new Map((await d.exercises.toArray()).map((e) => [e.name, e.videos]))
+    // Order is the paging order, not a storage detail.
+    expect(byName.get('Supino')?.map((v) => v.url)).toEqual([yt, ig])
+    expect(byName.get('Supino')?.[0]).toMatchObject({
+      title: 'pegada fechada',
+      startSec: 130,
+      endSec: 165,
+    })
+    expect(byName.get('Rosca')).toEqual([])
+  })
+
+  it('a backup made before videos existed imports as none', async () => {
+    await createExercise({ name: 'Supino' }, d)
+
+    // Strip what an older export simply would not have had.
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    for (const e of raw.exercises as Record<string, unknown>[]) delete e.videos
+
+    await resetAll(d)
+    await importBackupReplaceAll(parseBackup(JSON.stringify(raw)), d)
+
+    expect((await d.exercises.toArray()).every((e) => e.videos.length === 0)).toBe(true)
+  })
+
+  it('leaves nothing behind once the exercise is gone', async () => {
+    // No orphan is possible: the videos live inside the record, which is the
+    // whole point of them not being a table.
+    const id = await createExercise({ name: 'Supino', videos: [{ url: yt }] }, d)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    await resetAll(d)
+    await importBackupReplaceAll(doc, d)
+
+    const restored = (await d.exercises.toArray()).find((e) => e.name === 'Supino')!
+    await deleteExercise(restored.id!, d)
+    expect((await d.exercises.toArray()).flatMap((e) => e.videos)).toEqual([])
+    expect(id).toBeGreaterThan(0)
   })
 })

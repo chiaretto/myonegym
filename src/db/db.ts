@@ -185,6 +185,23 @@ export class MyOneGymDB extends Dexie {
             if (!Array.isArray(e.warmupIds)) e.warmupIds = []
           })
       })
+    // v12 — execution videos, stored INSIDE the exercise (see
+    // `Exercise.videos`). No `.stores()` change: Dexie declares indexes, and a
+    // video is deliberately not indexed — nothing queries by one.
+    //
+    // The upgrade exists only to give every exercise the empty array, so reads
+    // never have to ask whether the field is there. Same shape as v11's, and
+    // re-running it changes nothing.
+    this.version(12)
+      .stores({})
+      .upgrade(async (tx) => {
+        await tx
+          .table('exercises')
+          .toCollection()
+          .modify((e: Record<string, unknown>) => {
+            if (!Array.isArray(e.videos)) e.videos = []
+          })
+      })
   }
 }
 

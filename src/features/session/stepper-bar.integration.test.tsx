@@ -51,7 +51,7 @@ describe('The stepper is fixed chrome, not tab content', () => {
     expect(await screen.findByRole('button', { name: 'Concluir' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Próximo exercício' })).toBeInTheDocument()
 
-    for (const tab of ['Observações', 'Foto']) {
+    for (const tab of ['Notas', 'Foto']) {
       await user.click(screen.getByRole('tab', { name: tab }))
       expect(screen.getByRole('button', { name: 'Concluir' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Próximo exercício' })).toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('The stepper is fixed chrome, not tab content', () => {
     renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
 
     // Mid-exercise, looking at the machine's photo — Concluir must still work.
-    await user.click(await screen.findByRole('tab', { name: 'Foto' }))
+    await user.click(await screen.findByRole('tab', { name: /^Foto/ }))
     await user.click(screen.getByRole('button', { name: 'Concluir' }))
 
     // Marked done and advanced to the next exercise. (The name lives only in the

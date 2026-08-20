@@ -10,6 +10,7 @@ const ex = (warmupIds: number[]): Exercise => ({
   categoryIds: [],
   alternativeIds: [],
   warmupIds,
+  videos: [],
 })
 
 const map = new Map<number, Warmup>([

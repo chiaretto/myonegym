@@ -94,6 +94,7 @@ describe('v6 migration: categoryId → categoryIds, retire reserved', () => {
         kind: 'strength',
         categoryIds: [peito, triceps],
         alternativeIds: [],
+        videos: [],
         warmupIds: [],
       })
       const inPeito = await db.exercises.where('categoryIds').equals(peito).toArray()
@@ -471,6 +472,7 @@ describe('v10 migration: every exercise and session becomes strength', () => {
         kind: 'cardio',
         categoryIds: [],
         alternativeIds: [],
+        videos: [],
         warmupIds: [],
       })
       // where('kind') only works if v10 actually added the index.
@@ -486,7 +488,14 @@ describe('v10 migration: every exercise and session becomes strength', () => {
   it('leaves an already-migrated database alone', async () => {
     const db = new MyOneGymDB(name)
     await db.open()
-    await db.exercises.add({ name: 'Esteira', kind: 'cardio', categoryIds: [], alternativeIds: [], warmupIds: [] })
+    await db.exercises.add({
+      name: 'Esteira',
+      kind: 'cardio',
+      categoryIds: [],
+      alternativeIds: [],
+      warmupIds: [],
+      videos: [],
+    })
     db.close()
 
     // Reopening runs no upgrade, but the assertion is the point: a cardio
@@ -576,6 +585,7 @@ describe('v11 migration: exercises gain an empty warmup list', () => {
         kind: 'strength',
         categoryIds: [],
         alternativeIds: [],
+        videos: [],
         warmupIds: [w],
       })
       await db.exercises.add({
@@ -583,6 +593,7 @@ describe('v11 migration: exercises gain an empty warmup list', () => {
         kind: 'strength',
         categoryIds: [],
         alternativeIds: [],
+        videos: [],
         warmupIds: [],
       })
       // where('warmupIds') only works if v11 actually added the multiEntry index.
@@ -602,7 +613,8 @@ describe('v11 migration: exercises gain an empty warmup list', () => {
       kind: 'strength',
       categoryIds: [],
       alternativeIds: [],
-      warmupIds: [w],
+      videos: [],
+        warmupIds: [w],
     })
     db.close()
 
@@ -610,6 +622,93 @@ describe('v11 migration: exercises gain an empty warmup list', () => {
     await again.open()
     try {
       expect((await again.exercises.toArray())[0].warmupIds).toEqual([w])
+    } finally {
+      again.close()
+    }
+  })
+})
+
+/**
+ * v12 migration: an exercise gains `videos`, an empty list.
+ *
+ * No `.stores()` change — Dexie declares indexes and a video is deliberately not
+ * one (nothing queries by it). The upgrade exists only so reads never have to
+ * ask whether the field is there.
+ */
+describe('v12 migration: exercises gain an empty video list', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  async function openV11() {
+    const db = new Dexie(name)
+    db.version(1).stores({
+      gyms: '++id, name',
+      categories: '++id, &name',
+      exercises: '++id, name, categoryId',
+      days: '++id, name',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+      weightHistory: '++id, [gymId+exerciseId], changedAt',
+      sessions: '++id, gymId, status, startedAt, completedAt',
+      sessionEntries: '++id, sessionId, exerciseId',
+    })
+    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
+    db.version(4).stores({})
+    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
+    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
+    db.version(7).stores({})
+    db.version(8).stores({})
+    db.version(9).stores({})
+    db.version(10).stores({ exercises: '++id, name, kind, *categoryIds' })
+    db.version(11).stores({ warmups: '++id, name', exercises: '++id, name, kind, *categoryIds, *warmupIds' })
+    await db.open()
+    return db
+  }
+
+  it('gives every exercise an empty list, keeping every record', async () => {
+    const v11 = await openV11()
+    await v11
+      .table('exercises')
+      .add({ name: 'Supino', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [] })
+    await v11
+      .table('exercises')
+      .add({ name: 'Rosca', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [] })
+    v11.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      const exercises = await db.exercises.toArray()
+      expect(exercises).toHaveLength(2)
+      expect(exercises.every((e) => Array.isArray(e.videos) && e.videos.length === 0)).toBe(true)
+      expect(exercises.map((e) => e.name).sort()).toEqual(['Rosca', 'Supino'])
+    } finally {
+      db.close()
+    }
+  })
+
+  it('leaves videos already stored alone on a re-run', async () => {
+    const db = new MyOneGymDB(name)
+    await db.open()
+    const video = { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', startSec: 130 }
+    await db.exercises.add({
+      name: 'Supino',
+      kind: 'strength',
+      categoryIds: [],
+      alternativeIds: [],
+      warmupIds: [],
+      videos: [video],
+    })
+    db.close()
+
+    const again = new MyOneGymDB(name)
+    await again.open()
+    try {
+      expect((await again.exercises.toArray())[0].videos).toEqual([video])
     } finally {
       again.close()
     }

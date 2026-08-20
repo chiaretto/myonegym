@@ -88,3 +88,20 @@
   .wu-nav.prev { left: 4px; }
   .wu-nav.next { right: 4px; }
 }
+
+/* ------------------------------------------------- inline (Vídeos tab) -- */
+/* The same pager, sitting IN the page instead of over it: the tab is the
+   carousel, so there is no overlay, nothing to dismiss and no page behind. It
+   keeps the bar (name + counter) and the arrows floating over the media —
+   everything that says which video this is and how to reach the next. */
+/* `relative`, not `static`: the arrows are absolutely positioned against the
+   viewer, and a static box would send them to the page instead. */
+.wu-viewer.inline {
+  position: relative; inset: auto; z-index: auto;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border); border-radius: var(--r-card);
+  overflow: hidden;
+  /* Bounded rather than viewport-tall: the tab strip stays visible above it,
+     which is what makes it a tab and not a takeover. */
+  max-height: 70vh;
+}

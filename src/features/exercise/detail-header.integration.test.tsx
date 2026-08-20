@@ -72,7 +72,7 @@ describe('Catalog exercise detail header', () => {
     expect(screen.queryByText(/\d+ dias/)).not.toBeInTheDocument() // "2 dias" either
   })
 
-  it('moves the category labels into "Observações"', async () => {
+  it('moves the category labels into "Notas"', async () => {
     const { d1, crucifixo } = await seed()
     const user = userEvent.setup()
     renderAt(`/exercise/${crucifixo}?day=${d1}`)
@@ -82,7 +82,7 @@ describe('Catalog exercise detail header', () => {
     await screen.findByRole('tab', { name: 'Detalhe' })
     expect(screen.queryByText('Peito')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Observações' }))
+    await user.click(screen.getByRole('tab', { name: 'Notas' }))
     expect(await screen.findByText('Peito')).toBeInTheDocument()
   })
 })

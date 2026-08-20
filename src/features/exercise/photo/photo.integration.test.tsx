@@ -78,7 +78,7 @@ function renderAt(path: string) {
 }
 
 const openFotoTab = async (user: ReturnType<typeof userEvent.setup>) =>
-  user.click(await screen.findByRole('tab', { name: 'Foto' }))
+  user.click(await screen.findByRole('tab', { name: /^Foto/ }))
 
 describe('Exercise photos', () => {
   it('attaches a photo from the catalog exercise detail', async () => {

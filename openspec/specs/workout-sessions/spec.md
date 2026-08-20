@@ -309,14 +309,20 @@ per-session weight.
 
 ### Requirement: Session Exercise Detail
 
-O detalhe da entrada de sessão MUST continuar como está — abas "Execução",
-"Observações" e "Foto" como primeiro controle abaixo da barra de título, a mídia
-dentro de "Execução", as categorias e a nota em "Observações", as fotos em
-"Foto", os rótulos de status acima das abas e a barra fixa embaixo.
+O detalhe da entrada de sessão MUST manter o arranjo que já tem — abas como
+primeiro controle abaixo da barra de título, a mídia dentro de "Execução", as
+categorias e a nota na aba de notas, as fotos em "Foto", os rótulos de status
+acima das abas e a barra fixa embaixo.
+
+As abas MUST ser **quatro**: "Execução", **"Notas"**, **"Vídeos"** e "Foto" — o
+mesmo conjunto do detalhe do catálogo, na mesma ordem, porque as duas telas são a
+mesma vista em dois contextos e só o rótulo da primeira difere. A aba de notas
+chamava-se "Notas"; a de vídeos é nova (ver a capability
+`exercise-videos`).
 
 Quando o exercício da entrada é de **Cardio**, a aba "Execução" MUST NOT exibir
 o cartão "Peso alvo", o editor nem a linha do tempo do histórico — ela mostra a
-mídia (e as alternativas, se houver). "Observações" e "Foto" MUST continuar
+mídia (e as alternativas, se houver). "Notas", "Vídeos" e "Foto" MUST continuar
 funcionando exatamente como para um exercício de Força: nota e fotos são por
 `(academia, exercício)` e são justamente o que ajuda num cardio (a tela da
 esteira, o ajuste do banco da bike).
@@ -361,7 +367,7 @@ movimento que interessa a quem está decidindo fazê-lo.
 - GIVEN uma sessão de cardio da "Esteira" em andamento
 - WHEN o usuário abre o detalhe da entrada
 - THEN a aba "Execução" mostra a mídia e nenhum cartão de peso
-- AND as abas "Observações" e "Foto" continuam disponíveis
+- AND as abas "Notas", "Vídeos" e "Foto" continuam disponíveis
 
 #### Scenario: A nota do cardio é durável e por academia
 - GIVEN o usuário escreveu "nível 8, 25 min" na Esteira da academia "A"
