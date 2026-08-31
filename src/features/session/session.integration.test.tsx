@@ -130,11 +130,14 @@ describe('Workout session end-to-end', () => {
       expect((await db.sessionEntries.toArray()).find((e) => e.exerciseName === 'Supino Reto')?.done).toBe(true),
     )
 
-    // Voltar back to Supino → it now shows the distinct "Concluído" done state + chip.
+    // Voltar back to Supino → the control itself carries the done state, and it
+    // is the only thing that spells it out: the status chip that used to repeat
+    // it above the tabs is gone.
     await user.click(screen.getByRole('button', { name: 'Exercício anterior' }))
     expect(await screen.findByRole('heading', { name: 'Supino Reto', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Concluído' })).toBeInTheDocument()
-    expect(screen.getAllByText('Concluído').length).toBeGreaterThan(1) // button + chip
+    const done = screen.getByRole('button', { name: 'Concluído' })
+    expect(done).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getAllByText('Concluído')).toEqual([done])
   })
 
   it('steps between exercises (Voltar/Avançar) and guards Concluir treino', async () => {
@@ -194,13 +197,16 @@ describe('Workout session end-to-end', () => {
     expect(await screen.findByRole('button', { name: 'Continuar' })).toBeInTheDocument()
 
     // CHANGED: tapping another day used to drop the user into the Dia 1 runner.
-    // Dia 2's button is now drawn and announced as disabled, and answers the tap
-    // with the reason instead of a navigation nobody asked for. Either way, no
-    // second session is created — that is what this test is really about.
+    // Dia 2's button is drawn and announced as disabled, and the tap now opens
+    // the collision dialog (see home.integration) rather than a toast. Either
+    // way, no second session is created — that is what this test is about.
     const others = await screen.findAllByRole('button', { name: 'Iniciar' })
     await waitFor(() => expect(others[0]).toHaveAttribute('aria-disabled', 'true'))
     await user.click(others[0])
-    expect(await screen.findByText(/treino em andamento/i)).toBeInTheDocument()
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName(/treino em andamento/i)
+    // Nothing is decided until the user picks one, so still one session and
+    // still no runner.
     expect(screen.queryByText(/de 3 concluídos/)).not.toBeInTheDocument()
     expect(await db.sessions.count()).toBe(1)
   })

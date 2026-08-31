@@ -1,37 +1,11 @@
-# cardio Specification
+# Delta: cardio
 
-## Purpose
-A aba **Cardio**: a metade avulsa do treino. Musculação é rotina e vive em dias;
-cardio não — começa a partir do próprio exercício, não tem peso, e conta como
-treino em toda a Consistência (ver a estrela do calendário, na capability
-`consistency`).
+**Change ID:** `improve-session-entry-screen`
+**Affects:** o que acontece ao tocar Iniciar na aba Cardio com uma sessão já aberta
 
-## Requirements
+---
 
-### Requirement: Cardio Tab
-
-A barra de abas MUST oferecer uma aba **Cardio**, posicionada **ao lado de
-Treinos**, apontando para a rota `/cardio`. As demais abas MUST manter rótulo,
-ícone e ordem relativa.
-
-Com quatro abas, a barra MUST continuar legível na **tela mais estreita
-suportada** e no **maior tamanho de fonte** oferecido em Aparência: sem
-**transbordo horizontal**, sem corte e sem sobreposição. Um rótulo que não caiba
-em uma linha MUST **quebrar** — a tela tem folga vertical e nenhuma horizontal,
-então empurrar a barra para fora é o único desfecho inaceitável.
-
-#### Scenario: A aba abre a tela de cardio
-- GIVEN o app aberto na Home
-- WHEN o usuário toca a aba "Cardio"
-- THEN a rota `/cardio` é exibida
-- AND a aba Cardio aparece como ativa
-
-#### Scenario: Quatro abas cabem
-- GIVEN um aparelho estreito e a fonte no tamanho máximo
-- WHEN o usuário observa a barra de abas
-- THEN os quatro rótulos aparecem inteiros, sem corte
-- AND a barra não transborda para os lados — um rótulo longo quebra em duas
-  linhas em vez de empurrar a barra
+## MODIFIED Requirements
 
 ### Requirement: Cardio Screen
 
@@ -183,97 +157,12 @@ A única linha que abre a sessão é a **dona** dela, e ela não se apresenta co
 
 ---
 
-### Requirement: Start and Complete a Cardio
+## ADDED
 
-Tocar **Iniciar** em um exercício de cardio MUST criar uma **sessão de cardio**
-na academia ativa contendo **aquele exercício apenas**, e abrir a **tela da
-sessão** — a mesma de um treino de musculação. Retomar um cardio em andamento
-MUST levar ao mesmo lugar.
+(None)
 
-Pular direto para o detalhe do exercício pouparia um toque numa lista de um
-item, mas deixaria a sessão sem nenhuma tela que o usuário tivesse visto: nada
-para onde voltar, nada para onde retomar, e uma fileira de exceções só-de-cardio
-rio abaixo para manter isso coerente. Uma forma só para os dois tipos de treino
-vale o toque.
+---
 
-A sessão MUST guardar o próprio **tipo** e o **nome do exercício**, para que o
-histórico continue correto se o exercício mudar de tipo, for renomeado ou for
-excluído.
+## REMOVED
 
-Iniciar MUST exigir academia ativa e MUST respeitar **uma sessão ativa por
-academia** — a mesma regra dos dias de treino, valendo entre os dois tipos.
-
-Do detalhe de um exercício em sessão de cardio, **voltar** MUST devolver o
-usuário à **tela da sessão**, refazendo o caminho de entrada como em qualquer
-outro treino.
-
-O detalhe de um exercício em sessão de cardio MUST NOT oferecer os controles
-**Voltar/Avançar** entre exercícios: há um só, e dois controles permanentemente
-mortos dizem menos que controle nenhum.
-
-**Concluir** MUST encerrar a sessão de cardio diretamente, sem exigir que a
-única entrada seja marcada antes: com um item só, pedir a marcação e depois a
-conclusão seria pedir a mesma informação duas vezes. A sessão concluída MUST
-entrar no histórico como qualquer outra, e o usuário MUST chegar ao **resumo da
-sessão**, com o compartilhamento à mão (ver *Complete a Session*, em
-`workout-sessions`).
-
-Concluir um cardio MUST NOT alterar o marcador **"Próximo treino"** da Home. Uma
-sessão de cardio não tem dia, então não há rotação que ela possa avançar — e
-tampouco reiniciar. O marcador MUST continuar apontando para o dia seguinte ao
-do último treino de **força** (ver *Feature the Next Training Day*, em
-`home-navigation`).
-
-#### Scenario: Iniciar um cardio
-- GIVEN "Esteira" é um exercício de Cardio e há academia ativa
-- WHEN o usuário toca "Iniciar" na linha da Esteira
-- THEN uma sessão de cardio é criada na academia ativa, com a Esteira como
-  único item
-- AND a **tela da sessão** é aberta, com a Esteira como sua única entrada
-
-#### Scenario: Voltar devolve à tela da sessão
-- GIVEN o usuário iniciou um cardio e abriu o detalhe do exercício a partir da
-  tela da sessão
-- WHEN toca voltar
-- THEN a tela da sessão é exibida de novo
-
-#### Scenario: Sem Voltar/Avançar numa sessão de um exercício só
-- GIVEN o detalhe de um exercício numa sessão de cardio
-- WHEN o usuário observa a barra inferior
-- THEN não há controles de exercício anterior nem de próximo exercício
-- AND a ação de concluir continua disponível
-
-#### Scenario: Concluir encerra direto
-- GIVEN uma sessão de cardio da Esteira está em andamento
-- WHEN o usuário toca "Concluir"
-- THEN a sessão é encerrada e registrada no histórico
-- AND não foi preciso marcar o item antes
-
-#### Scenario: Concluir um cardio não mexe no Próximo treino
-- GIVEN o último treino de força foi o "Dia 1" e a Home marca o "Dia 2" como
-  "Próximo treino"
-- WHEN o usuário conclui um cardio
-- THEN a Home segue marcando o "Dia 2" como "Próximo treino"
-
-#### Scenario: Um cardio em andamento nunca fica sem caminho de volta
-- GIVEN existe um cardio da "Esteira" em andamento
-- WHEN o usuário tenta iniciar um treino a partir de um dia na Home
-- THEN nenhuma sessão nova é criada e ele permanece na Home
-- AND a explicação nomeia o **cardio** em andamento, e é isso que aponta para a
-  aba Cardio — onde a linha da Esteira oferece "Continuar"
-
-#### Scenario: Uma sessão ativa por academia vale entre os tipos
-- GIVEN há um treino de musculação em andamento na academia ativa
-- WHEN o usuário tenta iniciar um cardio
-- THEN o início é bloqueado
-- AND a tela explica que já há um treino em andamento, sem levá-lo até ele
-
-#### Scenario: Sem academia não se inicia
-- GIVEN nenhuma academia existe (ou nenhuma está ativa)
-- WHEN o usuário tenta iniciar um cardio
-- THEN o início é bloqueado e ele é convidado a criar/selecionar uma academia
-
-#### Scenario: O histórico sobrevive a mudanças no exercício
-- GIVEN uma sessão de cardio da "Esteira" foi concluída
-- WHEN a "Esteira" é renomeada, vira Força ou é excluída
-- THEN a sessão concluída continua registrada como cardio, com o nome que tinha
+(None)

@@ -212,18 +212,18 @@ describe('Session — "Fiz este no lugar"', () => {
     const user = userEvent.setup()
     await startAtEntry({ done: true })
 
-    // The entry is done, so its own detail says so…
-    expect(await screen.findByText('Concluído', { selector: '.chip' })).toBeInTheDocument()
-    // The chip renders before the catalog has answered, so the section that
-    // holds the link needs its own wait.
+    // The entry is done, and its detail says so through the control that set it.
+    expect(await screen.findByRole('button', { name: 'Concluído' })).toBeInTheDocument()
     await screen.findByRole('heading', { name: /Alternativas/ })
     await user.click(screen.getByRole('link', { name: /Supino Máquina/ }))
 
-    // …but the alternative being previewed has not been done.
+    // …but the alternative being previewed has not been done, so nothing on it
+    // claims the entry's state — the bar there offers the swap instead.
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: 'Supino Máquina' })).toBeInTheDocument(),
     )
-    expect(screen.queryByText('Concluído', { selector: '.chip' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Concluído' })).toBeNull()
+    expect(screen.queryByText('Concluído')).toBeNull()
     expect(screen.getByText(/Alternativa de Supino Reto/)).toBeInTheDocument()
   })
 

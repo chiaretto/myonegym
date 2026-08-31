@@ -99,7 +99,7 @@ describe('In-session exercise detail header', () => {
     expect(screen.queryByText('Dia 1')).not.toBeInTheDocument()
   })
 
-  it('keeps the "Concluído" status chip — it is status, not navigation context', async () => {
+  it('does not badge "Concluído" above the tabs — the floating bar already says it', async () => {
     const { gym, d1 } = await seed()
     const sessionId = await startSession(gym, d1, db)
     const entries = await listSessionEntries(sessionId, db)
@@ -107,6 +107,11 @@ describe('In-session exercise detail header', () => {
     renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
 
     await screen.findByRole('heading', { name: 'Supino Reto', level: 1 })
-    expect(document.querySelector('.ex-chips .chip.accent')).toHaveTextContent('Concluído')
+    expect(document.querySelector('.ex-chips .chip.accent')).toBeNull()
+    // The done state is not lost, only said once: by the control that sets it.
+    expect(screen.getByRole('button', { name: 'Concluído' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 })

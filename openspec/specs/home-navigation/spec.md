@@ -2,7 +2,9 @@
 
 ## Purpose
 TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Home Accordion of Training Days
 
 The Home screen MUST present training days as an **accordion**. Each day's header
@@ -565,18 +567,41 @@ botão de iniciar aquele dia, apenas indisponível agora.
 
 A affordance desabilitada MUST NOT ficar inerte ao toque. Num aparelho de toque,
 um controle que não responde não se distingue de um app travado — a mesma razão
-pela qual o cabeçalho inteiro do card responde (ver *Training Day Card*). Tocá-la
-MUST **explicar** por que iniciar não é possível, e MUST NOT levar o usuário para
-a sessão de **outro** dia: quem tocou em "Iniciar" no Dia 3 não pediu para abrir
-o treino do Dia 1. O caminho para retomar é a affordance de **"Continuar"** — que
-MUST permanecer com a aparência de ação e, sendo a única assim na tela, aponta
-para si.
+pela qual o cabeçalho inteiro do card responde (ver *Training Day Card*).
+
+Tocá-la MUST abrir um **diálogo modal**, e MUST NOT se limitar a uma mensagem
+passageira. Um aviso discreto é o instrumento errado para uma bifurcação: é
+silencioso, sai sozinho e deixa o usuário encarando o botão que acabou de
+recusá-lo. O diálogo MUST NOT levar direto para a sessão de **outro** dia — quem
+tocou em "Iniciar" no Dia 3 não pediu para abrir o treino do Dia 1 —, mas MUST
+oferecer esse caminho **nomeado**, junto das demais saídas.
+
+O diálogo MUST dizer qual treino está em andamento e quanto dele já foi feito, e
+MUST apresentar **todas as saídas de uma vez**, porque duas delas alteram dados e
+o usuário precisa ver isso antes de escolher, não depois:
+
+1. **Concluir o atual e iniciar o novo** — o treino aberto é encerrado com o que
+   já estava marcado e vai para o histórico. Esta saída MUST respeitar o mesmo
+   piso do runner (ver *Complete a Session*, em `workout-sessions`): com
+   **nenhum** exercício marcado ela MUST ser apresentada como indisponível, com a
+   razão à vista, porque uma sessão vazia se abandona em vez de se concluir.
+2. **Voltar ao treino atual** — abre a sessão em andamento.
+3. **Descartar o atual e iniciar o novo** — a sessão aberta e suas entradas são
+   apagadas. Sendo irreversível, MUST se apresentar como destrutiva e MUST NOT
+   ocupar a posição de ação primária.
+
+O diálogo MUST poder ser **fechado sem escolher**, por um controle de fechar
+explícito e pelos gestos que já fecham qualquer modal do app. Fechar MUST
+significar **nada acontece**: nenhuma sessão criada, encerrada ou apagada, e o
+usuário permanece na Home como estava. Fechar MUST NOT ser sinônimo de nenhuma
+das opções.
 
 Isso vale igualmente quando a sessão que bloqueia é um **cardio**, que não tem
-dia e portanto não tem card próprio nesta tela: a Home também MUST NOT levar o
-usuário até ele. A explicação MUST nomear o **tipo** em andamento, e é essa
-palavra que aponta para a aba Cardio, onde a linha daquele exercício oferece o
-"Continuar" (ver a capability `cardio`).
+dia e portanto não tem card próprio nesta tela. O diálogo MUST nomear o **tipo**
+em andamento, e é essa palavra que aponta para a aba Cardio (ver a capability
+`cardio`), onde a mesma colisão MUST ser respondida pelo **mesmo diálogo**: duas
+telas que recusam a mesma coisa pela mesma razão não podem responder de formas
+diferentes.
 
 O bloqueio MUST ser aplicado apenas quando a existência da sessão em andamento já
 é **conhecida**. Enquanto a leitura não responde, nenhuma affordance MUST ser
@@ -617,16 +642,48 @@ as affordances ao estado normal.
 #### Scenario: Tocar no botão desabilitado explica, e não navega
 - GIVEN a academia "A" tem uma sessão em andamento do "Dia 1"
 - WHEN o usuário toca na affordance de iniciar de "Dia 3"
-- THEN é exibida uma explicação de que já há um treino em andamento
+- THEN abre um diálogo dizendo que já há um treino em andamento, e qual
+- AND ele oferece concluir e iniciar, voltar ao atual, e descartar e iniciar
+- AND nenhuma sessão nova é criada enquanto nada for escolhido
+- AND o usuário não é levado para a sessão do "Dia 1" sem pedir
+
+#### Scenario: Fechar o diálogo não faz nada
+- GIVEN o diálogo aberto sobre uma sessão em andamento do "Dia 1"
+- WHEN o usuário o fecha pelo controle de fechar
+- THEN a sessão do "Dia 1" continua em andamento, intacta
+- AND nenhuma sessão nova foi criada
+- AND o usuário permanece na Home
+
+#### Scenario: Voltar ao treino atual
+- GIVEN o diálogo aberto sobre uma sessão em andamento do "Dia 1"
+- WHEN o usuário escolhe voltar ao treino atual
+- THEN a sessão do "Dia 1" é aberta, ainda em andamento
 - AND nenhuma sessão nova é criada
-- AND o usuário permanece na Home, sem ser levado para a sessão do "Dia 1"
+
+#### Scenario: Concluir o atual e iniciar o novo
+- GIVEN a sessão do "Dia 1" tem ao menos um exercício concluído
+- WHEN o usuário escolhe concluir e iniciar "Dia 3"
+- THEN a sessão do "Dia 1" passa a concluída, preservando o que estava marcado
+- AND uma sessão do "Dia 3" é criada e aberta
+
+#### Scenario: Sem nada marcado, concluir não é oferecido
+- GIVEN a sessão do "Dia 1" não tem nenhum exercício concluído
+- WHEN o diálogo é aberto
+- THEN a opção de concluir e iniciar é exibida indisponível
+- AND a razão é exibida junto dela
+
+#### Scenario: Descartar o atual e iniciar o novo
+- GIVEN o diálogo aberto sobre uma sessão em andamento do "Dia 1"
+- WHEN o usuário escolhe descartar "Dia 1"
+- THEN a sessão do "Dia 1" e suas entradas são apagadas
+- AND uma sessão do "Dia 3" é criada e aberta
 
 #### Scenario: Um cardio em andamento também só é explicado, nunca aberto
 - GIVEN a academia "A" tem um **cardio** em andamento, que não tem card na Home
 - WHEN o usuário toca na affordance de iniciar de "Dia 1"
-- THEN é exibida uma explicação de que já há um **cardio** em andamento
-- AND nenhuma sessão nova é criada
-- AND o usuário permanece na Home, sem ser levado para a sessão de cardio
+- THEN o diálogo nomeia um **cardio** em andamento e oferece as mesmas três saídas
+- AND nenhuma sessão nova é criada enquanto nada for escolhido
+- AND o usuário não é levado para a sessão de cardio sem tê-la escolhido
 
 #### Scenario: O botão desabilitado não expande o dia
 - GIVEN "Dia 3" está recolhido e sua affordance de iniciar está desabilitada
@@ -653,6 +710,8 @@ as affordances ao estado normal.
 - GIVEN no gym is active
 - WHEN the user taps the start-workout affordance
 - THEN starting is blocked and the user is prompted to create/select a gym first
+
+---
 
 ### Requirement: Feature the Next Training Day
 

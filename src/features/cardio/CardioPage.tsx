@@ -1,6 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { db } from '../../db/db'
-import { startCardioSession, ValidationError } from '../../db/repos'
+import {
+  completeSession,
+  deleteSession,
+  listSessionEntries,
+  startCardioSession,
+  ValidationError,
+} from '../../db/repos'
 import { exerciseCategoryNames } from '../../lib/days'
 import { busySessionMessage } from '../../lib/format'
 import {
@@ -13,7 +19,7 @@ import {
 import { buildWeekTrack, currentStreak } from '../../lib/week'
 import { useActiveGym } from '../../state/activeGym'
 import { TabBar } from '../../ui/Chrome'
-import { useToast } from '../../ui/Feedback'
+import { useChoice, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { WeeklySummary } from '../../ui/WeeklySummary'
@@ -45,6 +51,7 @@ export function CardioPage() {
   const runningExerciseId =
     activeSession?.kind === 'cardio' ? runningEntries?.[0]?.exerciseId : undefined
   const toast = useToast()
+  const choice = useChoice()
   const nav = useNavigate()
 
   const onStart = async (exerciseId: number) => {
@@ -58,14 +65,64 @@ export function CardioPage() {
     // known, no row can tell whether it is the one that owns the session, and
     // answering "you already have one" to its own Continuar would be a lie.
     if (activeSession?.kind === 'cardio' && runningEntries === undefined) return
+    const go = async () => {
+      try {
+        // CHANGED: the session screen, not the exercise inside it. Skipping
+        // straight to the entry saved a tap on a list of one, but it also meant
+        // the session had no screen the user had ever seen — nothing to go back
+        // to, nothing to resume to, and a whole set of cardio-only exceptions
+        // downstream to keep that consistent. One shape for both kinds of workout
+        // is worth the tap.
+        const { sessionId } = await startCardioSession(activeGymId, exerciseId, db)
+        nav(`/session/${sessionId}`)
+      } catch (e) {
+        toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar.')
+      }
+    }
+
     if (activeSession) {
-      // CHANGED: a row that does NOT own the running session says so and stops
-      // there. It used to navigate into the session anyway, right after saying
-      // it could not start — two answers to one tap, and the second was never
-      // asked for. Reaching the session is what its own "Continuar" is for, and
-      // that is the branch below.
+      // A row that does NOT own the running session collides with it.
+      //
+      // CHANGED: it used to answer with a toast and stop there — the reason
+      // alone, nothing to do about it. The same dialog Home uses now asks
+      // instead, so the two screens answer the same collision the same way.
+      // Reaching the session stays what its own "Continuar" is for; here it is
+      // one of three ways out, named rather than assumed.
       if (exerciseId !== runningExerciseId) {
-        toast(busySessionMessage(activeSession.kind))
+        const entries = await listSessionEntries(activeSession.id!, db)
+        const doneCount = entries.filter((e) => e.done).length
+        const target = exercises?.find((e) => e.id === exerciseId)?.name ?? 'o novo'
+        const picked = await choice({
+          title: busySessionMessage(activeSession.kind),
+          message:
+            `"${activeSession.dayName}" está em andamento, com ${doneCount} de ` +
+            `${entries.length} ${entries.length === 1 ? 'exercício concluído' : 'exercícios concluídos'}. ` +
+            'Só pode haver um treino em andamento por academia.',
+          options: [
+            {
+              id: 'finish',
+              label: `Concluir e iniciar "${target}"`,
+              tone: 'primary',
+              // The runner's own floor: a session with nothing marked cannot be
+              // completed, only abandoned. Offering it would fail on tap.
+              disabled: doneCount === 0,
+              hint:
+                doneCount === 0
+                  ? 'Nada foi marcado como concluído ainda — descarte para iniciar outro.'
+                  : undefined,
+            },
+            { id: 'resume', label: 'Voltar ao treino atual' },
+            { id: 'discard', label: `Descartar "${activeSession.dayName}"`, tone: 'danger' },
+          ],
+        })
+        if (picked === 'resume') nav(`/session/${activeSession.id}`)
+        else if (picked === 'finish') {
+          await completeSession(activeSession.id!, db)
+          await go()
+        } else if (picked === 'discard') {
+          await deleteSession(activeSession.id!, db)
+          await go()
+        }
         return
       }
       // The running cardio's own row: back to the session, which is where
@@ -73,18 +130,7 @@ export function CardioPage() {
       nav(`/session/${activeSession.id}`)
       return
     }
-    try {
-      // CHANGED: the session screen, not the exercise inside it. Skipping
-      // straight to the entry saved a tap on a list of one, but it also meant
-      // the session had no screen the user had ever seen — nothing to go back
-      // to, nothing to resume to, and a whole set of cardio-only exceptions
-      // downstream to keep that consistent. One shape for both kinds of workout
-      // is worth the tap.
-      const { sessionId } = await startCardioSession(activeGymId, exerciseId, db)
-      nav(`/session/${sessionId}`)
-    } catch (e) {
-      toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar.')
-    }
+    await go()
   }
 
   const blocked = activeSession != null

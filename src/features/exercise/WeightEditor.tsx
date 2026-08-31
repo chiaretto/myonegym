@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/db'
 import { deleteHistoryEntry, resolveWeight, saveWeight } from '../../db/repos'
@@ -54,6 +54,8 @@ export function WeightEditor({
   const toast = useToast()
   const confirm = useConfirm()
 
+  const cardRef = useRef<HTMLElement>(null)
+
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
@@ -73,6 +75,25 @@ export function WeightEditor({
     setOnlyHere(isException)
     setEditing(false)
   }, [current, isException, gymId])
+
+  // Opening the editor brings the card as near the top as the scroll extent
+  // allows. It sits below the media and the warm-up and it GROWS when it opens
+  // — stepper, units, "Só nessa academia", actions — which used to push Salvar
+  // under the fixed bar: the user typed a weight and could not see where to
+  // save it. `block: 'start'` also covers the card that is already near the
+  // bottom of a short page, where the browser scrolls as far as it can and the
+  // actions come into view that way.
+  //
+  // After a frame, not immediately: the input carries autoFocus, and the scroll
+  // focusing brings with it would land on top of ours and undo it.
+  // `scroll-margin-top` on the card is what keeps it clear of the sticky app bar.
+  useEffect(() => {
+    if (!editing) return
+    const raf = requestAnimationFrame(() =>
+      cardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
+    )
+    return () => cancelAnimationFrame(raf)
+  }, [editing])
 
   if (gymId == null) {
     return (
@@ -121,7 +142,7 @@ export function WeightEditor({
 
   return (
     <>
-      <section className="weight-card">
+      <section className="weight-card" ref={cardRef}>
         <div className="wc-head">
           <span className="wc-label">Peso alvo</span>
           {/* Only an exception is labelled: a global weight is just the

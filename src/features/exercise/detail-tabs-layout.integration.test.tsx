@@ -117,16 +117,21 @@ describe('In-session exercise detail — tabs first', () => {
     expect(comesBefore(tabList()!, peito)).toBe(true)
   })
 
-  it('keeps "Concluído" above the tabs on every tab', async () => {
+  it('says "Concluído" once, in the floating bar, on every tab', async () => {
     const user = await openEntry(true)
-    const chip = () => document.querySelector('.ex-head .chip.accent')
+    // The status chip above the tabs is gone: the bar's ticked control, its done
+    // tint and the filled progress segment already carry the fact, and a fourth
+    // badge for it was a line to read past mid-workout.
+    const done = () => screen.getByRole('button', { name: 'Concluído' })
 
-    expect(chip()).toHaveTextContent('Concluído')
-    expect(comesBefore(chip()!, tabList()!)).toBe(true)
+    expect(document.querySelector('.ex-head .chip.accent')).toBeNull()
+    expect(done()).toHaveAttribute('aria-pressed', 'true')
 
+    // Still true on every tab — the bar is chrome, not tab content.
     for (const name of ['Notas', 'Foto']) {
       await user.click(screen.getByRole('tab', { name }))
-      expect(chip()).toHaveTextContent('Concluído')
+      expect(done()).toHaveAttribute('aria-pressed', 'true')
+      expect(comesBefore(tabList()!, done())).toBe(true)
     }
   })
 })

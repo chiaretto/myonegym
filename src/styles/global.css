@@ -41,11 +41,28 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -
 }
 .screen { flex: 1; padding: 16px 18px 104px; overflow-y: auto; }
 
-/* Top bar */
+/* Top bar's geometry, for anything that scrolls itself to the top and must
+   clear it (see .weight-card's scroll-margin-top). The height is the top
+   padding plus the tallest thing in the row — the 2.2em .icon-btn at --fs-2xl —
+   so it tracks --font-scale exactly as the bar does. Both live here, where the
+   geometry is: a copy at the use site would drift the first time the bar is
+   re-padded, and the padding is named because a screen that drops it (see
+   .entry-top in session.css) has to subtract the same value back out. */
+:root {
+  --appbar-pad-top: 16px;
+  --appbar-h: calc(var(--appbar-pad-top) + 2.2 * var(--fs-2xl));
+}
+
+/* Top bar.
+   CHANGED: flush — no bottom padding, no divider. Both drew a separation the
+   content already makes: every screen opens with its own top padding, and the
+   bar is opaque over the app background, so it stays distinct by contrast while
+   the page scrolls under it. On the session's exercise screen the segmented
+   progress bar is what now marks the end of the header. */
 .appbar {
   display: flex; align-items: center; gap: 10px;
-  padding: 16px 18px 12px; position: sticky; top: 0; z-index: 5;
-  background: var(--surface-0); border-bottom: 0.5px solid var(--border);
+  padding: var(--appbar-pad-top) 18px 0; position: sticky; top: 0; z-index: 5;
+  background: var(--surface-0);
 }
 .appbar h1 { font-family: var(--font-title); font-size: var(--fs-2xl); font-weight: 700;
   display: flex; align-items: center; gap: 12px; letter-spacing: -0.02em; }
@@ -245,6 +262,15 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
 .sheet-close { flex-shrink: 0; }
 .sheet h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; margin-bottom: 14px; }
 .sheet-actions { display: flex; gap: 10px; margin-top: 8px; }
+
+/* A modal that offers several ways forward (ui/Feedback's useChoice) stacks its
+   buttons rather than laying them in a row: each label names its consequence
+   ("Concluir e iniciar", "Descartar e iniciar"), which is far too long to sit
+   side by side at any font scale. A stack also keeps a destructive option from
+   landing under a thumb that was aiming at its neighbour. */
+.choice-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.choice-hint { font-size: var(--fs-2xs); color: var(--text-muted); text-align: center;
+  margin-top: 5px; }
 /* A MODAL footer (direct child of the sheet, which scrolls) sticks to the bottom
    of the sheet so Cancelar/Salvar stay visible while tall content (e.g. the "Novo
    dia" exercise picker) scrolls. Scoped to `.sheet >` so it does NOT touch the

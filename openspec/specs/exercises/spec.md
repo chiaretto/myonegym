@@ -2,6 +2,7 @@
 
 ## Purpose
 TBD - created by archiving change bootstrap-myonegym. Update Purpose after archive.
+
 ## Requirements
 
 ### Requirement: Register an Exercise
@@ -594,13 +595,18 @@ does **not** affect the **exercises list** (Settings → Exercícios), which MUS
 keep showing each exercise's days — see *Show Training Days on the Exercises
 List*.
 
-Above the tabs, the header MAY carry only the entry's **status** labels — in a
-session, the **"Concluído"** indicator and the **"Alternativa de X"** label.
-Everything else that once sat there, the exercise's **categories** included,
-belongs to a tab: status is about the screen as a whole and stays visible on all
-of them, whereas a category is a description of the exercise and reads with the
-note (see *Exercise Note and Photos on the Catalog Detail*). On the catalog
-detail there is no status at all, so the tabs meet the top bar directly.
+Above the tabs, the header MAY carry only the **"Alternativa de X"** label — the
+one thing up there that says the screen is showing something other than the
+entry's own exercise. Everything else that once sat there belongs elsewhere: the
+exercise's **categories** to a tab, because a category describes the exercise and
+reads with the note (see *Exercise Note and Photos on the Catalog Detail*); and
+the **"Concluído"** indicator to nothing at all, because the floating bar's
+ticked control, that control's label and done tint, and the filled segment of the
+progress strip already carry the fact three times over (see *Segmented Progress
+on the Session Exercise Detail* and *One-Line Stepper With a Toggleable Done
+Control*, in `workout-sessions`). A fourth badge for one boolean is a line the
+user has to read past mid-workout. On the catalog detail there is no such label
+at all, so the tabs meet the top bar directly.
 
 Removing the day from the header MUST NOT change **navigation**: the catalog
 detail still carries its day context in the address, still offers Voltar /
@@ -632,8 +638,9 @@ that day expanded (see the `home-navigation` capability).
 - GIVEN "Supino Reto" carries the categories "Peito" and "Tríceps", and its
   session entry is already done
 - WHEN the user opens the in-session detail
-- THEN the "Concluído" indicator is shown above the tabs
-- AND "Peito" and "Tríceps" are shown as labels inside the "Observações" tab
+- THEN no "Concluído" indicator is shown above the tabs
+- AND the done state is legible from the floating bar's control
+- AND "Peito" and "Tríceps" are shown as labels inside the notes tab
 
 #### Scenario: Navigation is unaffected
 - GIVEN the user opened "Supino" from "Dia 4" on the catalog detail
@@ -641,11 +648,12 @@ that day expanded (see the `home-navigation` capability).
 - THEN stepping still follows "Dia 4"'s order
 - AND going back returns to Home with "Dia 4" still expanded
 
-
 #### Scenario: The exercises list still shows days
 - GIVEN "Rosca Direta" is in "Dia 2" and "Dia 5"
 - WHEN the user views Settings → Exercícios
 - THEN the "Rosca Direta" item still shows both day labels
+
+---
 
 ### Requirement: Show Training Days on the Exercises List
 

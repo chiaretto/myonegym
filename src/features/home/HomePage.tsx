@@ -1,6 +1,12 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
-import { startSession, ValidationError } from '../../db/repos'
+import {
+  completeSession,
+  deleteSession,
+  listSessionEntries,
+  startSession,
+  ValidationError,
+} from '../../db/repos'
 import {
   useActiveSession,
   useCategoryMap,
@@ -23,7 +29,7 @@ import {
   buildWeekTrack,
   currentStreak,
 } from '../../lib/week'
-import { useToast } from '../../ui/Feedback'
+import { useChoice, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { TabBar } from '../../ui/Chrome'
@@ -45,6 +51,7 @@ export function HomePage() {
   const summaries = useSessionSummaries()
   const nav = useNavigate()
   const toast = useToast()
+  const choice = useChoice()
 
   // The expanded day lives in the URL, not in component state: React unmounts
   // Home when an exercise detail opens, which would reset local state and lose
@@ -111,32 +118,72 @@ export function HomePage() {
     // one would be rejected by the repository anyway; better to let the tap fall
     // on the floor for the millisecond it takes to know.
     if (activeSession === undefined) return
+    const go = async () => {
+      try {
+        const sid = await startSession(activeGymId, dayId, db)
+        nav(`/session/${sid}`)
+      } catch (e) {
+        toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar o treino.')
+      }
+    }
+
     if (activeSession) {
-      // Only one active session per gym, and a day that is NOT the session's
-      // says exactly that and nothing else. This button is drawn disabled (see
-      // isBlocked), and taking someone who tapped "Iniciar" on Dia 3 into the
-      // Dia 1 workout was a third outcome they asked for neither. It still
-      // answers the tap — a control that goes dead under the finger reads as a
-      // frozen app — but it answers with the reason alone.
+      // Only one active session per gym, so tapping Iniciar on a different day
+      // is a collision the user did not know about.
       //
-      // CHANGED: that now holds for a running CARDIO too, which used to be
-      // ferried to from here because it owns no day card. Its own row on the
-      // Cardio tab offers "Continuar", so the way back exists; naming the kind
-      // in the message is what points at it.
+      // CHANGED: it used to answer with a toast — the reason alone, and nothing
+      // to do about it. A toast is the wrong instrument for a fork in the road:
+      // it is quiet, it leaves on its own, and it left the user staring at a
+      // button that had just refused them. This asks instead, and shows all
+      // three ways out at once, because two of them change data and the user has
+      // to see that before choosing rather than discover it afterwards.
+      //
+      // Holds for a running CARDIO too, which owns no day card of its own.
       if (activeSession.dayId !== dayId) {
-        toast(busySessionMessage(activeSession.kind))
+        const entries = await listSessionEntries(activeSession.id!, db)
+        const doneCount = entries.filter((e) => e.done).length
+        const target = days?.find((d) => d.id === dayId)?.name ?? 'o novo treino'
+        const picked = await choice({
+          title: busySessionMessage(activeSession.kind),
+          message:
+            `"${activeSession.dayName}" está em andamento, com ${doneCount} de ` +
+            `${entries.length} ${entries.length === 1 ? 'exercício concluído' : 'exercícios concluídos'}. ` +
+            'Só pode haver um treino em andamento por academia.',
+          options: [
+            {
+              id: 'finish',
+              label: `Concluir e iniciar "${target}"`,
+              tone: 'primary',
+              // The same floor the runner's "Concluir treino" enforces: a
+              // session with nothing marked cannot be completed, it is
+              // abandoned. Offering it here would just fail on tap.
+              disabled: doneCount === 0,
+              hint:
+                doneCount === 0
+                  ? 'Nada foi marcado como concluído ainda — descarte para iniciar outro.'
+                  : undefined,
+            },
+            { id: 'resume', label: 'Voltar ao treino atual' },
+            { id: 'discard', label: `Descartar "${activeSession.dayName}"`, tone: 'danger' },
+          ],
+        })
+        // Dismissed (X, backdrop, Escape) → nothing happens, and Home is
+        // exactly as it was.
+        if (picked === 'resume') nav(`/session/${activeSession.id}`)
+        else if (picked === 'finish') {
+          await completeSession(activeSession.id!, db)
+          await go()
+        } else if (picked === 'discard') {
+          await deleteSession(activeSession.id!, db)
+          await go()
+        }
         return
       }
       // This day's own session: the button reads "Continuar", and it resumes.
       nav(`/session/${activeSession.id}`)
       return
     }
-    try {
-      const sid = await startSession(activeGymId, dayId, db)
-      nav(`/session/${sid}`)
-    } catch (e) {
-      toast(e instanceof ValidationError ? e.message : 'Não foi possível iniciar o treino.')
-    }
+    await go()
   }
 
   return (

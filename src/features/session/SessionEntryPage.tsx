@@ -107,6 +107,7 @@ export function SessionEntryPage() {
   const idx = entries.findIndex((e) => e.id === eId)
   const prevId = idx > 0 ? entries[idx - 1].id : undefined
   const nextId = idx >= 0 && idx < entries.length - 1 ? entries[idx + 1].id : undefined
+  const doneCount = entries.filter((e) => e.done).length
   const goTo = (id: number) => nav(`/session/${sessionId}/entry/${id}`)
   const entryUrl = `/session/${sessionId}/entry/${eId}`
 
@@ -153,31 +154,75 @@ export function SessionEntryPage() {
     if (session.kind !== 'cardio') nav(`/session/${sessionId}`)
   }
 
+  // Marking and un-marking are NOT the same gesture, so they do not do the same
+  // thing. Marking is "next" — it keeps the workout's one-tap rhythm and moves
+  // on. Un-marking is "undo", and an undo that changes screen is not an undo:
+  // it is what rescues the accidental tap (a thumb on the phone as it comes off
+  // the bench), so it has to land the user back on the entry it just freed.
+  const onToggleDone = async () => {
+    if (readOnly) return
+    if (entry.done) {
+      await setEntryDone(eId, false, db)
+      return
+    }
+    await onCompleteAndAdvance()
+  }
+
+  // Where this exercise sits in the day, one segment per exercise, in the
+  // runner's order. It rides the floating bar at the bottom rather than the top
+  // of the screen: that block is already fixed and already the thing the thumb
+  // returns to between sets, so the progress sits with the controls that move
+  // through it instead of opening a second band of chrome up top.
+  //
+  // An indicator, not a control. It is inches from Concluir and from both
+  // arrows, so a tappable segment here would be a mis-tap waiting to happen;
+  // jumping around stays the job of the arrows and of the runner one tap up.
+  // `role="img"` carries the whole strip as the one sentence it draws, which is
+  // also why the segments say nothing of their own.
+  //
+  // Absent on a single-entry session (cardio): a lone full-width segment tells
+  // the user nothing, the same reason the arrows are absent there.
+  const progress =
+    idx >= 0 && entries.length > 1 ? (
+      <div
+        className="entry-progress"
+        role="img"
+        aria-label={`Exercício ${idx + 1} de ${entries.length}, ${doneCount} ${
+          doneCount === 1 ? 'concluído' : 'concluídos'
+        }`}
+      >
+        {entries.map((e, i) => (
+          <span
+            key={e.id}
+            className={`entry-seg${e.done ? ' done' : ''}${i === idx ? ' current' : ''}`}
+          />
+        ))}
+      </div>
+    ) : undefined
+
   return (
     <>
       {/* Previewing an alternative: Back returns to the entry, not to the
           runner — the user is one level deeper, not somewhere else. */}
       <BackBar title={shownName} to={previewing ? entryUrl : backTo} />
       <main className="screen has-action-bar">
-        {/* Above the tabs: the ENTRY's status only — it is true on every tab,
-            like the fixed bar at the bottom. No title (the name is in the top
-            bar), no training day (chosen moments ago in the runner) and no
-            categories: those describe the exercise and now read with the note.
-            A previewed alternative doesn't claim the entry's "Concluído". */}
-        {((entry.done && !previewing) || previewing) && (
+        {/* Above the tabs: only the fact that this is NOT the entry's own
+            exercise. No title (the name is in the top bar), no training day
+            (chosen moments ago in the runner) and no categories: those describe
+            the exercise and now read with the note.
+
+            The entry's "Concluído" chip used to live here too and is gone: the
+            screen says it three other ways now — the ticked box and its label in
+            the floating bar, that bar's calm done tint, and the filled segment in
+            the progress strip. A fourth badge for the same fact was just a line
+            of screen a mid-workout user had to read past. */}
+        {previewing && (
           <div className="ex-head">
             <div className="ex-chips">
-              {entry.done && !previewing && (
-                <span className="chip accent">
-                  <Icon name="check" size={12} /> Concluído
-                </span>
-              )}
-              {previewing && (
-                <span className="chip">
-                  <Icon name="arrows-left-right" size={12} /> Alternativa de{' '}
-                  {entryExercise?.name ?? entry.exerciseName}
-                </span>
-              )}
+              <span className="chip">
+                <Icon name="arrows-left-right" size={12} /> Alternativa de{' '}
+                {entryExercise?.name ?? entry.exerciseName}
+              </span>
             </div>
           </div>
         )}
@@ -261,6 +306,9 @@ export function SessionEntryPage() {
           side of it. On a completed session there is nothing to decide. */}
       {previewing ? (
         <StepperBar
+          /* The preview is off to the side of the entry, not a different one, so
+             the strip still reads the session with that entry as the current. */
+          progress={progress}
           action={
             readOnly ? undefined : (
               <button className="btn primary" onClick={onSwap}>
@@ -271,6 +319,7 @@ export function SessionEntryPage() {
         />
       ) : (
         <StepperBar
+          progress={progress}
           action={
             readOnly ? (
               <span className={`entry-done-state${entry.done ? ' done' : ''}`}>
@@ -278,11 +327,20 @@ export function SessionEntryPage() {
                 {entry.done ? 'Concluído' : 'Não feito'}
               </span>
             ) : (
+              /* A toggle wearing a checkbox, and `aria-pressed` rather than
+                 `role="checkbox"`: marking also navigates, and a checkbox that
+                 changes screen is not a checkbox. `aria-pressed` is what the
+                 runner's row checkbox already uses, so the two are now one
+                 control in two places. The box itself is aria-hidden — the
+                 label and the pressed state already say everything it draws. */
               <button
-                className={`btn ${entry.done ? 'done' : 'primary'}`}
-                onClick={onCompleteAndAdvance}
+                className={`btn entry-done-toggle ${entry.done ? 'done' : 'primary'}`}
+                aria-pressed={entry.done}
+                onClick={onToggleDone}
               >
-                <Icon name={entry.done ? 'check' : 'circle'} />{' '}
+                <span className={`done-box${entry.done ? ' checked' : ''}`} aria-hidden>
+                  {entry.done && <Icon name="check" size={13} />}
+                </span>
                 {entry.done ? 'Concluído' : 'Concluir'}
               </button>
             )

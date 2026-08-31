@@ -324,6 +324,29 @@ describe('Cardio tab', () => {
     expect(await db.sessions.count()).toBe(1)
   })
 
+  it('offers the same three ways out as Home, and closing does nothing', async () => {
+    const { gym, day } = await seed()
+    await startSession(gym, day, db)
+    const user = userEvent.setup()
+    renderAt('/cardio')
+
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+
+    // The same dialog Home opens: two screens refusing the same thing for the
+    // same reason must not answer it differently.
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('button', { name: /Concluir e iniciar "Esteira"/ })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Voltar ao treino atual' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Descartar "Dia 1"/ })).toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // Nothing happened: the strength session is untouched and no cardio started.
+    expect(await db.sessions.count()).toBe(1)
+    expect((await db.sessions.toArray())[0].status).toBe('active')
+  })
+
   it('a cardio row says a STRENGTH workout is running, naming that kind', async () => {
     const { gym, day } = await seed()
     await startSession(gym, day, db)

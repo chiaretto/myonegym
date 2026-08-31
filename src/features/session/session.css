@@ -72,14 +72,61 @@
 .used-weight.empty { border-style: dashed; border-color: var(--border-accent); color: var(--text-accent);
   font-weight: 600; font-size: var(--fs-2xs); }
 
-/* Guided stepper on the exercise detail: Concluído on top, Voltar/Avançar below
-   (stacks so all three labels fit at any font scale). */
-.entry-stepper { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
-.entry-nav-row { display: flex; gap: 8px; }
-.entry-nav-row .btn { flex: 1; }
+/* Segmented progress on the session's exercise screen: one segment per exercise
+   of the day, in the runner's order.
+
+   It rides the floating bar at the bottom (ui/StepperBar passes it to
+   ui/ActionBar), under the arrows and Concluir. That block is already fixed and
+   already where the thumb returns between sets, so the progress travels with the
+   controls that move through it instead of opening a second band of chrome at
+   the top of the screen. ActionBar measures itself, so the screen's bottom
+   reservation absorbs this strip with no number to keep in sync.
+
+   A diagram, not text, so the heights are in px — at 200% font scale an
+   em-sized version would grow into a band and start competing with the buttons
+   above it. The gutters come from ActionBar's own padding; only the gap to the
+   row above is set here. */
+.entry-progress { display: flex; align-items: center; gap: 4px; padding-top: 2px; }
+.entry-seg { flex: 1; min-width: 0; height: 6px; border-radius: var(--r-pill);
+  background: var(--surface-3); transition: height 0.15s ease-out, background 0.15s ease-out; }
+/* Pending, but where you are: the accent tint says "here" without claiming the
+   solid fill that means "done". */
+.entry-seg.current { height: 10px; background: var(--bg-accent); }
+/* Done wins the fill in both states; .current still supplies the height, so a
+   done exercise you have stepped back to reads as both at once. */
+.entry-seg.done, .entry-seg.done.current { background: var(--accent-grad); }
+
+/* Guided stepper on the exercise detail.
+   CHANGED: one line — `< action >`. It stacked because "Voltar", "Concluído"
+   and "Avançar" would not fit side by side; the arrows are now just their
+   chevrons, so they do, and the action in the middle ends up WIDER than it was
+   with a whole row to itself minus two labels. */
+.entry-nav-row { display: flex; align-items: stretch; gap: 8px; }
+/* The middle takes what is left; the arrows keep a thumb-sized square. `width`
+   must be beaten explicitly — .btn is width: 100%. */
+.entry-nav-row > * { flex: 1; min-width: 0; }
+.entry-nav-row .step-arrow { flex: 0 0 auto; width: 3.4em; padding-left: 0; padding-right: 0; }
+/* Catalog detail: no action, so the two arrows split the line between them
+   rather than sitting either side of a gap. */
+.entry-nav-row.nav-only .step-arrow { flex: 1; width: auto; }
 .entry-done-state { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 12px; font-size: var(--fs-sm); color: var(--text-secondary); }
 .entry-done-state.done { color: var(--text-accent); font-weight: 600; }
+
+/* The done control wears a checkbox so that "this can be unticked" is legible
+   before it is tried — the same promise the runner's row checkbox makes. Sized
+   in em so it tracks the label beside it at every font scale. */
+.entry-done-toggle .done-box {
+  width: 1.35em; height: 1.35em; border-radius: 0.4em; flex-shrink: 0;
+  border: 1.5px solid currentColor; display: grid; place-items: center;
+}
+/* Ticked: the box inverts against the calm .btn.done tint the button already
+   carries, so the check reads as filled-in rather than drawn-on. */
+.entry-done-toggle.done .done-box { background: var(--text-accent); color: var(--surface-1);
+  border-color: transparent; }
+/* Unticked, on the solid accent CTA: an empty box at full white would out-shout
+   the word next to it. */
+.entry-done-toggle.primary .done-box { border-color: rgba(255, 255, 255, 0.65); }
 
 /* Done-state variant of the primary action: a calm, confirmed look (accent-tinted,
    not the bold solid CTA) so a completed exercise is visibly different. */
