@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, setEntryDone, swapEntryExercise, ValidationError } from '../../db/repos'
@@ -20,6 +20,7 @@ import { exerciseCategoryNames } from '../../lib/days'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { PhotoTab } from '../exercise/photo/PhotoTab'
+import { RestTimer } from './RestTimer'
 import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
@@ -46,6 +47,22 @@ export function SessionEntryPage() {
   const [params] = useSearchParams()
 
   const [tab, setTab] = useState<EntryTab>('exec')
+
+  // The rest-between-sets stopwatch. Only the START INSTANT is state; the
+  // elapsed time is derived from the clock by `useElapsed`, which is what makes
+  // the count survive the phone going in a pocket mid-rest — the exact case
+  // this exists for. `null` is "stopped", so toggling is one assignment.
+  //
+  // It lives on the page, not in the tab panel: checking the machine's note or
+  // photo mid-rest must not kill the count. Leaving "Execução" only takes the
+  // media away, and with it the button that rides on top of it.
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null)
+  const timerElapsed = useElapsed(timerStartedAt)
+  // Stepping to another exercise resets it, and this has to be said out loud:
+  // the route keeps the same component and only swaps a param, so React
+  // reconciles rather than remounts and every useState above would otherwise
+  // carry over. The rest belongs to the set that was just done.
+  useEffect(() => setTimerStartedAt(null), [eId])
 
   // CHANGED: the session, whichever kind it is. A cardio used to go back to
   // /cardio instead, because Iniciar jumped straight here and the overview was
@@ -276,6 +293,15 @@ export function SessionEntryPage() {
                 tall enough to push their content off the fold from up there. */}
             <div className="hero">
               <Media url={exercise?.mediaUrl} alt={shownName} className="hero-media" />
+              {/* Over the media, not under it: the stopwatch is a tool used
+                  while looking at the exercise, not part of it. Below, it would
+                  push the target weight off the fold on the app's most-scrolled
+                  screen; on top, it costs no height at all. */}
+              <RestTimer
+                elapsed={timerElapsed}
+                running={timerStartedAt != null}
+                onToggle={() => setTimerStartedAt((at) => (at == null ? Date.now() : null))}
+              />
             </div>
             {/* Warm-ups of the exercise being SHOWN — while previewing an
                 alternative, it is that movement's warm-up that matters. */}

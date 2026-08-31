@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fmtClock, fmtNumber, historyDelta, relativeDate } from './format'
+import { fmtClock, fmtLapse, fmtNumber, historyDelta, relativeDate } from './format'
 import type { WeightHistory } from '../db/types'
 
 const h = (over: Partial<WeightHistory>): WeightHistory => ({
@@ -47,6 +47,48 @@ describe('fmtClock', () => {
   it('clamps a negative span to zero', () => {
     expect(fmtClock(-5_000)).toBe('00:00:00')
   })
+
+describe('fmtLapse', () => {
+  it('shows seconds alone under a minute, with their unit', () => {
+    // A minutes field that can only say "00" is a field of no information, and
+    // the circle this is read in is the size of a thumbprint. The unit stays
+    // because a bare "45" beside a clock glyph could just as well be minutes.
+    expect(fmtLapse(0)).toBe('00s')
+    expect(fmtLapse(1_000)).toBe('01s')
+    expect(fmtLapse(7_000)).toBe('07s')
+    expect(fmtLapse(59_000)).toBe('59s')
+  })
+
+  it('grows the minutes field at sixty seconds, and keeps it', () => {
+    expect(fmtLapse(60_000)).toBe('01:00')
+    expect(fmtLapse(61_000)).toBe('01:01')
+    expect(fmtLapse(90_000)).toBe('01:30')
+    expect(fmtLapse(725_000)).toBe('12:05')
+  })
+
+  it('truncates the seconds instead of rounding them', () => {
+    // 0.999 s in has not been a second yet, so the timer must not claim one.
+    expect(fmtLapse(999)).toBe('00s')
+    expect(fmtLapse(59_999)).toBe('59s')
+    // And the minutes field does not appear a moment early either.
+    expect(fmtLapse(59_999)).not.toContain(':')
+  })
+
+  it('lets the minutes grow past an hour rather than wrapping', () => {
+    // A timer someone forgot must read as absurd, not as freshly started.
+    expect(fmtLapse(3_600_000)).toBe('60:00')
+    expect(fmtLapse(6_000_000)).toBe('100:00')
+  })
+
+  it('drops the unit once there are minutes — the colon already says what they are', () => {
+    expect(fmtLapse(60_000)).not.toContain('s')
+    expect(fmtLapse(725_000)).not.toContain('s')
+  })
+
+  it('never goes negative', () => {
+    expect(fmtLapse(-5_000)).toBe('00s')
+  })
+})
 })
 
 describe('historyDelta', () => {

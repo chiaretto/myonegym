@@ -96,6 +96,39 @@
    done exercise you have stepped back to reads as both at once. */
 .entry-seg.done, .entry-seg.done.current { background: var(--accent-grad); }
 
+/* Rest-between-sets stopwatch, laid over the exercise media (features/session/
+   RestTimer). Tucked into the top-right corner — .hero clips, so the inset is
+   what keeps the circle off the card's 20px corner curve; two round shapes at
+   8px clear each other, but this is the number to raise if a corner ever shaves.
+
+   The circle is a FIXED size in both states, so starting and stopping cannot
+   make it jump under the finger that just tapped it. Sized in em off the number
+   it holds, with a px floor: at the smallest font scale the em alone would land
+   under a comfortable touch target. */
+.rest-timer {
+  position: absolute; top: 8px; right: 8px; z-index: 1;
+  width: 4.4em; height: 4.4em; min-width: 58px; min-height: 58px; padding: 0.5em;
+  border-radius: 50%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+  font-size: var(--fs-xs);
+  /* The app's accent, IDENTICAL in both states — it is the one control laid over
+     a photo, and the brand colour is what makes it read as a control rather than
+     as part of the picture. The glyph is the whole difference between stopped
+     and running: a colour that changed too would be a second thing to decode on
+     a circle the size of a thumbprint.
+
+     Solid, never a tint: --bg-accent is an rgba, and a see-through fill on a
+     bright photo loses the number, which is the one thing this draws. */
+  background: var(--accent-grad); color: var(--on-accent);
+  border: 0; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.9);
+}
+.rest-timer:active { filter: brightness(0.92); }
+.rest-timer .rt-icon { font-size: 1.35em; line-height: 1; opacity: 0.9; }
+/* Tabular figures: it repaints every second, and proportional digits would make
+   the number twitch sideways inside the circle as 1s and 0s trade places. */
+.rest-timer .rt-time { font-size: 1.1em; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
 /* Guided stepper on the exercise detail.
    CHANGED: one line — `< action >`. It stacked because "Voltar", "Concluído"
    and "Avançar" would not fit side by side; the arrows are now just their

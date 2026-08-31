@@ -202,8 +202,12 @@ h1, h2, h3 { font-family: var(--font-title); font-weight: 700; letter-spacing: -
    Media box sizes to the image's natural proportions (no fixed aspect ratio),
    so portrait/square exercise media shows at full height instead of being
    shrunk into a short landscape box. Very tall media is capped to the viewport. */
+/* `position: relative` so something can be laid OVER the media — today the rest
+   stopwatch on the session's exercise screen (see .rest-timer in session.css).
+   It changes nothing on its own; `overflow: hidden` still clips whatever sits
+   on top, so an overlay has to stay inside these bounds. */
 .hero { background: var(--surface-1); border: 0.5px solid var(--border); border-radius: var(--r-card);
-  overflow: hidden; display: grid; place-items: center; margin-bottom: 16px; }
+  overflow: hidden; display: grid; place-items: center; margin-bottom: 16px; position: relative; }
 img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contain; display: block; }
 /* Placeholder has no intrinsic size — keep it a tidy landscape box. */
 .media-fallback.hero-media { aspect-ratio: 16 / 10; width: 100%; display: grid; place-items: center;
