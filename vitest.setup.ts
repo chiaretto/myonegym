@@ -1,6 +1,24 @@
 import '@testing-library/jest-dom/vitest'
 import 'fake-indexeddb/auto'
+import { configure } from '@testing-library/react'
 import { beforeEach } from 'vitest'
+
+/**
+ * How long `waitFor`, `findBy*` and friends keep looking before giving up.
+ *
+ * The Testing Library default is 1 s, calibrated — like vitest's test timeout —
+ * for something much smaller than what this suite does. A single `findByRole`
+ * here can be waiting on a whole `<App/>` mount plus a Dexie round trip; on a
+ * loaded machine that crosses one second without anything being wrong. Three of
+ * the five baseline runs failed exactly this way, on
+ * `Unable to find role="button" and name "Começar do zero"`.
+ *
+ * Kept deliberately BELOW `testTimeout` (see vitest.config.ts). That ordering is
+ * what preserves the error message: when an element genuinely never appears, the
+ * async utility gives up first and says "Unable to find …", instead of the test
+ * hitting its own ceiling and reporting a bare timeout with nothing to act on.
+ */
+configure({ asyncUtilTimeout: 5_000 })
 import { clearQueryCache } from './src/lib/hooks'
 import { installMemoryOpfs } from './src/test/memoryOpfs'
 
