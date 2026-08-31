@@ -31,8 +31,10 @@ export function AlternativesSection({
 
   return (
     <section className="note-card alt-section">
-      {/* h3 to match the neighbouring "Histórico" section, which .section-head
-          styles — the two sit one under the other on the same tab. */}
+      {/* h3 + .section-head, the shared heading shape for a titled block on this
+          tab. It used to be justified by sitting under the "Histórico" section;
+          that section has since moved inside the weight card, so this is now the
+          only user of the pair on the tab. */}
       <div className="section-head">
         <h3>
           <Icon name="arrows-left-right" size={14} /> Alternativas

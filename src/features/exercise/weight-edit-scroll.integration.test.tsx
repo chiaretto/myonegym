@@ -107,6 +107,20 @@ describe('Editing the weight brings its card to the top', () => {
     await waitFor(() => expect(scrolledCard()).toBe(document.querySelector('.weight-card')))
   })
 
+  it('does not scroll when the history is revealed — that is a different trigger', async () => {
+    const { gym, supino, day } = await seed()
+    await saveWeight(gym, supino, 20, 'KG', 'global', db)
+    renderAt(`/exercise/${supino}?day=${day}`)
+
+    // Revealing the history also changes the card's height, but it is not the
+    // gesture the scroll exists for: only entering edit hides Salvar below the
+    // fold, and only that should move the page.
+    await userEvent.setup().click(await screen.findByRole('button', { name: /Histórico/ }))
+
+    expect(document.querySelector('.timeline')).not.toBeNull()
+    expect(scrolledCard()).toBeUndefined()
+  })
+
   it('does not scroll while the card is only being read', async () => {
     const { gym, supino, day } = await seed()
     await saveWeight(gym, supino, 20, 'KG', 'global', db)
