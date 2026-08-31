@@ -77,7 +77,13 @@ describe('Editing the weight brings its card to the top', () => {
     const [entry] = await listSessionEntries(sessionId, db)
     renderAt(`/session/${sessionId}/entry/${entry.id}`)
 
-    await userEvent.setup().click(await screen.findByRole('button', { name: /Editar/ }))
+    // The label only flips Definir → Editar once the weight's live query has
+    // answered, which is a gym read, a resolveWeight and a re-render deep. The
+    // default one second is a race on a loaded machine, and what this test is
+    // about is the scroll, not how fast Dexie is.
+    await userEvent.setup().click(
+      await screen.findByRole('button', { name: /Editar/ }, { timeout: 3000 }),
+    )
 
     expect(await screen.findByRole('button', { name: /Salvar/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument()
@@ -108,7 +114,9 @@ describe('Editing the weight brings its card to the top', () => {
     const [entry] = await listSessionEntries(sessionId, db)
     renderAt(`/session/${sessionId}/entry/${entry.id}`)
 
-    expect(await screen.findByRole('button', { name: /Editar/ })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /Editar/ }, { timeout: 3000 }),
+    ).toBeInTheDocument()
     expect(scrolledCard()).toBeUndefined()
   })
 })

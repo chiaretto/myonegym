@@ -70,6 +70,36 @@ export function fmtClock(ms: number): string {
 }
 
 /**
+ * A short running duration, showing only the field that carries information:
+ * **"SSs" under a minute** ("00s", "07s", "45s") and **"MM:SS" from a minute on**
+ * ("01:00", "01:30", "12:05").
+ *
+ * Sibling of `fmtClock`, which carries hours. Hours are what a workout needs and
+ * what a **rest between sets** never does — "00:00:45" is two fields of zero and
+ * one of information — and by the same argument a rest of 45 seconds does not
+ * need a minutes field either. Dropping it buys the digits that ARE meaningful
+ * more room in a circle the size of a thumbprint, which is where this is read:
+ * at arm's length, mid-set.
+ *
+ * The seconds carry a **unit** while they stand alone, because alone they are
+ * ambiguous — "45" beside a clock glyph could as easily be minutes. From a
+ * minute on the colon says what the fields are and the suffix would be noise,
+ * so it goes.
+ *
+ * Both rules `fmtClock` established hold here, for the same reasons. Seconds are
+ * truncated, never rounded, so the timer never shows a second that has not
+ * elapsed. And the leading field — minutes, once there are any — grows past two
+ * digits instead of wrapping: a timer someone forgot to stop should read as
+ * absurd (100:00), not as freshly started (40:00).
+ */
+export function fmtLapse(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = String(total % 60).padStart(2, '0')
+  return m === 0 ? `${s}s` : `${String(m).padStart(2, '0')}:${s}`
+}
+
+/**
  * The whole answer a blocked play button gives: there is already a session
  * open, so this one cannot start. It names the kind that is running, not the
  * kind that was tapped — "cardio" on Home is the useful half of the sentence,
