@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
@@ -9,7 +9,9 @@ import {
   createDay,
   createExercise,
   createGym,
+  listSessionEntries,
   saveWeight,
+  setEntryDone,
   startSession,
 } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
@@ -137,7 +139,7 @@ describe('Iniciar is disabled on the other days while a session is open', () => 
     expect(screen.getByRole('button', { name: 'Continuar' })).not.toHaveClass('blocked')
   })
 
-  it('explains on tap instead of opening the other day’s session', async () => {
+  it('asks, in a dialog, instead of opening the other day’s session', async () => {
     const { gym, dia1 } = await seedTwoDays()
     await startSession(gym, dia1, db)
     const user = userEvent.setup()
@@ -152,13 +154,20 @@ describe('Iniciar is disabled on the other days while a session is open', () => 
     await waitFor(() => expect(dia2).toHaveAttribute('aria-disabled', 'true'))
     await user.click(dia2)
 
-    // It says why...
-    expect(await screen.findByText(/treino em andamento/i)).toBeInTheDocument()
-    // ...and that is all: no second session, and the user is still on Home
-    // rather than inside the Dia 1 runner they never asked for.
+    // CHANGED: a dialog, not a toast. A toast is the wrong instrument for a
+    // fork in the road — it is quiet, it leaves on its own, and it left the
+    // user staring at the button that had just refused them.
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveAccessibleName(/treino em andamento/i)
+    // All three ways out are visible before choosing, because two of them
+    // change data.
+    expect(within(dialog).getByRole('button', { name: /Concluir e iniciar "Dia 2"/ })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Voltar ao treino atual' })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: /Descartar "Dia 1"/ })).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Fechar' })).toBeInTheDocument()
+
+    // Nothing has happened yet.
     expect(await db.sessions.count()).toBe(1)
-    expect(screen.getByText('Dia 2')).toBeInTheDocument()
-    expect(screen.queryByText(/concluídos/)).not.toBeInTheDocument()
   })
 
   it('does not disable the day whose own session is open (tapping it resumes)', async () => {
@@ -216,5 +225,99 @@ describe('Iniciar is disabled on the other days while a session is open', () => 
     expect(startButtons()).toHaveLength(2)
     expect(document.querySelector('.day-start.blocked')).toBeNull()
     expect(document.querySelector('.day-start[aria-disabled="true"]')).toBeNull()
+  })
+})
+
+/**
+ * The collision dialog. Tapping Iniciar on another day while a workout is open
+ * used to answer with a toast: the reason alone, and nothing to do about it.
+ * Now it asks, and every way out is named — including the two that change data.
+ */
+describe('Starting another workout while one is open', () => {
+  const openDialog = async () => {
+    const { gym, dia1 } = await seedTwoDays()
+    const sessionId = await startSession(gym, dia1, db)
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    const dia2 = await screen.findByRole('button', { name: 'Iniciar' })
+    await waitFor(() => expect(dia2).toHaveAttribute('aria-disabled', 'true'))
+    await user.click(dia2)
+    return { user, sessionId, dialog: await screen.findByRole('dialog') }
+  }
+
+  it('closing with the X does nothing at all', async () => {
+    const { user, dialog } = await openDialog()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Fechar' }))
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // Still one session, still on Home: dismissing is never one of the options.
+    expect(await db.sessions.count()).toBe(1)
+    expect((await db.sessions.toArray())[0].status).toBe('active')
+    expect(screen.getByText('Dia 2')).toBeInTheDocument()
+  })
+
+  it('"Voltar ao treino atual" opens the session that was already running', async () => {
+    const { user, sessionId, dialog } = await openDialog()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Voltar ao treino atual' }))
+
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento', level: 1 })).toBeInTheDocument()
+    expect(document.querySelector('.session-day')).toHaveTextContent('Dia 1')
+    expect(await db.sessions.count()).toBe(1)
+    expect((await db.sessions.get(sessionId))!.status).toBe('active')
+  })
+
+  it('"Concluir e iniciar" banks the old workout and opens the new one', async () => {
+    const { gym, dia1 } = await seedTwoDays()
+    const sessionId = await startSession(gym, dia1, db)
+    // Completing needs at least one entry done — the runner's own floor.
+    const [entry] = await listSessionEntries(sessionId, db)
+    await setEntryDone(entry.id!, true, db)
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <App />
+      </MemoryRouter>,
+    )
+    const dia2 = await screen.findByRole('button', { name: 'Iniciar' })
+    await waitFor(() => expect(dia2).toHaveAttribute('aria-disabled', 'true'))
+    await user.click(dia2)
+
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: /Concluir e iniciar "Dia 2"/ }))
+
+    // The old one is history, with what was marked on it kept.
+    await waitFor(async () => expect((await db.sessions.get(sessionId))!.status).toBe('completed'))
+    expect((await listSessionEntries(sessionId, db))[0].done).toBe(true)
+    // And the new one is running.
+    await waitFor(async () => expect(await db.sessions.count()).toBe(2))
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento', level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(document.querySelector('.session-day')).toHaveTextContent('Dia 2'))
+  })
+
+  it('refuses to bank a workout with nothing marked, and says why', async () => {
+    const { dialog } = await openDialog()
+
+    // Same floor the runner's "Concluir treino" enforces: an empty session is
+    // abandoned, not completed. Offering it here would just fail on tap.
+    expect(within(dialog).getByRole('button', { name: /Concluir e iniciar/ })).toBeDisabled()
+    expect(within(dialog).getByText(/Nada foi marcado como concluído/)).toBeInTheDocument()
+  })
+
+  it('"Descartar" throws the old workout away and opens the new one', async () => {
+    const { user, sessionId, dialog } = await openDialog()
+
+    await user.click(within(dialog).getByRole('button', { name: /Descartar "Dia 1"/ }))
+
+    await waitFor(async () => expect(await db.sessions.get(sessionId)).toBeUndefined())
+    // Its entries go with it, rather than being left orphaned.
+    expect(await listSessionEntries(sessionId, db)).toHaveLength(0)
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento', level: 1 })).toBeInTheDocument()
+    await waitFor(() => expect(document.querySelector('.session-day')).toHaveTextContent('Dia 2'))
   })
 })
