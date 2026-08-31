@@ -109,9 +109,11 @@ describe('Weight scope on the catalog exercise detail', () => {
       scope: 'global',
       weight: { value: 20 },
     })
-    // Now the label means something, and the history says whose it is.
+    // Now the label means something, and the history says whose it is — in the
+    // modal's title, which is where the scope is now read.
     expect(await within(weightCard()).findByText('Academia A')).toBeInTheDocument()
-    expect(document.querySelector('.history .section-head')).toHaveTextContent('nesta academia')
+    await user.click(within(weightCard()).getByRole('button', { name: /Histórico/ }))
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(/nesta academia/)
   })
 
   it('reopens with the box already checked where an exception exists', async () => {

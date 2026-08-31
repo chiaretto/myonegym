@@ -58,6 +58,28 @@
 .wc-edit .sheet-actions .btn { flex: 1; width: auto; }
 .wc-edit .sheet-actions .btn.primary { flex: 1.4; }
 
+/* The card's top line: the "Peso alvo" eyebrow on the left, and on the right the
+   gym chip (exceptions only) beside the way out to the history. */
+.wc-head-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* Deliberately quiet — it shares the top line with an eyebrow label, and the
+   figure below is what the eye should land on. It reads as a way out to the
+   past, not as a second thing to do with the weight, so it borrows the label's
+   size rather than the button's.
+   The negative margin cancels the padding: the padding is there to give a
+   thumb something to hit at this size, not to make the row taller. */
+.wc-history-btn {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  padding: 8px 6px; margin: -8px -6px;
+  background: transparent; border: 0;
+  color: var(--text-secondary); font-size: var(--fs-2xs); font-weight: 600;
+}
+.wc-history-btn:active { color: var(--text-accent); }
+/* The one part that is not muted: it answers "is there anything in there?"
+   before the modal costs a tap. Tabular so the row does not shift as entries
+   are added or deleted. */
+.wc-history-count { font-variant-numeric: tabular-nums; font-weight: 700;
+  color: var(--text-accent); }
+
 .history { display: flex; flex-direction: column; gap: 10px; }
 .section-head h3 { font-family: var(--font-title); font-size: var(--fs-md); font-weight: 700;
   display: flex; align-items: center; gap: 8px; }

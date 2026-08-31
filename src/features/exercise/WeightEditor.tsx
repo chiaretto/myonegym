@@ -7,6 +7,7 @@ import { fmtNumber, fmtWeight, historyDelta, relativeDate } from '../../lib/form
 import { useGyms, useHistory } from '../../lib/hooks'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
+import { Sheet } from '../../ui/Sheet'
 import { Sparkline } from './Sparkline'
 
 /** Step a weight string by ±0.5, clamped at 0 and snapped to a clean half-step. */
@@ -57,6 +58,11 @@ export function WeightEditor({
   const cardRef = useRef<HTMLElement>(null)
 
   const [editing, setEditing] = useState(false)
+  // The history opens in a modal, from a button on the card. Always shut on
+  // arrival and never persisted: the question this screen answers between sets
+  // is "how much do I lift", and the answer has to be visible without scrolling
+  // past three months of it first.
+  const [historyOpen, setHistoryOpen] = useState(false)
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
   const [onlyHere, setOnlyHere] = useState(false)
@@ -145,13 +151,34 @@ export function WeightEditor({
       <section className="weight-card" ref={cardRef}>
         <div className="wc-head">
           <span className="wc-label">Peso alvo</span>
-          {/* Only an exception is labelled: a global weight is just the
-              exercise's weight, and naming a gym on it would be noise. */}
-          {gym && isException && (
-            <span className="chip accent">
-              <Icon name="building" size={12} /> {gym.name}
-            </span>
-          )}
+          <span className="wc-head-right">
+            {/* Only an exception is labelled: a global weight is just the
+                exercise's weight, and naming a gym on it would be noise. */}
+            {gym && isException && (
+              <span className="chip accent">
+                <Icon name="building" size={12} /> {gym.name}
+              </span>
+            )}
+            {/* On the card's top line, in the same quiet register as the "Peso
+                alvo" eyebrow beside it: a way out to the past, not a second
+                thing to do with the weight. Loud enough to be a control, never
+                loud enough to compete with the figure below it.
+
+                Present while EDITING too. It was hidden there while the history
+                expanded the card — that pushed Cancelar and Salvar back below
+                the fold, which the scroll-to-top exists to prevent. From the top
+                line, opening a modal, it costs the edit form no height at all,
+                and checking what you lifted last time is exactly the thing you
+                want while deciding what to type. */}
+            {history && history.length > 0 && (
+              <button className="wc-history-btn" onClick={() => setHistoryOpen(true)}>
+                <Icon name="history" size={13} /> Histórico
+                {/* The count answers "is there anything in there?" before the
+                    modal costs a tap. */}
+                <span className="wc-history-count">{history.length}</span>
+              </button>
+            )}
+          </span>
         </div>
 
         {!editing ? (
@@ -231,52 +258,60 @@ export function WeightEditor({
             </div>
           </div>
         )}
+
       </section>
 
-      {history && history.length > 0 && (
-        <section className="history">
-          <div className="section-head">
-            <h3>
-              <Icon name="history" size={16} /> Histórico
-              {isException && <span className="count"> · nesta academia</span>}
-            </h3>
-          </div>
-          <Sparkline history={history} />
-          <ul className="timeline">
-            {history.map((entry, i) => {
-              const prev = history[i + 1]
-              const delta = historyDelta(entry, prev)
-              const isCurrent = i === 0
-              return (
-                <li key={entry.id} className={`tl-item${isCurrent ? ' current' : ''}`}>
-                  <span className="tl-dot" />
-                  <div className="tl-content">
-                    <div className="tl-left">
-                      <span className="tl-value">
-                        {fmtNumber(entry.value)} <span className="u">{entry.unit}</span>
+      {/* A modal, not a panel on the card: the timeline is as long as the user
+          has trained, and the card's job is to answer "how much do I lift" in
+          one glance. Given its own screen it can be as long as it likes.
+
+          The condition covers deleting the last entry from inside: with nothing
+          left to show, the modal closes itself rather than standing empty. */}
+      {historyOpen && history && history.length > 0 && (
+        <Sheet
+          // Only an exception is qualified — a global history belongs to no gym
+          // in particular, so there would be nothing to name.
+          title={isException ? 'Histórico · nesta academia' : 'Histórico'}
+          onClose={() => setHistoryOpen(false)}
+        >
+          <div className="history">
+            <Sparkline history={history} />
+            <ul className="timeline">
+              {history.map((entry, i) => {
+                const prev = history[i + 1]
+                const delta = historyDelta(entry, prev)
+                const isCurrent = i === 0
+                return (
+                  <li key={entry.id} className={`tl-item${isCurrent ? ' current' : ''}`}>
+                    <span className="tl-dot" />
+                    <div className="tl-content">
+                      <div className="tl-left">
+                        <span className="tl-value">
+                          {fmtNumber(entry.value)} <span className="u">{entry.unit}</span>
+                        </span>
+                        <span className="tl-date">{relativeDate(entry.changedAt)}</span>
+                      </div>
+                      <span className={`tl-delta ${delta.direction}`}>
+                        {delta.direction === 'up' && <Icon name="arrow-up" size={11} />}
+                        {delta.direction === 'down' && <Icon name="arrow-down" size={11} />}
+                        {delta.text}
                       </span>
-                      <span className="tl-date">{relativeDate(entry.changedAt)}</span>
+                      {canEdit && (
+                        <button
+                          className="tl-delete"
+                          aria-label="Excluir registro"
+                          onClick={() => onDeleteEntry(entry.id!, isCurrent)}
+                        >
+                          <Icon name="trash" />
+                        </button>
+                      )}
                     </div>
-                    <span className={`tl-delta ${delta.direction}`}>
-                      {delta.direction === 'up' && <Icon name="arrow-up" size={11} />}
-                      {delta.direction === 'down' && <Icon name="arrow-down" size={11} />}
-                      {delta.text}
-                    </span>
-                    {canEdit && (
-                      <button
-                        className="tl-delete"
-                        aria-label="Excluir registro"
-                        onClick={() => onDeleteEntry(entry.id!, isCurrent)}
-                      >
-                        <Icon name="trash" />
-                      </button>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        </Sheet>
       )}
     </>
   )
