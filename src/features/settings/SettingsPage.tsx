@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { buildInfo, useAppUpdate } from '../../lib/appUpdate'
 import { useCategories, useDays, useExercises, useGyms, useWarmups } from '../../lib/hooks'
 import { useInstall } from '../../lib/install'
 import { Icon } from '../../ui/Icon'
@@ -30,6 +31,7 @@ export function SettingsPage() {
   const canInstall = useInstall((s) => s.canInstall)
   const isInstalled = useInstall((s) => s.isInstalled)
   const platform = useInstall((s) => s.platform)
+  const updateStatus = useAppUpdate((s) => s.status)
 
   // The row says what the install screen can actually do here, so tapping it is
   // never a dead end — iOS has no install button, only instructions.
@@ -40,6 +42,13 @@ export function SettingsPage() {
       : platform === 'ios'
         ? 'Veja como adicionar à tela inicial'
         : 'Como abrir o app fora do navegador'
+
+  // Same rule as the install row: say what the screen can do here, so that
+  // tapping it is never a dead end.
+  const updateSub =
+    updateStatus === 'unsupported'
+      ? `Versão ${buildInfo.version}`
+      : `Versão ${buildInfo.version} · procure uma mais nova`
 
   return (
     <>
@@ -64,6 +73,7 @@ export function SettingsPage() {
         <div className="group-label">App</div>
         <div className="group">
           <NavRow to="/settings/install" icon="device-mobile" title="Instalar app" sub={installSub} />
+          <NavRow to="/settings/update" icon="refresh" title="Atualizar app" sub={updateSub} />
         </div>
 
         <div className="group-label">Aparência</div>

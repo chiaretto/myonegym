@@ -1,6 +1,24 @@
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { buildDefine } from './scripts/buildInfo'
+
+// A fixed instant, so a test can assert the build date the screen renders.
+// See scripts/buildInfo.ts.
+process.env.MYONEGYM_BUILD_TIME = '2026-09-01T14:22:00.000Z'
 
 export default defineConfig({
+  // The same globals vite.config.ts injects. Without them `__APP_VERSION__` is
+  // undefined here and every test that mounts Settings throws.
+  define: buildDefine(),
+  resolve: {
+    alias: {
+      // `virtual:pwa-register` only exists while vite-plugin-pwa is loaded, and
+      // the plugin is not part of the test run. The stub stands in for the whole
+      // suite: an alias cannot be forgotten by a file, and does not depend on
+      // import order the way a per-file `vi.mock` does.
+      'virtual:pwa-register': fileURLToPath(new URL('./src/test/pwaRegister.ts', import.meta.url)),
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',
