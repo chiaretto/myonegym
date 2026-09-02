@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { buildDefine } from './scripts/buildInfo'
 
 /**
  * Serve the dev server over https when `./scripts/dev-cert.sh` has been run.
@@ -27,6 +28,9 @@ export default defineConfig(({ command }) => {
 
   return {
     base,
+    // Version and build stamp for Settings -> "Atualizar app". Shared with
+    // vitest.config.ts so the same globals exist in tests (see scripts/buildInfo).
+    define: buildDefine(),
     // Expose the dev server on the LAN so the PWA can be opened from a phone.
     // Fixed port keeps the Windows portproxy → WSL forwarding rule valid.
     server: {
@@ -45,6 +49,12 @@ export default defineConfig(({ command }) => {
       react(),
       VitePWA({
         registerType: 'autoUpdate',
+        // The app registers the service worker itself, from src/lib/appUpdate.ts:
+        // it is the only way to hold the ServiceWorkerRegistration, and without
+        // that handle nothing can call `update()` on demand. Leaving the
+        // injected registerSW.js in place too would register the same worker
+        // twice.
+        injectRegister: null,
         includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
         // The install prompt needs a service worker, and the app has an in-app
         // install screen that must be exercisable without deploying first.

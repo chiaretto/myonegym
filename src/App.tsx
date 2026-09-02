@@ -25,6 +25,7 @@ import { WarmupsPage, WarmupFormPage } from './features/settings/WarmupsPage'
 import { AppearancePage } from './features/settings/AppearancePage'
 import { AssistantPage } from './features/settings/AssistantPage'
 import { InstallPage } from './features/settings/InstallPage'
+import { UpdatePage } from './features/settings/UpdatePage'
 
 export function App() {
   const reconcile = useActiveGym((s) => s.reconcile)
@@ -110,6 +111,7 @@ export function App() {
           <Route path="/settings/appearance" element={<AppearancePage />} />
           <Route path="/settings/assistant" element={<AssistantPage />} />
           <Route path="/settings/install" element={<InstallPage />} />
+          <Route path="/settings/update" element={<UpdatePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 

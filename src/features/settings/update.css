@@ -1,0 +1,16 @@
+/* Settings → Atualizar app. The page borrows install.css for the hero — same
+   app, same lockup — so only the spinner lives here. */
+
+/* The one thing a check has to show while it runs: that it is running. The row
+   icon turns, because there is nothing else on the row to animate. */
+.update-spin .ti { display: inline-block; animation: update-spin 1.1s linear infinite; }
+
+@keyframes update-spin {
+  to { transform: rotate(1turn); }
+}
+
+/* A device set to reduce motion gets the icon, not the rotation — the button
+   label ("Procurando…") already carries the same news. */
+@media (prefers-reduced-motion: reduce) {
+  .update-spin .ti { animation: none; }
+}

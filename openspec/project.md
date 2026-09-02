@@ -146,6 +146,15 @@ no server** — all data lives in the browser.
   `/openspec-apply` → `/openspec-archive`.
 - Delta specs use ADDED / MODIFIED / REMOVED with Given/When/Then scenarios.
 - Mobile-first: design for a phone viewport; PWA installable and offline-capable.
+- The **app** registers the service worker (`src/lib/appUpdate.ts`, called from
+  `main.tsx`), and `injectRegister` is off in `vite.config.ts`. That is what puts
+  the `ServiceWorkerRegistration` in reach of Settings → "Atualizar app", which
+  exists because an installed PWA is resumed rather than navigated to and so
+  never asks the browser for a newer build on its own. Turning `injectRegister`
+  back on would register the same worker twice.
+- The version and build stamp the app shows come from `scripts/buildInfo.ts`,
+  shared by `vite.config.ts` and `vitest.config.ts`. Never write a version
+  literal into a component.
 - Install assets are **generated**, never drawn by hand. Two chains, because the
   icon and the launch screen are different artwork:
   - **Icons** — master `public/icon.png`, run `npm run pwa-assets`
