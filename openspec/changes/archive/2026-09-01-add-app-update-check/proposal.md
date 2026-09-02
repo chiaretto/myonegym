@@ -174,3 +174,51 @@ onde ele faz alguma coisa.
 | A data do build muda a cada compilação e polui diffs | Low | Low | Valor injetado em tempo de build, não versionado em arquivo algum |
 | iOS não aplicar a atualização mesmo com o worker novo ativo | Med | Med | O recarregamento pelo evento `activated` é o mesmo caminho do `autoUpdate`; a tela informa o estado, e resta ao usuário fechar e reabrir. Verificar no aparelho antes de arquivar |
 | Verificação automática frequente demais gastando rede | Low | Low | Intervalo mínimo entre verificações; só ao voltar ao primeiro plano, nunca em laço |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-09-01
+**Duration:** mesmo dia (proposta, implementação e arquivamento em 2026-09-01)
+**Outcome:** Implementado, com a verificação em aparelho pendente de deploy
+(tarefas 4.2–4.4 em `tasks.md`) — elas só podem acontecer depois que uma versão
+nova estiver publicada, que é justamente o que este change existe para trazer.
+
+### Files Modified
+- `src/lib/appUpdate.ts` — registro do service worker, verificação manual e
+  automática, guarda de treino (novo)
+- `src/lib/appUpdate.test.ts` — 14 testes (novo)
+- `src/features/settings/UpdatePage.tsx` — a tela (novo)
+- `src/features/settings/update.css` — o giro do ícone durante a verificação (novo)
+- `src/features/settings/update.integration.test.tsx` — 6 testes (novo)
+- `src/features/settings/SettingsPage.tsx` — linha "Atualizar app", com a versão
+  no subtítulo
+- `src/App.tsx` — rota `/settings/update`
+- `src/main.tsx` — `initAppUpdate()` antes da primeira renderização
+- `src/vite-env.d.ts` — tipos do `virtual:pwa-register` e as duas constantes de build
+- `src/test/pwaRegister.ts` — dublê do módulo virtual, sobre um `EventTarget`
+  real para poder disparar `updatefound` (novo)
+- `scripts/buildInfo.ts` — `buildDefine()`, fonte única da versão e do stamp (novo)
+- `vite.config.ts` — `injectRegister: null` e o `define`
+- `vitest.config.ts` — o mesmo `define`, com stamp fixo, e o alias do módulo virtual
+- `openspec/project.md` — duas convenções novas (quem registra o service worker,
+  e de onde vem a versão)
+
+### Specs Updated
+- `openspec/specs/app-foundation/spec.md` — +3 requisitos (*Update the App From
+  Settings*, *The App Checks for a New Version on Its Own*, *An Update Never
+  Interrupts a Workout*), 1 modificado (*Installable, Offline PWA*, que ganhou a
+  atualização ao lado da instalação e a regra do registro único)
+
+### Verificação
+- `npm test` — 82 arquivos, 1020 de 1021 testes passando. A única falha,
+  `cardio.integration.test.tsx > stars the calendar day a cardio was done on`,
+  **é anterior a esta mudança**: reprova igual em `origin/main` (verificado em
+  worktree limpa do commit `3765ac6`) e depende da data do sistema — hoje é dia
+  1º, e o dia anterior do teste cai no mês que a grade do calendário não desenha
+- `npm run typecheck` — limpo
+- `npx openspec validate --specs --strict` — 17/17
+- `npm run build` — `dist/index.html` sem referência a service worker (o registro
+  vem do bundle do app): um registro só, como o requisito novo exige
+- Verificação em aparelho (iOS/Android) — **pendente**, depende do deploy
