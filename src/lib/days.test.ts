@@ -8,12 +8,12 @@ const cats = new Map<number, Category>([
   [3, { id: 3, name: 'Costas' }],
 ])
 const exs = new Map<number, Exercise>([
-  [10, { id: 10, name: 'Supino', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] }],
-  [11, { id: 11, name: 'Crucifixo', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] }],
-  [12, { id: 12, name: 'Tríceps Corda', kind: 'strength', categoryIds: [2], alternativeIds: [], warmupIds: [], videos: [] }],
-  [13, { id: 13, name: 'Puxada', kind: 'strength', categoryIds: [3], alternativeIds: [], warmupIds: [], videos: [] }],
-  [14, { id: 14, name: 'Sem categoria', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [], videos: [] }], // no category
-  [15, { id: 15, name: 'Supino Inclinado', kind: 'strength', categoryIds: [1, 2], alternativeIds: [], warmupIds: [], videos: [] }], // compound: Peito + Tríceps
+  [10, { id: 10, name: 'Supino', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] }],
+  [11, { id: 11, name: 'Crucifixo', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] }],
+  [12, { id: 12, name: 'Tríceps Corda', kind: 'strength', categoryIds: [2], alternativeIds: [], videos: [] }],
+  [13, { id: 13, name: 'Puxada', kind: 'strength', categoryIds: [3], alternativeIds: [], videos: [] }],
+  [14, { id: 14, name: 'Sem categoria', kind: 'strength', categoryIds: [], alternativeIds: [], videos: [] }], // no category
+  [15, { id: 15, name: 'Supino Inclinado', kind: 'strength', categoryIds: [1, 2], alternativeIds: [], videos: [] }], // compound: Peito + Tríceps
 ])
 const day = (exerciseIds: number[]): Day => ({ id: 1, name: 'Dia 1', exerciseIds })
 

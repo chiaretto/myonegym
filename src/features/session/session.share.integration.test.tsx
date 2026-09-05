@@ -59,9 +59,9 @@ beforeEach(() => {
 async function seedCompleted() {
   const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
-  const peito = await createCategory('Peito', db)
-  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
-  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
+  const peitoral = await createCategory('Peitoral', db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
+  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peitoral] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo] }, db)
   await saveWeight(gym, supino, 40, 'KG', 'global', db)
   const sessionId = await startSession(gym, day, db)

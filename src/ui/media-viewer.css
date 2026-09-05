@@ -1,20 +1,22 @@
-/* Full-screen warm-up viewer.
-
-   Fixed rather than a sheet: this is content with its own navigation, not a
-   drawer of actions. It sits above the tab bar (z 999) so nothing of the screen
-   behind competes with it. */
+/* The media pager. Two presentations: on the page (the Vídeos tab) and as a
+   full-screen overlay (a video opened from the read-only exercise view). The
+   base is the page one, and `.overlay` lifts it out. */
 
 /* grid-template-columns: 100% is load-bearing. Without it the implicit column
-   sizes to max-content — the media at its NATURAL width — and the whole overlay
-   grows past the viewport: the close button walks off the right edge and the
-   arrows land on top of the image. Being `position: fixed`, that overflow does
-   not show up in the document's scrollWidth, which is why it survived the first
-   look. Same family as the tab bar's missing `min-width: 0`. */
+   sizes to max-content — the media at its NATURAL width — and the box grows past
+   its container: the counter walks off the right edge and the arrows land on top
+   of the image. Same family as the tab bar's missing `min-width: 0`. */
 .wu-viewer {
-  position: fixed; inset: 0; z-index: 1000;
-  background: var(--surface-0);
+  /* `relative`, not `static`: the arrows are absolutely positioned against the
+     viewer, and a static box would send them to the page instead. */
+  position: relative;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border); border-radius: var(--r-card);
   display: grid; grid-template-rows: auto 1fr; grid-template-columns: 100%;
   overflow: hidden;
+  /* Bounded rather than viewport-tall: the tab strip stays visible above it,
+     which is what makes it a tab and not a takeover. */
+  max-height: 70vh;
 }
 
 .wu-bar {
@@ -26,6 +28,15 @@
 .wu-count { flex: none; font-size: var(--fs-xs); color: var(--text-secondary);
   font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wu-close { flex: none; }
+
+/* Overlay: the whole screen, above the tab bar, and not bounded by the card
+   height the page presentation uses — a modal has no layout to share. */
+.wu-viewer.overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: var(--surface-0);
+  border: 0; border-radius: 0;
+  max-height: none;
+}
 
 /* The media area. The arrows float above it now, so the side padding is small:
    the media gets the full width, which is what a vertical Short needs most. */
@@ -72,15 +83,6 @@
 .wu-failed .ti { font-size: var(--fs-6xl); color: var(--text-muted); }
 .wu-failed .btn { width: auto; }
 
-/* The opener, sitting in the Execução tab with the weight card and the
-   alternatives. Auto width: it is one action, not a full-width primary. */
-.wu-open { width: auto; justify-self: start; }
-.wu-open-count {
-  min-width: 1.6em; padding: 1px 6px; border-radius: var(--r-pill);
-  background: var(--bg-accent); color: var(--text-accent);
-  font-size: var(--fs-2xs); font-weight: 700; font-variant-numeric: tabular-nums;
-}
-
 /* Narrow phones: the arrows pull in a little, but keep a 40px target. */
 @media (max-width: 360px) {
   .wu-stage { padding: 10px; }
@@ -89,19 +91,3 @@
   .wu-nav.next { right: 4px; }
 }
 
-/* ------------------------------------------------- inline (Vídeos tab) -- */
-/* The same pager, sitting IN the page instead of over it: the tab is the
-   carousel, so there is no overlay, nothing to dismiss and no page behind. It
-   keeps the bar (name + counter) and the arrows floating over the media —
-   everything that says which video this is and how to reach the next. */
-/* `relative`, not `static`: the arrows are absolutely positioned against the
-   viewer, and a static box would send them to the page instead. */
-.wu-viewer.inline {
-  position: relative; inset: auto; z-index: auto;
-  background: var(--surface-1);
-  border: 0.5px solid var(--border); border-radius: var(--r-card);
-  overflow: hidden;
-  /* Bounded rather than viewport-tall: the tab strip stays visible above it,
-     which is what makes it a tab and not a takeover. */
-  max-height: 70vh;
-}

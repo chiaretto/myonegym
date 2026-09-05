@@ -47,10 +47,10 @@ afterEach(async () => {
 async function seed() {
   const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
-  const peito = await createCategory('Peito', db)
-  const triceps = await createCategory('Tríceps', db)
+  const peitoral = await createCategory('Peitoral', db)
+  const triceps = await createCategory('Tricípite', db)
   const supino = await createExercise(
-    { name: 'Supino Reto', mediaUrl: 'https://x.com/supino.gif', categoryIds: [peito, triceps] },
+    { name: 'Supino Reto', mediaUrl: 'https://x.com/supino.gif', categoryIds: [peitoral, triceps] },
     db,
   )
   const day = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
@@ -94,7 +94,7 @@ describe('In-session exercise detail — tabs first', () => {
     const user = await openEntry()
     expect(media()).toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
     expect(media()).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('tab', { name: /^Foto/ }))
@@ -106,15 +106,15 @@ describe('In-session exercise detail — tabs first', () => {
 
   it('shows the categories inside "Notas", not above the tabs', async () => {
     const user = await openEntry()
-    expect(screen.queryByText('Peito')).not.toBeInTheDocument()
-    expect(screen.queryByText('Tríceps')).not.toBeInTheDocument()
+    expect(screen.queryByText('Peitoral')).not.toBeInTheDocument()
+    expect(screen.queryByText('Tricípite')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
 
-    const peito = await screen.findByText('Peito')
-    expect(screen.getByText('Tríceps')).toBeInTheDocument()
+    const peitoral = await screen.findByText('Peitoral')
+    expect(screen.getByText('Tricípite')).toBeInTheDocument()
     // Inside the panel, below the tabs — not back up in the header.
-    expect(comesBefore(tabList()!, peito)).toBe(true)
+    expect(comesBefore(tabList()!, peitoral)).toBe(true)
   })
 
   it('says "Concluído" once, in the floating bar, on every tab', async () => {
@@ -165,10 +165,10 @@ describe('Catalog exercise detail — tabs first', () => {
 
   it('shows the categories inside "Notas", not above the tabs', async () => {
     const user = await openExercise()
-    expect(screen.queryByText('Peito')).not.toBeInTheDocument()
+    expect(screen.queryByText('Peitoral')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
 
-    expect(comesBefore(tabList()!, await screen.findByText('Peito'))).toBe(true)
+    expect(comesBefore(tabList()!, await screen.findByText('Peitoral'))).toBe(true)
   })
 })

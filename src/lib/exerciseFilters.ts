@@ -1,12 +1,16 @@
-import type { Day, Exercise } from '../db/types'
+import type { Day, Exercise, ExerciseKind } from '../db/types'
 
 export type CategoryFilter = number | 'none' | 'all'
 export type DayFilter = number | 'none' | 'all'
+/** Força or Cardio, or neither narrowing — there is no "sem tipo": every
+ *  exercise has one, and an absent field means Força (see `ExerciseKind`). */
+export type KindFilter = ExerciseKind | 'all'
 
 export interface ExerciseFilters {
   search?: string
   category?: CategoryFilter
   dayId?: DayFilter
+  kind?: KindFilter
 }
 
 /** Lowercases and strips diacritics, so "Elevação" and "elevacao" compare equal. */
@@ -26,18 +30,23 @@ export function matchesSearch(name: string, search: string): boolean {
 }
 
 /**
- * Narrows `exercises` by name search, category, and training day — all combined
- * with AND. Pure view filter: never mutates `exercises` or `days`.
+ * Narrows `exercises` by name search, category, training day and kind — all
+ * combined with AND. Pure view filter: never mutates `exercises` or `days`.
  */
 export function filterExercises(
   exercises: Exercise[],
   filters: ExerciseFilters,
   days: Day[],
 ): Exercise[] {
-  const { search = '', category = 'all', dayId = 'all' } = filters
+  const { search = '', category = 'all', dayId = 'all', kind = 'all' } = filters
 
   return exercises.filter((exercise) => {
     if (!matchesSearch(exercise.name, search)) return false
+
+    // An exercise with no `kind` is Força — the same default the record, the
+    // form and the v10 upgrade use, so the filter cannot disagree with them
+    // about a partial row.
+    if (kind !== 'all' && (exercise.kind ?? 'strength') !== kind) return false
 
     // Guard against unexpected data shape (old/partial records where categoryIds
     // is missing) — such an exercise is treated as uncategorized, never a crash.

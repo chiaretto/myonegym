@@ -54,11 +54,11 @@ async function seed() {
 describe('Voltar from a cardio exercise detail', () => {
   it('returns to the Cardio tab, not to Home', async () => {
     const user = userEvent.setup()
-    await seed()
+    const { esteira } = await seed()
 
     renderAt('/cardio')
     await user.click(await screen.findByText('Esteira'))
-    expect(url()).toBe('/exercise/1?from=cardio')
+    expect(url()).toBe(`/exercise/${esteira}?from=cardio`)
 
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
     expect(url()).toBe('/cardio')

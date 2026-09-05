@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Exercise } from '../../db/types'
+import { isOfficialId } from '../../data/officialCatalog'
 import { alternativesOf } from '../../lib/alternatives'
 import { useExerciseMap } from '../../lib/hooks'
 import { Icon } from '../../ui/Icon'
@@ -45,7 +46,10 @@ export function AlternativesSection({
           <Link key={alt.id} className="row alt-row" to={hrefFor(alt.id!)}>
             <Media className="thumb" url={alt.mediaUrl} alt={alt.name} />
             <span className="row-body">
-              <span className="row-title">{alt.name}</span>
+              <span className="row-title">
+                {alt.name}
+                {isOfficialId(alt.id!) && <span className="chip sm">Oficial</span>}
+              </span>
             </span>
             <Icon name="chevron-right" className="chev row-chev" />
           </Link>

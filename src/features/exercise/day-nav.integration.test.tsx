@@ -28,7 +28,7 @@ const url = () => screen.getByTestId('url').textContent
 async function seed() {
   const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
-  const cat = await createCategory('Peito', db)
+  const cat = await createCategory('Peitoral', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
   const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [cat] }, db)
   const rosca = await createExercise({ name: 'Rosca Direta', categoryIds: [cat] }, db)

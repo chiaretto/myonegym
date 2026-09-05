@@ -4,7 +4,6 @@ import {
   createCategory,
   createDay,
   createExercise,
-  listCategories,
   listDays,
   listExercises,
 } from '../db/repos'
@@ -27,14 +26,14 @@ vi.mock('../lib/geminiClient', async (importOriginal) => {
 const { runTurn } = await import('../lib/geminiClient')
 const mockedTurn = vi.mocked(runTurn)
 
-let peito: number
+let peitoral: number
 let supino: number
 let dia1: number
 
 beforeEach(async () => {
   for (const table of [db.categories, db.exercises, db.days]) await table.clear()
-  peito = await createCategory('Peito', db)
-  supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
+  peitoral = await createCategory('Peitoral', db)
+  supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
   dia1 = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
 
   useAssistantChat.getState().reset()
@@ -46,7 +45,7 @@ beforeEach(async () => {
 function twoSectionProposal(): CatalogProposal {
   return {
     summary: 'Renomeei a categoria e criei o Dia 2.',
-    categories: [{ ref: 'c1', id: peito, name: 'Peitoral' }],
+    categories: [{ ref: 'c1', id: peitoral, name: 'Peitoral' }],
     exercises: [
       {
         ref: 'e1',
@@ -125,7 +124,10 @@ describe('conversation', () => {
     await send('segunda')
 
     const [first, second] = mockedTurn.mock.calls.map((c) => c[0].catalog)
-    expect(first.exercises.map((e) => e.name)).toEqual(['Supino Reto'])
+    // The snapshot carries both sources, so what pins this test is what it does
+    // NOT carry: the exercise created between the two turns.
+    expect(first.exercises.map((e) => e.name)).toContain('Supino Reto')
+    expect(first.exercises.map((e) => e.name)).not.toContain('Adicionado Depois')
     expect(second).toEqual(first)
   })
 })
@@ -151,7 +153,7 @@ describe('failures', () => {
     mockedTurn.mockRejectedValue(new Error('falhou'))
     await send('oi')
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(await db.days.count()).toBe(1)
   })
 })
@@ -173,7 +175,7 @@ describe('deciding a proposal', () => {
     const id = await proposeAndGetId()
     useAssistantChat.getState().reject(id)
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(await db.days.count()).toBe(1)
     expect(useAssistantChat.getState().pending).toBeNull()
     expect(useAssistantChat.getState().canSend()).toBe(true)
@@ -213,7 +215,7 @@ describe('deciding a proposal', () => {
     const id = await proposeAndGetId()
     await useAssistantChat.getState().accept(id, ALL_SECTIONS)
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peitoral'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect((await listDays(db)).map((x) => x.name)).toEqual(['Dia 1', 'Dia 2'])
 
     const entry = useAssistantChat.getState().entries.find((e) => e.id === id)!
@@ -225,7 +227,7 @@ describe('deciding a proposal', () => {
     const id = await proposeAndGetId()
     await useAssistantChat.getState().accept(id, only('categories'))
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peitoral'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(await db.days.count()).toBe(1) // Dia 2 was not created
 
     mockedTurn.mockResolvedValue(textTurn('ok'))
@@ -266,7 +268,7 @@ describe('deciding a proposal', () => {
 
     await useAssistantChat.getState().accept(id, ALL_SECTIONS)
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(useAssistantChat.getState().entries.at(-1)!.kind).toBe('error')
     const entry = useAssistantChat.getState().entries.find((e) => e.id === id)!
     expect(entry.kind === 'proposal' && entry.decision).toBeNull()
@@ -297,7 +299,7 @@ describe('the conversation from the bug report', () => {
 
     expect(entry.repairs.map((r) => r.kind)).toEqual(['media-cleared', 'category-unlinked'])
     expect(entry.repairs.every((r) => r.text.includes('HIIT (Esteira ou Bike)'))).toBe(true)
-    expect(entry.repairs[1].text).toContain('Cardio')
+    expect(entry.repairs[1].text).toContain('Aeróbico')
   })
 
   it('applies it, and the catalog ends up as the card promised', async () => {
@@ -309,22 +311,22 @@ describe('the conversation from the bug report', () => {
     // No error entry: the whole point of the change.
     expect(useAssistantChat.getState().entries.some((e) => e.kind === 'error')).toBe(false)
 
-    const cats = await listCategories(db)
-    const exercises = await listExercises(db)
+    // The user's own catalog — the official one is not what a proposal writes.
+    const exercises = await db.exercises.toArray()
     const days = await listDays(db)
-    expect(cats).toHaveLength(6)
+    expect(await db.categories.count()).toBe(6)
     expect(exercises).toHaveLength(18)
     expect(days.map((x) => x.name)).toEqual([
-      'Dia A - Superior (Peito, Ombros e Tríceps)',
-      'Dia B - Costas e Bíceps',
-      'Dia C - Core, Cardio e Ombros',
+      'Dia A - Superior (Peitoral, Deltoides e Tricípite)',
+      'Dia B - Dorsais e Bicípite',
+      'Dia C - Abdômen, Aeróbico e Deltoides',
     ])
 
     // What the card promised to remove is what disappeared.
     expect(impact.exercises.removed).toBe(9)
     expect(impact.categories.removed).toBe(2)
     expect(impact.days.removed).toBe(3)
-    expect(impact.exercises.removedNames).toContain('Encolhimento para Trapézio (Halteres)')
+    expect(impact.exercises.removedNames).toContain('Encolhimento para Pescoço (Halteres)')
   })
 
   it('leaves the repaired exercise without image and without the dropped category', async () => {
@@ -340,12 +342,16 @@ describe('the conversation from the bug report', () => {
     const entry = await propose()
     await useAssistantChat.getState().accept(entry.id, ALL_SECTIONS)
 
-    const supino = (await listExercises(db)).find((e) => e.name === 'Supino Reto com Barra')!
+    // The user's own exercises, not the merged listing: the official catalog
+    // carries a "Supino Reto com Barra" of its own now, and this is about what
+    // the proposal wrote.
+    const mine = await db.exercises.toArray()
+    const supino = mine.find((e) => e.name === 'Supino Reto com Barra')!
     expect(supino.mediaUrl).toBe(
       'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-reto.gif',
     )
     // The one whose url carries a query string — the case that looks broken and is not.
-    const triceps = (await listExercises(db)).find((e) => e.name.startsWith('Tríceps Pulley'))!
+    const triceps = mine.find((e) => e.name.startsWith('Tricípite Pulley'))!
     expect(triceps.mediaUrl).toContain('?resize=675%2C811&ssl=1')
   })
 

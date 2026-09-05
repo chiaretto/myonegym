@@ -168,7 +168,7 @@ describe('Rest timer on the session exercise screen', () => {
     expect(timer()).toHaveAttribute('aria-pressed', 'true')
 
     // Away: there is no media outside "Execução", so no button either.
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
     expect(screen.queryByRole('button', { name: /^Cronômetro/ })).toBeNull()
 
     // Back: still running.
@@ -230,5 +230,57 @@ describe('Rest timer on the session exercise screen', () => {
     // places.
     expect(await screen.findByText(/Duração:/)).toBeInTheDocument()
     expect(await findTimer()).toBeInTheDocument()
+  })
+})
+
+/**
+ * The phone sits on the bench while the rest counts down, two metres from the
+ * user's eyes — exactly what the system reads as idle. A stopwatch you have to
+ * wake the phone to read is not a stopwatch.
+ */
+describe('The rest timer keeps the screen awake', () => {
+  const stub = () => {
+    const release = vi.fn(async () => {})
+    const request = vi.fn(
+      async () => ({ release, addEventListener: () => {} }) as unknown as WakeLockSentinel,
+    )
+    Object.defineProperty(navigator, 'wakeLock', { value: { request }, configurable: true })
+    return { request, release }
+  }
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'wakeLock', { value: undefined, configurable: true })
+  })
+
+  it('holds the screen only while it is running', async () => {
+    const { request, release } = stub()
+    const { sessionId, entries } = await seedSession()
+    const user = userEvent.setup()
+    renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
+
+    const btn = await findTimer()
+    // Not while stopped: the workout clock runs for the whole session, and
+    // holding the screen on for an hour is a battery bill nobody asked for.
+    expect(request).not.toHaveBeenCalled()
+
+    await user.click(btn)
+    await act(async () => {})
+    expect(request).toHaveBeenCalledWith('screen')
+
+    await user.click(timer())
+    expect(release).toHaveBeenCalled()
+  })
+
+  it('does not break where the browser has no Wake Lock', async () => {
+    Object.defineProperty(navigator, 'wakeLock', { value: undefined, configurable: true })
+    const { sessionId, entries } = await seedSession()
+    const user = userEvent.setup()
+    renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
+
+    await user.click(await findTimer())
+    await act(async () => {})
+
+    // The timer is what matters, and it counts either way.
+    expect(timer()).toHaveAccessibleName(/^Cronômetro/)
   })
 })

@@ -3,10 +3,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, setEntryDone, swapEntryExercise, ValidationError } from '../../db/repos'
 import { useElapsed } from '../../lib/elapsed'
+import { useWakeLock } from '../../lib/wakeLock'
 import { fmtClock } from '../../lib/format'
 import {
   useCategoryMap,
   useExerciseMap,
+  useNote,
   usePhotos,
   useSession,
   useSessionEntries,
@@ -25,7 +27,6 @@ import { StepperBar } from '../../ui/StepperBar'
 import { Tabs } from '../../ui/Tabs'
 import { NoteEditor } from '../exercise/NoteEditor'
 import { VideosTab } from '../exercise/VideosTab'
-import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from '../exercise/WeightEditor'
 import '../exercise/exercise.css'
 import './session.css'
@@ -58,6 +59,9 @@ export function SessionEntryPage() {
   // media away, and with it the button that rides on top of it.
   const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null)
   const timerElapsed = useElapsed(timerStartedAt)
+  // The phone is on the bench while this counts, and a screen that sleeps takes
+  // the stopwatch with it. Only while the REST timer runs — see `useWakeLock`.
+  useWakeLock(timerStartedAt != null)
   // Stepping to another exercise resets it, and this has to be said out loud:
   // the route keeps the same component and only swaps a param, so React
   // reconciles rather than remounts and every useState above would otherwise
@@ -100,6 +104,9 @@ export function SessionEntryPage() {
   // panel below would list. Undefined until it answers, so the strip shows
   // nothing rather than claiming zero.
   const photos = usePhotos(session?.gymId ?? null, shownId)
+  // Of the exercise being SHOWN, like the tally beside "Vídeos": while
+  // previewing an alternative, it is that movement's note that means anything.
+  const note = useNote(session?.gymId ?? null, shownId)
 
   // `entries` joins the wait: it drives the stepper, and an empty list would
   // render this exercise as the only one in the session.
@@ -258,7 +265,7 @@ export function SessionEntryPage() {
         <Tabs<EntryTab>
           tabs={[
             { id: 'exec', label: 'Execução' },
-            { id: 'notes', label: 'Notas' },
+            { id: 'notes', label: 'Notas', mark: !!note?.text.trim() },
             // Of the exercise being SHOWN, like the panels below: while
             // previewing an alternative, it is that movement's tally that means
             // anything.
@@ -305,7 +312,6 @@ export function SessionEntryPage() {
             </div>
             {/* Warm-ups of the exercise being SHOWN — while previewing an
                 alternative, it is that movement's warm-up that matters. */}
-            <WarmupButton exercise={exercise} />
             {/* Per-gym target weight (same editor as the catalog); read-only once
                 completed. Absent for cardio — there is no load to show. */}
             {exercise?.kind !== 'cardio' && (

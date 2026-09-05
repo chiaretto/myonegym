@@ -43,6 +43,13 @@ export const SECTION_LABEL: Record<Section, string> = {
  * The catalog as handed to the assistant: categories, exercises and days, each
  * with its **real** id, and nothing else.
  *
+ * It carries **both sources**. The official catalog ships with the app and is
+ * marked `readOnly` — the model may put those exercises in a day, give one to a
+ * user exercise as an alternative, or classify with an official category, but it
+ * may not rename, re-categorise or delete one, and it must not list them back in
+ * `categories`/`exercises`. Sending them is what stops the assistant proposing a
+ * second "Supino Reto" every time it is asked to fill a gap it cannot see.
+ *
  * Gyms, weights, weight history, notes, photos and sessions are deliberately
  * absent. They are per-gym or personal training data, they are not what the
  * assistant edits, and this is the payload that leaves the device — so the
@@ -50,13 +57,14 @@ export const SECTION_LABEL: Record<Section, string> = {
  * field to put them in.
  */
 export interface CatalogSnapshot {
-  categories: { id: number; name: string }[]
+  categories: { id: number; name: string; readOnly?: true }[]
   exercises: {
     id: number
     name: string
     mediaUrl: string | null
     categoryIds: number[]
     alternativeIds: number[]
+    readOnly?: true
   }[]
   days: { id: number; name: string; exerciseIds: number[] }[]
 }

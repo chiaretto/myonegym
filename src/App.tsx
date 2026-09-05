@@ -18,10 +18,13 @@ import { ConsistencyPage } from './features/consistency/ConsistencyPage'
 import { SettingsPage } from './features/settings/SettingsPage'
 import { GymsPage, GymFormPage } from './features/settings/GymsPage'
 import { CategoriesPage, CategoryFormPage } from './features/settings/CategoriesPage'
-import { ExercisesPage, ExerciseFormPage } from './features/settings/ExercisesPage'
+import {
+  ExercisesPage,
+  ExerciseFormPage,
+  ExerciseViewPage,
+} from './features/settings/ExercisesPage'
 import { DaysPage, DayFormPage } from './features/settings/DaysPage'
 import { DataPage } from './features/settings/DataPage'
-import { WarmupsPage, WarmupFormPage } from './features/settings/WarmupsPage'
 import { AppearancePage } from './features/settings/AppearancePage'
 import { AssistantPage } from './features/settings/AssistantPage'
 import { InstallPage } from './features/settings/InstallPage'
@@ -101,12 +104,10 @@ export function App() {
           <Route path="/settings/exercises" element={<ExercisesPage />} />
           <Route path="/settings/exercises/new" element={<ExerciseFormPage />} />
           <Route path="/settings/exercises/:id/edit" element={<ExerciseFormPage />} />
+          <Route path="/settings/exercises/:id/view" element={<ExerciseViewPage />} />
           <Route path="/settings/days" element={<DaysPage />} />
           <Route path="/settings/days/new" element={<DayFormPage />} />
           <Route path="/settings/days/:id/edit" element={<DayFormPage />} />
-          <Route path="/settings/warmups" element={<WarmupsPage />} />
-          <Route path="/settings/warmups/new" element={<WarmupFormPage />} />
-          <Route path="/settings/warmups/:id/edit" element={<WarmupFormPage />} />
           <Route path="/settings/data" element={<DataPage />} />
           <Route path="/settings/appearance" element={<AppearancePage />} />
           <Route path="/settings/assistant" element={<AssistantPage />} />

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
-import { createCategory, createDay, createExercise, listCategories, listDays } from '../../db/repos'
+import { createCategory, createDay, createExercise, listDays } from '../../db/repos'
 import type { CatalogProposal } from '../../data/catalogPayload'
 import {
   reportedProposal,
@@ -24,7 +24,7 @@ vi.mock('../../lib/geminiClient', async (importOriginal) => {
 const { runTurn } = await import('../../lib/geminiClient')
 const mockedTurn = vi.mocked(runTurn)
 
-let peito: number
+let peitoral: number
 let supino: number
 let dia1: number
 
@@ -35,8 +35,8 @@ beforeEach(async () => {
   useAssistantToken.getState().clear()
   mockedTurn.mockReset()
 
-  peito = await createCategory('Peito', db)
-  supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
+  peitoral = await createCategory('Peitoral', db)
+  supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
   dia1 = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
 })
 
@@ -48,7 +48,7 @@ afterEach(async () => {
 function proposal(): CatalogProposal {
   return {
     summary: 'Renomeei a categoria e criei o Dia 2.',
-    categories: [{ ref: 'c1', id: peito, name: 'Peitoral' }],
+    categories: [{ ref: 'c1', id: peitoral, name: 'Peitoral' }],
     exercises: [
       {
         ref: 'e1',
@@ -135,7 +135,7 @@ describe('conversation', () => {
     await ask(user, 'oi')
 
     expect(await screen.findByText(/Falha inesperada|não consegui/i)).toBeInTheDocument()
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
 
     // Usable means the thread accepts another try — the send button waits for
     // text, as it always does, rather than staying locked by the failure.
@@ -175,7 +175,7 @@ describe('deciding a proposal', () => {
   it('shows the proposal without writing anything, and blocks the next message', async () => {
     const user = await propose()
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(await db.days.count()).toBe(1)
     expect(screen.getByPlaceholderText('Decida a proposta acima primeiro')).toBeDisabled()
     expect(user).toBeDefined()
@@ -186,7 +186,7 @@ describe('deciding a proposal', () => {
 
     await user.click(screen.getByRole('button', { name: 'Rejeitar' }))
 
-    expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peito'])
+    expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral'])
     expect(await screen.findByText(/Recusado/)).toBeInTheDocument()
     await waitFor(() =>
       expect(screen.getByPlaceholderText('O que você quer ajustar?')).toBeEnabled(),
@@ -199,7 +199,7 @@ describe('deciding a proposal', () => {
     await user.click(screen.getByRole('button', { name: 'Aceitar' }))
 
     await waitFor(async () =>
-      expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peitoral']),
+      expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral']),
     )
     expect((await listDays(db)).map((x) => x.name)).toEqual(['Dia 1', 'Dia 2'])
     expect(await screen.findByText(/Aplicado:/)).toBeInTheDocument()
@@ -214,7 +214,7 @@ describe('deciding a proposal', () => {
     await user.click(screen.getByRole('button', { name: /Aplicar 2 de 3/ }))
 
     await waitFor(async () =>
-      expect((await listCategories(db)).map((c) => c.name)).toEqual(['Peitoral']),
+      expect((await db.categories.toArray()).map((c) => c.name)).toEqual(['Peitoral']),
     )
     expect(await db.days.count()).toBe(1) // Dia 2 never created
     expect(await screen.findByText(/fora: Dias de treino/)).toBeInTheDocument()
@@ -283,7 +283,7 @@ describe('the proposal from the bug report', () => {
 
     expect(await screen.findByText('Ajustes na proposta')).toBeInTheDocument()
     expect(screen.getByText(/fica sem imagem/)).toHaveTextContent('HIIT (Esteira ou Bike)')
-    expect(screen.getByText(/fica sem a categoria/)).toHaveTextContent('Cardio')
+    expect(screen.getByText(/fica sem a categoria/)).toHaveTextContent('Aeróbico')
     // Still a decision, not a report of something already done.
     expect(screen.getByRole('button', { name: 'Aceitar' })).toBeEnabled()
   })
@@ -294,7 +294,7 @@ describe('the proposal from the bug report', () => {
     await user.click(screen.getByRole('button', { name: 'Aceitar' }))
 
     await waitFor(async () => expect((await listDays(db)).length).toBe(3))
-    expect((await listCategories(db)).length).toBe(6)
+    expect(await db.categories.count()).toBe(6)
     expect(await db.exercises.count()).toBe(18)
     expect(await screen.findByText(/Aplicado:/)).toBeInTheDocument()
     expect(screen.queryByText('Não consegui aplicar a proposta.')).not.toBeInTheDocument()

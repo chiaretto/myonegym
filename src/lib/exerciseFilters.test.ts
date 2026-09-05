@@ -3,11 +3,11 @@ import { filterExercises, matchesSearch, normalizeForSearch } from './exerciseFi
 import type { Day, Exercise } from '../db/types'
 
 const exercises: Exercise[] = [
-  { id: 1, name: 'Rosca Direta', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] },
-  { id: 2, name: 'Rosca Scott', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] },
-  { id: 3, name: 'Supino Reto', kind: 'strength', categoryIds: [2], alternativeIds: [], warmupIds: [], videos: [] },
-  { id: 4, name: 'Elevação Lateral', kind: 'strength', categoryIds: [2], alternativeIds: [], warmupIds: [], videos: [] },
-  { id: 5, name: 'Alongamento', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [], videos: [] }, // no category
+  { id: 1, name: 'Rosca Direta', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] },
+  { id: 2, name: 'Rosca Scott', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] },
+  { id: 3, name: 'Supino Reto', kind: 'strength', categoryIds: [2], alternativeIds: [], videos: [] },
+  { id: 4, name: 'Elevação Lateral', kind: 'strength', categoryIds: [2], alternativeIds: [], videos: [] },
+  { id: 5, name: 'Alongamento', kind: 'strength', categoryIds: [], alternativeIds: [], videos: [] }, // no category
 ]
 
 const days: Day[] = [
@@ -56,8 +56,8 @@ describe('filterExercises', () => {
     // A view filter must not crash on unexpected data shape — such a record is
     // treated as uncategorized. (Regression: selecting "Sem categoria" threw.)
     const messy: Exercise[] = [
-      { id: 1, name: 'Legado', kind: 'strength', categoryIds: undefined, alternativeIds: [], warmupIds: [], videos: [] } as unknown as Exercise,
-      { id: 2, name: 'Peito', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] },
+      { id: 1, name: 'Legado', kind: 'strength', categoryIds: undefined, alternativeIds: [], videos: [] } as unknown as Exercise,
+      { id: 2, name: 'Peito', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] },
     ]
     expect(() => filterExercises(messy, { category: 'none' }, days)).not.toThrow()
     expect(filterExercises(messy, { category: 'none' }, days).map((e) => e.name)).toEqual(['Legado'])
@@ -66,9 +66,9 @@ describe('filterExercises', () => {
 
   it('a specific category matches any exercise that includes it (compound)', () => {
     const compound: Exercise[] = [
-      { id: 1, name: 'Rosca Direta', kind: 'strength', categoryIds: [1], alternativeIds: [], warmupIds: [], videos: [] },
-      { id: 2, name: 'Remada', kind: 'strength', categoryIds: [2, 1], alternativeIds: [], warmupIds: [], videos: [] }, // includes cat 1
-      { id: 3, name: 'Supino', kind: 'strength', categoryIds: [2], alternativeIds: [], warmupIds: [], videos: [] }, // does not
+      { id: 1, name: 'Rosca Direta', kind: 'strength', categoryIds: [1], alternativeIds: [], videos: [] },
+      { id: 2, name: 'Remada', kind: 'strength', categoryIds: [2, 1], alternativeIds: [], videos: [] }, // includes cat 1
+      { id: 3, name: 'Supino', kind: 'strength', categoryIds: [2], alternativeIds: [], videos: [] }, // does not
     ]
     const result = filterExercises(compound, { category: 1 }, days)
     expect(result.map((e) => e.id).sort()).toEqual([1, 2])
@@ -119,5 +119,47 @@ describe('filterExercises', () => {
     filterExercises(exercises, { search: 'rosca', category: 1, dayId: 2 }, days)
     expect(exercises).toEqual(exercisesCopy)
     expect(days).toEqual(daysCopy)
+  })
+})
+
+describe('filter by kind', () => {
+  const esteira: Exercise = {
+    id: 6,
+    name: 'Esteira',
+    kind: 'cardio',
+    categoryIds: [2],
+    alternativeIds: [],
+    videos: [],
+  }
+  const mixed = [...exercises, esteira]
+
+  it('narrows to Força or to Cardio', () => {
+    expect(filterExercises(mixed, { kind: 'cardio' }, days).map((e) => e.name)).toEqual(['Esteira'])
+    expect(filterExercises(mixed, { kind: 'strength' }, days).map((e) => e.name)).not.toContain(
+      'Esteira',
+    )
+    expect(filterExercises(mixed, { kind: 'strength' }, days)).toHaveLength(exercises.length)
+  })
+
+  it('does not narrow at all with "all", nor when absent', () => {
+    expect(filterExercises(mixed, { kind: 'all' }, days)).toHaveLength(mixed.length)
+    expect(filterExercises(mixed, {}, days)).toHaveLength(mixed.length)
+  })
+
+  it('treats a record with no kind as Força, like everything else does', () => {
+    const legacy = [
+      { id: 99, name: 'Antigo', categoryIds: [], alternativeIds: [], videos: [] } as unknown as Exercise,
+    ]
+    expect(filterExercises(legacy, { kind: 'strength' }, days)).toHaveLength(1)
+    expect(filterExercises(legacy, { kind: 'cardio' }, days)).toHaveLength(0)
+  })
+
+  it('combines with the other filters using AND', () => {
+    // Cardio AND a category the cardio is in → found; with the other category → not.
+    expect(filterExercises(mixed, { kind: 'cardio', category: 2 }, days).map((e) => e.name)).toEqual(
+      ['Esteira'],
+    )
+    expect(filterExercises(mixed, { kind: 'cardio', category: 1 }, days)).toEqual([])
+    expect(filterExercises(mixed, { kind: 'cardio', search: 'rosca' }, days)).toEqual([])
   })
 })

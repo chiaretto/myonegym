@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { ACCENTS, DEFAULT_ACCENT } from '../../state/accents'
 import { FONT_SCALE_DEFAULT, useSettings } from '../../state/settings'
+import { DEFAULT_SPLASH_ID, SPLASHES } from '../../state/splashes'
 import { useOnboarding } from '../../state/onboarding'
 
 const ROOT_PROPS = ['--font-scale', '--accent', '--accent-2', '--accent-rgb']
@@ -139,3 +140,67 @@ function fireChange(el: HTMLElement, value: string) {
   setter.call(input, value)
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
+
+describe('Appearance boot splash', () => {
+  const option = (name: string | RegExp) =>
+    within(screen.getByRole('group', { name: 'Tela de abertura' })).getByRole('button', { name })
+
+  const renderScreen = () =>
+    render(
+      <MemoryRouter initialEntries={['/settings/appearance']}>
+        <App />
+      </MemoryRouter>,
+    )
+
+  it('offers every artwork, shows each one, and marks the default', async () => {
+    renderScreen()
+    await screen.findByRole('heading', { name: 'Aparência' })
+
+    const group = screen.getByRole('group', { name: 'Tela de abertura' })
+    expect(within(group).getAllByRole('button')).toHaveLength(SPLASHES.length)
+
+    for (const s of SPLASHES) expect(option(new RegExp(s.name))).toBeInTheDocument()
+    // The picker shows the artwork, not a list of names: the thing being chosen
+    // is a picture.
+    const images = within(group).getAllByRole('presentation', { hidden: true })
+    expect(images.map((i) => i.getAttribute('src'))).toEqual(
+      SPLASHES.map((s) => `${import.meta.env.BASE_URL}${s.file}`),
+    )
+
+    expect(option(new RegExp(SPLASHES[0].name))).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('persists the choice where the boot script will find it', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await screen.findByRole('heading', { name: 'Aparência' })
+
+    await user.click(option(/Mulher/))
+
+    expect(useSettings.getState().splash).toBe('mulher')
+    await waitFor(() => {
+      const saved = JSON.parse(localStorage.getItem('myonegym.settings') || '{}')
+      // Exactly where index.html's inline script reads it.
+      expect(saved.state.splash).toBe('mulher')
+    })
+  })
+
+  it('says the choice lands on the next launch, because it cannot land on this one', async () => {
+    renderScreen()
+    await screen.findByRole('heading', { name: 'Aparência' })
+
+    expect(screen.getByText(/próxima vez/)).toBeInTheDocument()
+  })
+
+  it('is restored by "Restaurar padrão"', async () => {
+    const user = userEvent.setup()
+    renderScreen()
+    await screen.findByRole('heading', { name: 'Aparência' })
+
+    await user.click(option(/Homem/))
+    expect(useSettings.getState().splash).toBe('homem')
+
+    await user.click(screen.getByRole('button', { name: /Restaurar padrão/ }))
+    expect(useSettings.getState().splash).toBe(DEFAULT_SPLASH_ID)
+  })
+})

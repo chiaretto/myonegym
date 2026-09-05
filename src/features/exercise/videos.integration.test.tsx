@@ -8,7 +8,6 @@ import {
   createDay,
   createExercise,
   createGym,
-  createWarmup,
   listSessionEntries,
   startSession,
 } from '../../db/repos'
@@ -34,7 +33,7 @@ beforeEach(() => {
 afterEach(async () => {
   cleanup()
   await Promise.all(
-    [db.gyms, db.categories, db.exercises, db.days, db.sessions, db.sessionEntries, db.warmups].map((t) =>
+    [db.gyms, db.categories, db.exercises, db.days, db.sessions, db.sessionEntries].map((t) =>
       t.clear(),
     ),
   )
@@ -322,21 +321,6 @@ describe('the Vídeos tab is the carousel', () => {
     expect(iframe.getAttribute('allow')).toMatch(/autoplay/)
   })
 
-  it('leaves the warm-up viewer refusing to autoplay', async () => {
-    // The warm-up is reached by a button and must not spend data before it is
-    // asked to — the exact rule the videos tab no longer needs.
-    const user = userEvent.setup()
-    await seedGym()
-    const w = await createWarmup({ name: 'Rotação', url: YT }, db)
-    const id = await createExercise({ name: 'Supino', warmupIds: [w] }, db)
-
-    renderAt(`/exercise/${id}`)
-    await user.click(await screen.findByRole('button', { name: /Aquecimento/ }))
-    const iframe = document.querySelector('iframe')!
-    expect(new URL(iframe.getAttribute('src')!).searchParams.get('autoplay')).toBeNull()
-    expect(iframe.getAttribute('allow')).not.toMatch(/autoplay/)
-  })
-
   it('shows an empty state, and does not ask for a gym', async () => {
     const user = userEvent.setup()
     // No gym at all: the videos belong to the exercise, not to (gym, exercise).
@@ -377,10 +361,10 @@ describe('the notes tab is called "Notas"', () => {
     const id = await createExercise({ name: 'Supino' }, db)
 
     renderAt(`/exercise/${id}`)
-    expect(await screen.findByRole('tab', { name: 'Notas' })).toBeInTheDocument()
+    expect(await screen.findByRole('tab', { name: /^Notas/ })).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: 'Observações' })).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
     await user.type(screen.getByLabelText('Notas'), 'banco no furo 3')
     await user.click(screen.getByRole('button', { name: /Salvar/ }))
     expect((await db.exerciseNotes.toArray())[0]?.text).toBe('banco no furo 3')
@@ -423,7 +407,7 @@ describe('the tab strip counts what is behind each tab', () => {
 
     renderAt(`/exercise/${id}`)
     expect(await screen.findByRole('tab', { name: 'Detalhe' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: 'Notas' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Notas/ })).toBeInTheDocument()
   })
 
   it('counts inside a session too, following the exercise shown', async () => {

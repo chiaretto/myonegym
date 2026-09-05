@@ -28,17 +28,12 @@ export function VideosTab({ exercise }: { exercise: Exercise | undefined }) {
       <div className="empty">
         <span className="big">🎬</span>
         <h2>Nenhum vídeo ainda</h2>
-        <p>
-          Guarde aqui vídeos de execução deste exercício — do YouTube ou do Instagram, com o trecho
-          que interessa. Eles são cadastrados na edição do exercício.
-        </p>
       </div>
     )
   }
 
   return (
     <MediaViewer
-      inline
       title="Vídeos"
       items={videos.map((v) => ({
         url: v.url,

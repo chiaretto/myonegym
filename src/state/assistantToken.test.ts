@@ -39,7 +39,7 @@ describe('the key is a device preference, not user data', () => {
   it('is not part of the exported backup', async () => {
     const d = new MyOneGymDB(`test-token-export-${Date.now()}`)
     await d.open()
-    await createCategory('Peito', d)
+    await createCategory('Peitoral', d)
     useAssistantToken.getState().setToken(SECRET)
 
     const backup = await exportBackup(d)

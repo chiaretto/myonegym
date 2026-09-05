@@ -42,3 +42,20 @@
 .fs-preview .p-badge.accent { background: var(--bg-accent); border-color: var(--border-accent);
   color: var(--text-accent); }
 .fs-preview .p-cta { justify-self: start; }
+
+/* Tela de abertura: the artwork itself is the control, because the thing being
+   chosen is a picture — a list of names would make the user pick blind. */
+.sp-card { padding: 14px 16px; display: block; }
+.sp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sp-option { display: grid; gap: 6px; padding: 0; background: none; border: 0;
+  color: inherit; font: inherit; cursor: pointer; min-width: 0; }
+/* The masters are tall portraits; the thumb keeps that shape so the crop the
+   user sees here is the crop a phone will show. */
+.sp-thumb { width: 100%; aspect-ratio: 9 / 16; object-fit: cover;
+  border-radius: var(--r-ctl); border: 1.5px solid transparent;
+  background: var(--surface-2); display: block; }
+.sp-option.on .sp-thumb { border-color: var(--accent); }
+.sp-name { display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: var(--fs-2xs); color: var(--text-secondary); min-width: 0; }
+.sp-option.on .sp-name { color: var(--text-primary); font-weight: 600; }
+.sp-option:focus-visible .sp-thumb { outline: 2px solid var(--text-primary); outline-offset: 3px; }

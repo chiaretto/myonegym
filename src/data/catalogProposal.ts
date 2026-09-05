@@ -14,6 +14,7 @@ import {
   validateMediaUrl,
 } from '../db/repos'
 import { mirrorSymmetric } from './alternativesRepair'
+import { isOfficialId } from './officialCatalog'
 import {
   SECTIONS,
   catalogSnapshot,
@@ -141,23 +142,32 @@ export function proposalImpact(
   const removedFrom = <T extends { id: number; name: string }>(
     stored: T[],
     proposed: { id: number | null }[],
+    /** Only the catalog has an official half — a **day** is always the user's,
+     *  and its ids come from `++id`, so they sit in the reserved range without
+     *  meaning anything by it. */
+    fromCatalog = true,
   ) => {
     const keep = new Set(proposed.map((p) => p.id).filter((id): id is number => id !== null))
-    return stored.filter((s) => !keep.has(s.id)).map((s) => s.name)
+    // An official entity is never "removed": it lives in the bundle, a proposal
+    // cannot delete it, and its absence from the list is exactly where it
+    // belongs (see the repair, which takes them out).
+    return stored
+      .filter((s) => !keep.has(s.id) && !(fromCatalog && isOfficialId(s.id)))
+      .map((s) => s.name)
   }
 
   const catRemoved = removedFrom(snapshot.categories, proposal.categories)
   const exRemoved = removedFrom(snapshot.exercises, proposal.exercises)
-  const dayRemoved = removedFrom(snapshot.days, proposal.days)
+  const dayRemoved = removedFrom(snapshot.days, proposal.days, false)
 
   const catUpdated = proposal.categories.filter((c) => {
-    if (c.id === null) return false
+    if (c.id === null || isOfficialId(c.id)) return false
     const before = storedCategories.get(c.id)
     return !!before && before.name !== c.name.trim()
   }).length
 
   const exUpdated = proposal.exercises.filter((e) => {
-    if (e.id === null) return false
+    if (e.id === null || isOfficialId(e.id)) return false
     const before = storedExercises.get(e.id)
     if (!before) return false
     if (before.name !== e.name.trim()) return true
@@ -268,7 +278,17 @@ export function validateProposal(
    * does when the entity already exists (and still exists), or when its own
    * section is also being applied and will create it.
    */
+  const officialRef = (ref: string, kind: 'categoria' | 'exercício') => {
+    const id = Number(ref)
+    if (!Number.isInteger(id) || !isOfficialId(id)) return false
+    return (kind === 'categoria' ? storedCategoryIds : storedExerciseIds).has(id)
+  }
+
   const assertUsable = (ref: string, kind: 'categoria' | 'exercício') => {
+    // An official entity is never listed in the proposal (the repair takes it
+    // out), so its ref resolves against the catalog instead of against a
+    // proposed entity — which is the whole point of sending it in the snapshot.
+    if (officialRef(ref, kind)) return
     const entity = kind === 'categoria' ? categories.get(ref) : exercises.get(ref)
     if (!entity) {
       throw new ProposalError(`Proposta inválida: referência a ${kind} desconhecida ("${ref}").`)
@@ -395,9 +415,14 @@ async function applyInTransaction(
       const snapshot = await catalogSnapshot(d)
       validateProposal(snapshot, proposal, selection)
 
+      // The official entities are addressable by their id-as-ref even though the
+      // proposal never lists them: a day may place one, and an exercise may take
+      // one as an alternative.
       const categoryId = new Map<string, number>()
+      for (const c of snapshot.categories) if (isOfficialId(c.id)) categoryId.set(String(c.id), c.id)
       for (const c of proposal.categories) if (c.id !== null) categoryId.set(c.ref, c.id)
       const exerciseId = new Map<string, number>()
+      for (const e of snapshot.exercises) if (isOfficialId(e.id)) exerciseId.set(String(e.id), e.id)
       for (const e of proposal.exercises) if (e.id !== null) exerciseId.set(e.ref, e.id)
 
       if (selection.categories) {
@@ -407,10 +432,15 @@ async function applyInTransaction(
         // Deletions first: they free names before any rename or create runs into
         // the unique name index. (A pure swap of two names would still clash —
         // it fails cleanly and rolls back rather than half-applying.)
-        for (const c of snapshot.categories) if (!keep.has(c.id)) await deleteCategory(c.id, d)
+        // Official entities are skipped in both directions: there is no row to
+        // delete and none to rename.
+        for (const c of snapshot.categories) {
+          if (!keep.has(c.id) && !isOfficialId(c.id)) await deleteCategory(c.id, d)
+        }
 
         const stored = byId(snapshot.categories)
         for (const c of proposal.categories) {
+          if (c.id !== null && isOfficialId(c.id)) continue
           if (c.id === null) {
             categoryId.set(c.ref, await createCategory(c.name, d))
           } else if (stored.get(c.id)?.name !== c.name.trim()) {
@@ -423,9 +453,12 @@ async function applyInTransaction(
         const keep = new Set(
           proposal.exercises.map((e) => e.id).filter((id): id is number => id !== null),
         )
-        for (const e of snapshot.exercises) if (!keep.has(e.id)) await deleteExercise(e.id, d)
+        for (const e of snapshot.exercises) {
+          if (!keep.has(e.id) && !isOfficialId(e.id)) await deleteExercise(e.id, d)
+        }
 
         for (const e of proposal.exercises) {
+          if (e.id !== null && isOfficialId(e.id)) continue
           const categoryIds = e.categoryRefs.map((ref) => categoryId.get(ref)!)
           const input = { name: e.name, mediaUrl: e.mediaUrl ?? undefined, categoryIds }
           if (e.id === null) exerciseId.set(e.ref, await createExercise(input, d))
@@ -437,11 +470,27 @@ async function applyInTransaction(
         // it is given as the whole truth for that exercise and unlinks the
         // peers left out, so feeding it a one-sided proposal in sequence would
         // delete the very link the second call was about to confirm.
+        // An OFFICIAL peer is set aside before mirroring and added back after.
+        // `mirrorSymmetric` drops a peer that is not itself a key, and an
+        // official exercise never is one — the proposal does not list it. The
+        // link is real all the same: it lives on the user's record alone, and
+        // the read path unions the referrers back in (see `lib/alternatives`).
+        const officialPeers = new Map<string, string[]>()
         const repaired = mirrorSymmetric(
-          proposal.exercises.map((e) => ({ key: e.ref, peers: e.alternativeRefs })),
+          proposal.exercises.map((e) => {
+            const official = e.alternativeRefs.filter((ref) => {
+              const id = Number(ref)
+              return Number.isInteger(id) && isOfficialId(id)
+            })
+            officialPeers.set(e.ref, official)
+            return { key: e.ref, peers: e.alternativeRefs.filter((ref) => !official.includes(ref)) }
+          }),
         )
         for (const e of proposal.exercises) {
-          const ids = (repaired.get(e.ref) ?? [])
+          // Never as the SUBJECT: an official exercise has no row to write its
+          // list to. It reaches this relation from the other side only.
+          if (e.id !== null && isOfficialId(e.id)) continue
+          const ids = [...(officialPeers.get(e.ref) ?? []), ...(repaired.get(e.ref) ?? [])]
             .map((ref) => exerciseId.get(ref)!)
             .sort((a, b) => a - b)
           await setAlternatives(exerciseId.get(e.ref)!, ids, d)

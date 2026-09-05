@@ -4,6 +4,8 @@ import { useSettings } from '../state/settings'
 import { allTables, MyOneGymDB } from '../db/db'
 import { GLOBAL_GYM_ID } from '../db/types'
 import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
+import { officialCategories, officialExercises } from './officialCatalog'
+import { EXAMPLE_DAYS, EXAMPLE_GYM, EXAMPLE_WEIGHTS } from './exampleRoutine'
 import { removeImage } from './photoStore'
 import {
   addPhoto,
@@ -12,10 +14,13 @@ import {
   createDay,
   createExercise,
   createGym,
-  createWarmup,
   deleteExercise,
   createCategory,
+  getExercise,
   getNote,
+  listCardioExercises,
+  listDays,
+  listExercises,
   listHistory,
   listSessionEntries,
   resolveWeight,
@@ -48,7 +53,7 @@ afterEach(async () => {
 })
 
 async function seed() {
-  const cat = await createCategory('Peito', d)
+  const cat = await createCategory('Peitoral', d)
   const g = await createGym('A', d)
   const ex = await createExercise({ name: 'Supino', mediaUrl: 'https://x.com/s.gif', categoryIds: [cat] }, d)
   await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
@@ -165,36 +170,36 @@ describe('backup includes per-gym exercise notes', () => {
 
 describe('exercise categories: multi-category and back-compat', () => {
   it('round-trips an exercise with multiple categories', async () => {
-    const peito = await createCategory('Peito', d)
-    const triceps = await createCategory('Tríceps', d)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [peito, triceps] }, d)
+    const peitoral = await createCategory('Peitoral', d)
+    const triceps = await createCategory('Tricípite', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peitoral, triceps] }, d)
 
     const doc = parseBackup(JSON.stringify(await exportBackup(d)))
     await resetAll(d)
     await importBackupReplaceAll(doc, d)
 
-    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peito, triceps])
+    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peitoral, triceps])
   })
 
   it('imports a pre-multi-category backup (singular categoryId + reserved bucket)', async () => {
-    const peito = await createCategory('Peito', d)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [peito] }, d)
+    const peitoral = await createCategory('Peitoral', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peitoral] }, d)
     const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
 
     // Rewrite the doc to look like an OLD backup: singular categoryId, a reserved
     // "Sem categoria" category, and an exercise pointing at it.
     const cats = doc.categories as Record<string, unknown>[]
-    const reservedId = 9999
+    const reservedId = 19999
     cats.push({ id: reservedId, name: 'Sem categoria', reserved: true })
     const exs = doc.exercises as Record<string, unknown>[]
-    exs[0] = { id: exs[0].id, name: 'Supino', categoryId: peito }
-    exs.push({ id: 8888, name: 'Alongamento', categoryId: reservedId })
+    exs[0] = { id: exs[0].id, name: 'Supino', categoryId: peitoral }
+    exs.push({ id: 18888, name: 'Alongamento', categoryId: reservedId })
 
     await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
 
     // Singular → one-element list; reserved category dropped, its ref emptied.
-    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peito])
-    expect((await d.exercises.get(8888))?.categoryIds).toEqual([])
+    expect((await d.exercises.get(ex))?.categoryIds).toEqual([peitoral])
+    expect((await d.exercises.get(18888))?.categoryIds).toEqual([])
     expect(await d.categories.get(reservedId)).toBeUndefined()
     expect((await d.categories.toArray()).some((c) => c.name === 'Sem categoria')).toBe(false)
   })
@@ -257,12 +262,28 @@ describe('exercise alternatives survive a backup', () => {
   it('drops a reference to an exercise the backup does not contain', async () => {
     const ex = await createExercise({ name: 'Supino' }, d)
     const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
-    ;(doc.exercises as Record<string, unknown>[])[0].alternativeIds = [7777]
+    // In the USER range: an id nothing can resolve, now or later.
+    ;(doc.exercises as Record<string, unknown>[])[0].alternativeIds = [17777]
 
     await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
 
     // Repaired, not rejected: a dangling id is not worth failing a restore over.
     expect((await d.exercises.get(ex))?.alternativeIds).toEqual([])
+  })
+
+  it('keeps a reference to the official catalog, which the document never carries', async () => {
+    const ex = await createExercise({ name: 'Supino Caseiro' }, d)
+    const official = officialExercises()[0].id!
+    await setAlternatives(ex, [official], d)
+
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
+    // The official exercise is not in the file — it never is — so the old rule
+    // would have read this as dangling and deleted the link on every restore.
+    expect((doc.exercises as Record<string, unknown>[]).some((e) => e.id === official)).toBe(false)
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect((await d.exercises.get(ex))?.alternativeIds).toEqual([official])
   })
 
   it('mirrors a link that only points one way', async () => {
@@ -340,12 +361,17 @@ describe('exercise kind travels through a backup', () => {
     expect((await d.sessions.toArray()).every((s) => s.kind === 'strength')).toBe(true)
   })
 
-  it('the sample seeds loose cardio exercises', async () => {
+  it('leaves the Cardio tab populated, without seeding cardio itself', async () => {
     await generateExample(d)
-    const cardio = (await d.exercises.toArray()).filter((e) => e.kind === 'cardio')
-    expect(cardio.length).toBeGreaterThan(0)
 
-    // They are what the Cardio tab is for: outside every day, and with no weight.
+    // CHANGED: the sample used to create two loose cardio exercises so the tab
+    // would not open empty. The official catalog ships cardio now, so creating
+    // more would only duplicate it — the guarantee holds without the sample.
+    const cardio = (await listCardioExercises(d)).filter((e) => e.kind === 'cardio')
+    expect(cardio.length).toBeGreaterThan(0)
+    expect(await d.exercises.count()).toBe(0)
+
+    // Still what the Cardio tab is for: outside every day, and with no weight.
     const inDays = new Set((await d.days.toArray()).flatMap((day) => day.exerciseIds))
     for (const e of cardio) {
       expect(inDays.has(e.id!)).toBe(false)
@@ -354,61 +380,45 @@ describe('exercise kind travels through a backup', () => {
   })
 })
 
-describe('warmups travel through a backup', () => {
-  it('round-trips the records and the links, shared by two exercises', async () => {
-    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
-    const other = await createWarmup({ name: 'Outro', url: 'https://youtube.com/watch?v=a' }, d)
-    await createExercise({ name: 'Supino', warmupIds: [other, w] }, d)
-    await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
-
-    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
-    await resetAll(d)
-    await importBackupReplaceAll(doc, d)
-
-    // One record, two users, and the order each exercise chose.
-    expect(await d.warmups.count()).toBe(2)
-    const byName = new Map((await d.exercises.toArray()).map((e) => [e.name, e.warmupIds]))
-    expect(byName.get('Supino')).toEqual([other, w])
-    expect(byName.get('Desenvolvimento')).toEqual([w])
-  })
-
-  it('a backup made before warmups existed imports as none', async () => {
-    await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
+/**
+ * Warm-ups were removed from the app, so the document no longer carries them —
+ * and a file that still does has to import anyway. Rejecting a field the app
+ * stopped using would make every backup taken until now unrestorable, which is
+ * the one thing a backup cannot be.
+ */
+describe('a backup that still carries warm-ups', () => {
+  it('is not part of what this version exports', async () => {
     await createExercise({ name: 'Supino' }, d)
+    const doc = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
 
-    // Strip what an older export simply would not have had.
-    const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
-    delete raw.warmups
-    for (const e of raw.exercises as Record<string, unknown>[]) delete e.warmupIds
-
-    const doc = parseBackup(JSON.stringify(raw))
-    await resetAll(d)
-    await importBackupReplaceAll(doc, d)
-
-    expect(await d.warmups.count()).toBe(0)
-    expect((await d.exercises.toArray()).every((e) => e.warmupIds.length === 0)).toBe(true)
+    expect(doc.warmups).toBeUndefined()
+    expect((doc.exercises as Record<string, unknown>[])[0].warmupIds).toBeUndefined()
   })
 
-  it('drops a link to a warmup the document does not carry', async () => {
-    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
-    await createExercise({ name: 'Supino', warmupIds: [w] }, d)
-
-    // A document whose exercise points at a record that is not in it.
+  it('imports clean, ignoring them', async () => {
+    const ex = await createExercise({ name: 'Supino' }, d)
     const raw = JSON.parse(JSON.stringify(await exportBackup(d))) as Record<string, unknown>
-    raw.warmups = []
+    // Put back exactly what an older export wrote.
+    raw.warmups = [{ id: 1, name: 'Rotação', url: 'https://x.com/a.png' }]
+    ;(raw.exercises as Record<string, unknown>[])[0].warmupIds = [1]
 
     await resetAll(d)
     await importBackupReplaceAll(parseBackup(JSON.stringify(raw)), d)
 
-    // Restored without the dangling link, rather than with a broken reference.
-    expect((await d.exercises.toArray())[0].warmupIds).toEqual([])
+    expect((await d.exercises.get(ex))?.name).toBe('Supino')
+    expect(Object.keys((await d.exercises.get(ex))!)).not.toContain('warmupIds')
+  })
+
+  it('does not bump the document version for the removal', async () => {
+    const doc = await exportBackup(d)
+    expect(doc.version).toBe(SCHEMA_VERSION)
   })
 })
 
 describe('device-local UI preferences stay out of the backup', () => {
   it('does not carry the accent colour', async () => {
     const g = await createGym('Academia A', d)
-    const cat = await createCategory('Peito', d)
+    const cat = await createCategory('Peitoral', d)
     const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     await saveWeight(g, ex, 40, 'KG', 'global', d)
     useSettings.getState().setAccent('green')
@@ -430,9 +440,8 @@ describe('full backup is a complete snapshot', () => {
   /** Seed one of everything, then export/JSON/parse/wipe/import and compare. */
   async function seedEverything() {
     const g = await createGym('Academia A', d)
-    const cat = await createCategory('Peito', d)
-    const warmup = await createWarmup({ name: 'Rotação de ombro', url: 'https://x.com/w.gif' }, d)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [cat], warmupIds: [warmup] }, d)
+    const cat = await createCategory('Peitoral', d)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     const day = await createDay({ name: 'Dia 1', exerciseIds: [ex] }, d)
     await saveWeight(g, ex, 40, 'KG', 'global', d)
     await saveWeight(g, ex, 42.5, 'KG', 'global', d) // history
@@ -642,34 +651,58 @@ describe('exercise photos are part of the backup', () => {
 })
 
 describe('generate example', () => {
-  it('creates the bundled sample routine (gym, categories, exercises, days, weights)', async () => {
+  it('creates four days, a gym and some weights — and no catalog of its own', async () => {
     await generateExample(d)
-    expect(await d.categories.count()).toBe(8)
-    // 27 strength + 2 loose cardio (the Cardio tab must not open empty).
-    expect(await d.exercises.count()).toBe(29)
-    expect((await d.exercises.toArray()).filter((e) => e.kind === 'cardio')).toHaveLength(2)
-    expect(await d.days.count()).toBe(6)
+
+    expect(await d.days.count()).toBe(EXAMPLE_DAYS.length)
+    expect(await d.days.count()).toBe(4)
     expect(await d.gyms.count()).toBe(1)
-    expect((await d.gyms.toArray())[0].name).toBe('Fit Park')
-    expect(await d.weights.count()).toBe(18)
-    // exercises carry media; day categories are derived (day has no categoryId)
-    expect((await d.exercises.toArray()).some((e) => e.mediaUrl)).toBe(true)
-    expect((await d.days.toArray()).every((day) => !('categoryId' in day))).toBe(true)
+    expect((await d.gyms.toArray())[0].name).toBe(EXAMPLE_GYM)
+    expect(await d.weights.count()).toBe(EXAMPLE_WEIGHTS.length)
+    expect(await d.weightHistory.count()).toBe(EXAMPLE_WEIGHTS.length)
+
+    // The point of the change: the sample no longer brings a second catalog.
+    expect(await d.exercises.count()).toBe(0)
+    expect(await d.categories.count()).toBe(0)
   })
 
-  it('is additive and reference-safe with existing data (remapped ids)', async () => {
-    // Pre-existing category (shared name) + a gym, so the run must dedup + skip gym.
-    await createCategory('Peito', d)
+  it('fills its days with the official exercises, in the order given', async () => {
+    await generateExample(d)
+
+    const days = await listDays(d)
+    expect(days.map((x) => x.name)).toEqual(EXAMPLE_DAYS.map((x) => x.name))
+    for (const [i, day] of days.entries()) {
+      expect(day.exerciseIds).toEqual(EXAMPLE_DAYS[i].exerciseIds)
+      // And each one resolves — through the catalog, not through a row.
+      for (const id of day.exerciseIds) {
+        expect(await getExercise(id, d), String(id)).toBeDefined()
+      }
+    }
+  })
+
+  it('seeds the weights globally, so a gym created later already has them', async () => {
+    await generateExample(d)
+
+    const weights = await d.weights.toArray()
+    expect(weights.every((w) => w.gymId === GLOBAL_GYM_ID)).toBe(true)
+    const other = await createGym('Outra', d)
+    const first = EXAMPLE_WEIGHTS[0]
+    expect(await resolveWeight(other, first.exerciseId, d)).toMatchObject({
+      scope: 'global',
+      weight: { value: first.value },
+    })
+  })
+
+  it('is additive: it does not add a second gym over the user\'s own', async () => {
     await createGym('Casa', d)
     await generateExample(d)
-    // "Peito" not duplicated; a fresh gym is NOT added (one already existed)
-    expect((await d.categories.where('name').equalsIgnoreCase('Peito').count())).toBe(1)
+
     expect(await d.gyms.count()).toBe(1)
-    // day → exercise references all resolve to real exercises
-    const exIds = new Set((await d.exercises.toArray()).map((e) => e.id))
-    for (const day of await d.days.toArray()) {
-      for (const id of day.exerciseIds) expect(exIds.has(id)).toBe(true)
-    }
+    expect((await d.gyms.toArray())[0].name).toBe('Casa')
+    // No gym seeded means no sample weights either — they came with it.
+    expect(await d.weights.count()).toBe(0)
+    // The days are still written: they are the routine, which is the sample.
+    expect(await d.days.count()).toBe(4)
   })
 })
 
@@ -721,7 +754,7 @@ describe('resetAll', () => {
     await resetAll(d)
     await expect(generateExample(d)).resolves.not.toThrow()
     expect(await d.gyms.count()).toBe(1)
-    expect(await d.categories.count()).toBe(8)
+    expect(await d.days.count()).toBe(EXAMPLE_DAYS.length)
   })
 })
 
@@ -832,7 +865,9 @@ describe('weight scopes travel through a backup', () => {
   it('seeds the sample routine with GLOBAL weights, shared by a later gym', async () => {
     await generateExample(d)
 
-    expect(await d.weights.where('gymId').equals(GLOBAL_GYM_ID).count()).toBe(18)
+    expect(await d.weights.where('gymId').equals(GLOBAL_GYM_ID).count()).toBe(
+      EXAMPLE_WEIGHTS.length,
+    )
     const nova = await createGym('Nova', d)
     const withWeight = (await d.weights.toArray())[0].exerciseId
     expect(await resolveWeight(nova, withWeight, d)).toMatchObject({ scope: 'global' })
@@ -896,5 +931,154 @@ describe('exercise videos travel through a backup', () => {
     await deleteExercise(restored.id!, d)
     expect((await d.exercises.toArray()).flatMap((e) => e.videos)).toEqual([])
     expect(id).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * The case that reaches **every backup ever produced by this app**: a document
+ * exported while the catalog still lived in the database. It carries the
+ * official exercises and categories with the very ids the app now serves from
+ * the bundle, plus days, weights, history and sessions pointing at them.
+ *
+ * Restoring it must perform the same swap of source the v13 upgrade performs:
+ * the catalog rows are dropped, everything that references them is restored
+ * untouched, and the ids go on meaning the same movements.
+ */
+describe('restoring a backup made before the catalog moved to the bundle', () => {
+  /** A document shaped like a pre-v13 export: the catalog inside it. */
+  function legacyDoc(gymId: number) {
+    const supino = officialExercises().find((e) => e.name === 'Supino Reto com Barra')!
+    const rosca = officialExercises().find((e) => e.name === 'Rosca Direta com Barra')!
+    const peito = officialCategories().find((c) => c.name === 'Peito')!
+    return {
+      app: 'myonegym',
+      kind: 'backup',
+      version: SCHEMA_VERSION,
+      exportedAt: Date.now(),
+      gyms: [{ id: gymId, name: 'Academia A', createdAt: 1 }],
+      // Exactly what an old export carried: the catalog as database rows.
+      categories: [{ id: peito.id, name: peito.name }],
+      exercises: [
+        {
+          id: supino.id,
+          name: supino.name,
+          kind: 'strength',
+          categoryIds: [peito.id],
+          alternativeIds: [],
+          videos: [],
+        },
+        {
+          id: rosca.id,
+          name: rosca.name,
+          kind: 'strength',
+          categoryIds: [],
+          alternativeIds: [],
+          videos: [],
+        },
+      ],
+      days: [{ id: 1, name: 'Dia 1', exerciseIds: [supino.id, rosca.id] }],
+      weights: [{ id: 1, gymId: GLOBAL_GYM_ID, exerciseId: supino.id, value: 60, unit: 'KG' }],
+      weightHistory: [
+        {
+          id: 1,
+          gymId: GLOBAL_GYM_ID,
+          exerciseId: supino.id,
+          value: 60,
+          unit: 'KG',
+          changedAt: 1,
+          kind: 'first',
+        },
+      ],
+      sessions: [
+        {
+          id: 1,
+          gymId,
+          kind: 'strength',
+          dayId: 1,
+          dayName: 'Dia 1',
+          startedAt: 1,
+          completedAt: 2,
+          status: 'completed',
+        },
+      ],
+      sessionEntries: [
+        { id: 1, sessionId: 1, exerciseId: supino.id, exerciseName: supino.name, done: true },
+      ],
+      exerciseNotes: [{ id: 1, gymId, exerciseId: supino.id, text: 'banco no 4', updatedAt: 1 }],
+      exercisePhotos: [],
+      warmups: [],
+      supino,
+      rosca,
+      peito,
+    }
+  }
+
+  it('does not recreate the catalog in the database', async () => {
+    const doc = legacyDoc(1)
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect(await d.exercises.count()).toBe(0)
+    expect(await d.categories.count()).toBe(0)
+  })
+
+  it('restores everything that pointed at the catalog, untouched', async () => {
+    const doc = legacyDoc(1)
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect((await d.days.toArray())[0].exerciseIds).toEqual([doc.supino.id, doc.rosca.id])
+    expect((await d.weights.toArray())[0]).toMatchObject({
+      exerciseId: doc.supino.id,
+      value: 60,
+    })
+    expect(await d.weightHistory.count()).toBe(1)
+    expect((await d.exerciseNotes.toArray())[0]).toMatchObject({
+      exerciseId: doc.supino.id,
+      text: 'banco no 4',
+    })
+    expect((await d.sessionEntries.toArray())[0]).toMatchObject({
+      exerciseId: doc.supino.id,
+      exerciseName: doc.supino.name,
+    })
+  })
+
+  it('resolves those ids against the bundle, so the day reads the same as before', async () => {
+    const doc = legacyDoc(1)
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    const ids = (await d.days.toArray())[0].exerciseIds
+    const names = await Promise.all(ids.map(async (id) => (await getExercise(id, d))?.name))
+    expect(names).toEqual([doc.supino.name, doc.rosca.name])
+
+    // And the merged listing shows the catalog once, not twice.
+    const all = await listExercises(d)
+    expect(all.filter((e) => e.name === doc.supino.name)).toHaveLength(1)
+  })
+
+  it('leaves an exercise the user created beyond the catalog unresolvable, without deleting its weight', async () => {
+    const doc = legacyDoc(1) as unknown as Record<string, unknown>
+    // Back when the catalog was theirs, a user exercise took the next free id —
+    // one the bundled file does not carry.
+    ;(doc.exercises as Record<string, unknown>[]).push({
+      id: 9998,
+      name: 'Invenção minha',
+      kind: 'strength',
+      categoryIds: [],
+      alternativeIds: [],
+      videos: [],
+    })
+    ;(doc.weights as Record<string, unknown>[]).push({
+      id: 2,
+      gymId: GLOBAL_GYM_ID,
+      exerciseId: 9998,
+      value: 30,
+      unit: 'KG',
+    })
+
+    await importBackupReplaceAll(parseBackup(JSON.stringify(doc)), d)
+
+    expect(await getExercise(9998, d)).toBeUndefined()
+    // The weight survives: deleting a user's record over an id that did not
+    // match is the one outcome here with no way back.
+    expect(await d.weights.where('exerciseId').equals(9998).count()).toBe(1)
   })
 })

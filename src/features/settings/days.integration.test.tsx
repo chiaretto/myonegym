@@ -19,11 +19,11 @@ afterEach(async () => {
 
 describe('Home day header — derived categories', () => {
   it('shows the distinct categories of the day exercises and updates on change', async () => {
-    const peito = await createCategory('Peito', db)
-    const triceps = await createCategory('Tríceps', db)
-    const supino = await createExercise({ name: 'Supino', categoryIds: [peito] }, db)
-    const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
-    const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [triceps] }, db)
+    const peitoral = await createCategory('Peitoral', db)
+    const triceps = await createCategory('Tricípite', db)
+    const supino = await createExercise({ name: 'Supino', categoryIds: [peitoral] }, db)
+    const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peitoral] }, db)
+    const corda = await createExercise({ name: 'Tricípite Corda', categoryIds: [triceps] }, db)
     const dayId = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, corda] }, db)
 
     render(
@@ -32,13 +32,13 @@ describe('Home day header — derived categories', () => {
       </MemoryRouter>,
     )
 
-    // Distinct categories, in first-appearance order (Peito once, then Tríceps).
-    expect(await screen.findByText('Peito · Tríceps')).toBeInTheDocument()
+    // Distinct categories, in first-appearance order (Peitoral once, then Tricípite).
+    expect(await screen.findByText('Peitoral · Tricípite')).toBeInTheDocument()
 
-    // Remove the Tríceps exercise → the derived label updates live.
+    // Remove the Tricípite exercise → the derived label updates live.
     await updateDay(dayId, { name: 'Dia 1', exerciseIds: [supino, crucifixo] }, db)
-    await waitFor(() => expect(screen.getByText('Peito')).toBeInTheDocument())
-    expect(screen.queryByText('Peito · Tríceps')).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Peitoral')).toBeInTheDocument())
+    expect(screen.queryByText('Peitoral · Tricípite')).not.toBeInTheDocument()
   })
 })
 

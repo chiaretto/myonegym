@@ -252,17 +252,30 @@ img.hero-media { width: 100%; height: auto; max-height: 72vh; object-fit: contai
   border-top: 0.5px solid var(--border); padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
   max-height: 88vh; overflow-y: auto; }
 
-/* Centred variant (ui/Sheet `centred`). For short, decision-shaped modals — the
-   gym switcher — where a bottom sheet reads as a drawer of options rather than
-   as a question. Opt-in per call site; the default stays a bottom sheet.
-   The safe-area padding goes away with it: floating clear of the bottom edge,
-   there is no home indicator to clear. */
-.sheet-backdrop.centred { align-items: center; padding: 20px; }
-.sheet-backdrop.centred > .sheet { border-radius: 24px; border: 0.5px solid var(--border);
+/* Centre variant (ui/Sheet `placement="centre"`). For short, decision-shaped
+   modals — the gym switcher — where a bottom sheet reads as a drawer of options
+   rather than as a question. Opt-in per call site; the default stays a bottom
+   sheet. The safe-area padding goes away with it: floating clear of the bottom
+   edge, there is no home indicator to clear. */
+.sheet-backdrop.centre { align-items: center; padding: 20px; }
+.sheet-backdrop.centre > .sheet { border-radius: 24px; border: 0.5px solid var(--border);
   padding: 20px 18px; max-height: min(88vh, 640px); }
-.sheet-backdrop.centred > .sheet > .sheet-actions { margin: 8px -18px -20px; padding: 12px 18px; }
+.sheet-backdrop.centre > .sheet > .sheet-actions { margin: 8px -18px -20px; padding: 12px 18px; }
+
+/* Top variant (ui/Sheet `placement="top"`). For a panel with a field in it: the
+   keyboard claims the bottom half of the screen, so a panel anchored down there
+   would open half-covered — with its own Salvar under the keyboard, which is the
+   exact failure the weight editor used to scroll around. Anchored to the top, it
+   is fully visible with the keyboard up. */
+.sheet-backdrop.top { align-items: flex-start; padding: 0; }
+.sheet-backdrop.top > .sheet { border-radius: 0 0 24px 24px; border: 0.5px solid var(--border);
+  border-top: 0; padding: calc(16px + env(safe-area-inset-top)) 18px 20px;
+  max-height: 92vh; }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
-.sheet-head h2 { margin-bottom: 0; }
+/* The title takes the free space, so anything else in the head sits to the
+   RIGHT of it. Without this, `space-between` with three children (title,
+   action, close) parks the action dead centre. */
+.sheet-head h2 { margin-bottom: 0; flex: 1; min-width: 0; }
 .sheet-close { flex-shrink: 0; }
 .sheet h2 { font-family: var(--font-title); font-size: var(--fs-xl); font-weight: 700; margin-bottom: 14px; }
 .sheet-actions { display: flex; gap: 10px; margin-top: 8px; }

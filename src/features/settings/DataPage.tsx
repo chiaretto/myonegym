@@ -159,6 +159,15 @@ export function DataPage() {
               </span>
             </span>
           </button>
+          {/* Two things a restore can no longer bring back, said before it runs
+              rather than discovered after: the app's own catalog is code now, and
+              the warm-ups do not exist any more. */}
+          <p className="group-note">
+            <Icon name="info-circle" size={12} /> De um arquivo antigo, a lista de exercícios e
+            categorias <strong>oficiais</strong> não é restaurada — ela vem com o app. Os
+            <strong> aquecimentos</strong> também não: eles deixaram de existir, e os vídeos do
+            exercício ocupam esse lugar.
+          </p>
         </div>
 
         <input

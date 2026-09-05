@@ -54,7 +54,7 @@ describe('Home end-to-end', () => {
   it('shows seeded days and the weight badge after expanding', async () => {
     // Seed a controlled fixture (independent of the sample-data content).
     const gym = await createGym('Academia A', db)
-    const cat = await createCategory('Peito', db)
+    const cat = await createCategory('Peitoral', db)
     const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
     await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
     await saveWeight(gym, supino, 40, 'KG', 'global', db)
@@ -104,7 +104,7 @@ describe('Home end-to-end', () => {
 /** Two days in one gym, so one can hold the open session and the other be blocked. */
 async function seedTwoDays() {
   const gym = await createGym('Academia A', db)
-  const cat = await createCategory('Peito', db)
+  const cat = await createCategory('Peitoral', db)
   const supino = await createExercise({ name: 'Supino Reto', categoryIds: [cat] }, db)
   const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [cat] }, db)
   const dia1 = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)

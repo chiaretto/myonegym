@@ -327,9 +327,12 @@ o rótulo **"Alternativa de X"**, que não repete nada.
 
 As abas MUST ser **quatro**: "Execução", **"Notas"**, **"Vídeos"** e "Foto" — o
 mesmo conjunto do detalhe do catálogo, na mesma ordem, porque as duas telas são a
-mesma vista em dois contextos e só o rótulo da primeira difere. A aba de notas
-chamava-se "Notas"; a de vídeos é nova (ver a capability
-`exercise-videos`).
+mesma vista em dois contextos e só o rótulo da primeira difere.
+
+A aba "Notas" MUST exibir a marca `(*)` quando o exercício **exibido** tem
+anotação naquela academia (ver *The Notas Tab Says Whether There Is a Note*, em
+`exercises`) — como a contagem de "Vídeos", ela é do movimento que está na tela,
+não do que abriu a entrada.
 
 Quando o exercício da entrada é de **Cardio**, a aba "Execução" MUST NOT exibir
 o cartão "Peso alvo", o editor nem a linha do tempo do histórico — ela mostra a
@@ -338,41 +341,12 @@ funcionando exatamente como para um exercício de Força: nota e fotos são por
 `(academia, exercício)` e são justamente o que ajuda num cardio (a tela da
 esteira, o ajuste do banco da bike).
 
-A aba **"Execução"** MUST oferecer, quando o exercício tem aquecimentos
-vinculados, o mesmo controle de **aquecimento** do detalhe do catálogo (ver a
-capability `warmups` e *Warmup Button on the Exercise Detail*, em `exercises`).
-É durante o treino que se aquece: obrigar a sair da sessão para consultar
-derrotaria o propósito.
-
-Fechar o visualizador MUST devolver o usuário **à mesma entrada e à mesma aba**,
-com a sessão inalterada — abrir um aquecimento MUST NOT marcar nada como feito,
-nem avançar o stepper.
-
-Enquanto uma **alternativa** está sendo vista, o controle MUST refletir o
-exercício **exibido**, como as três abas já fazem: é o aquecimento daquele
-movimento que interessa a quem está decidindo fazê-lo.
-
-#### Scenario: Aquecimento a partir da sessão
-- GIVEN uma sessão em andamento e "Supino", que tem dois aquecimentos
-- WHEN o usuário abre o detalhe da entrada e toca o controle de aquecimento
-- THEN o visualizador abre com os aquecimentos do "Supino"
-
-#### Scenario: Fechar não mexe na sessão
-- GIVEN o visualizador aberto a partir de uma entrada de sessão
-- WHEN o usuário fecha
-- THEN volta à mesma entrada, na aba "Execução"
-- AND nada foi marcado como concluído e o stepper não avançou
-
-#### Scenario: A alternativa traz o próprio aquecimento
-- GIVEN o usuário está vendo uma alternativa dentro da sessão
-- WHEN observa a aba "Execução"
-- THEN o controle de aquecimento reflete o exercício **exibido**, não o da
-  entrada
-
-#### Scenario: Sem aquecimento, sem controle
-- GIVEN a entrada é de um exercício sem aquecimentos
-- WHEN o usuário abre o detalhe
-- THEN nenhum controle de aquecimento é exibido
+A aba "Execução" MUST NOT exibir controle de **aquecimento**: o conceito deixou
+de existir no app (ver *Deprecated*, em `exercises`). O que se assiste
+durante o treino é a aba **"Vídeos"**, que continua exatamente onde está — e é
+justamente ela que torna o aquecimento dispensável, porque a mídia de apoio ao
+movimento já está a um toque de distância, dentro da própria entrada, sem sair
+da sessão.
 
 #### Scenario: Nada de distintivo "Concluído" acima das abas
 - GIVEN uma entrada já marcada como concluída
@@ -391,6 +365,12 @@ movimento que interessa a quem está decidindo fazê-lo.
 - WHEN abre a Esteira de novo em "A", num cardio futuro ou pelo catálogo
 - THEN a nota está lá
 - AND ela não aparece na Esteira da academia "B"
+
+#### Scenario: Não há controle de aquecimento na sessão
+- GIVEN uma sessão em andamento
+- WHEN o usuário abre o detalhe de uma entrada e percorre a aba "Execução"
+- THEN nenhum controle de aquecimento é exibido
+- AND a aba "Vídeos" continua disponível na mesma tela
 
 ---
 
@@ -970,5 +950,57 @@ que fica registrado de um treino é o que foi feito, não quanto se descansou.
 - WHEN conclui a sessão e abre o resumo
 - THEN nada sobre descanso é exibido ali
 - AND nada foi gravado a respeito
+
+---
+
+### Requirement: The Rest Timer Keeps the Screen Awake
+
+Enquanto o **cronômetro de descanso está correndo**, o app MUST pedir ao sistema
+que **mantenha a tela ligada**, e MUST liberar esse pedido assim que ele for
+parado, a tela sair ou o usuário deixar a entrada.
+
+O motivo é a situação real: o celular fica no banco, contando, e o usuário olha
+para ele de dois metros — exatamente o que o sistema lê como "ocioso" e responde
+apagando a tela. Um cronômetro que exige acordar o telefone para ser lido não é
+um cronômetro.
+
+O pedido MUST valer **apenas para o cronômetro de descanso**, e MUST NOT ser
+feito pelo relógio do treino. Aquele corre a sessão inteira, e segurar a tela por
+uma hora seria uma conta de bateria que o usuário não pediu; o descanso dura
+alguns minutos, passados olhando para o número.
+
+O pedido MUST ser **refeito ao voltar para o app**: o navegador retoma a
+permissão quando a página é escondida e não a devolve sozinho.
+
+A falta do recurso MUST ser **silenciosa**. Um navegador que nunca o implementou,
+um contexto inseguro, o modo de economia de bateria — em todos, o cronômetro
+MUST continuar contando normalmente e a tela MUST apenas se comportar como se
+comportaria de qualquer forma. Nada MUST ser exibido ao usuário a respeito.
+
+#### Scenario: A tela fica acesa durante o descanso
+- GIVEN o detalhe de uma entrada de sessão
+- WHEN o usuário inicia o cronômetro
+- THEN o app pede ao sistema para manter a tela ligada
+
+#### Scenario: Parar devolve a tela ao sistema
+- GIVEN o cronômetro correndo
+- WHEN o usuário o para
+- THEN o pedido é liberado
+
+#### Scenario: O relógio do treino não segura a tela
+- GIVEN uma sessão em andamento com o cronômetro parado
+- WHEN o usuário apenas observa a tela
+- THEN nenhum pedido para manter a tela ligada é feito
+
+#### Scenario: Voltar ao app pede de novo
+- GIVEN o cronômetro correndo e o app foi para segundo plano
+- WHEN o usuário volta para o app
+- THEN o pedido é refeito
+
+#### Scenario: Sem o recurso, nada quebra
+- GIVEN um navegador sem a API de manter a tela ligada
+- WHEN o usuário inicia o cronômetro
+- THEN ele conta normalmente
+- AND nada é exibido sobre a tela poder apagar
 
 ---

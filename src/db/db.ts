@@ -9,7 +9,6 @@ import type {
   Gym,
   Session,
   SessionEntry,
-  Warmup,
   Weight,
   WeightHistory,
 } from './types'
@@ -25,7 +24,6 @@ export class MyOneGymDB extends Dexie {
   sessionEntries!: Table<SessionEntry, number>
   exerciseNotes!: Table<ExerciseNote, number>
   exercisePhotos!: Table<ExercisePhoto, number>
-  warmups!: Table<Warmup, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -202,6 +200,48 @@ export class MyOneGymDB extends Dexie {
             if (!Array.isArray(e.videos)) e.videos = []
           })
       })
+    // v13 — the catalog moves OUT of the database and into the bundle (see
+    // `data/officialCatalog`). Both tables are emptied, and **not one reference
+    // to them is rewritten**.
+    //
+    // That is not data loss, and the reason is the whole design: the catalog
+    // file is an *export of this very database*, so the ids it carries are the
+    // ids the devices in the field already hold. Emptying the rows swaps where
+    // an exercise is *read from*; it does not change *which* exercise a number
+    // means. The days keep their exercises, the weights keep their movement,
+    // and every history entry stays attached to what it always described.
+    //
+    // Not renumbering is a safety decision rather than a saving one: rewriting
+    // the six tables that reference an exercise is an operation with many ways
+    // to end up half-applied, and rewriting none has no ways at all.
+    //
+    // An id in the official range that the file does NOT carry — an exercise the
+    // user created beyond the catalog — stops resolving. Its weights, history,
+    // notes and photos are deliberately left in place: screens already know how
+    // to show a session entry whose exercise is gone, and deleting a user's
+    // records over an id that did not match is the one outcome here with no way
+    // back.
+    //
+    // The same version also removes **warm-ups**. The exercise videos cover what
+    // a warm-up covered — support media for a movement, reached from inside the
+    // exercise — and cover it with fewer parts: a video is written in the
+    // exercise's own form instead of being registered elsewhere and then linked.
+    // Keeping both meant two ways to store the same thing, two screens, two
+    // pickers and two viewers to maintain.
+    //
+    // The table goes, the link field goes with it, and nothing is converted:
+    // the warm-ups a user had are erased. That was the owner's call, made with
+    // the alternative (turning each link into a video of that exercise) on the
+    // table.
+    this.version(13)
+      .stores({
+        warmups: null,
+        exercises: '++id, name, kind, *categoryIds',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('exercises').clear()
+        await tx.table('categories').clear()
+      })
   }
 }
 
@@ -282,6 +322,5 @@ export function allTables(database: MyOneGymDB = db) {
     // outside the database, so an import/reset must drop those too (see
     // `clearImages` in data/photoStore).
     database.exercisePhotos,
-    database.warmups,
   ]
 }

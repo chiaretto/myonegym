@@ -37,9 +37,9 @@ afterEach(async () => {
 async function seed() {
   const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
-  const peito = await createCategory('Peito', db)
-  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
-  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
+  const peitoral = await createCategory('Peitoral', db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
+  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peitoral] }, db)
   const d1 = await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo] }, db)
   const d4 = await createDay({ name: 'Dia 4', exerciseIds: [crucifixo] }, db)
   return { gym, d1, d4, supino, crucifixo }
@@ -80,10 +80,10 @@ describe('Catalog exercise detail header', () => {
     // Not in the header any more: it is a description of the exercise, and the
     // space it cost was pushing the tabs themselves down the screen.
     await screen.findByRole('tab', { name: 'Detalhe' })
-    expect(screen.queryByText('Peito')).not.toBeInTheDocument()
+    expect(screen.queryByText('Peitoral')).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole('tab', { name: 'Notas' }))
-    expect(await screen.findByText('Peito')).toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: /^Notas/ }))
+    expect(await screen.findByText('Peitoral')).toBeInTheDocument()
   })
 })
 
