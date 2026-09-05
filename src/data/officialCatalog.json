@@ -539,7 +539,9 @@
         11,
         10
       ],
-      "alternativeIds": [],
+      "alternativeIds": [
+        55
+      ],
       "videos": [],
       "mediaFile": "agachamento-bulgaro-smith.webp"
     },
@@ -606,17 +608,17 @@
       "mediaFile": "corrida-externa.webp"
     },
     {
-      "name": "Bike",
+      "id": 43,
+      "name": "Bike Interna",
+      "kind": "cardio",
       "categoryIds": [
         7,
         9,
         11
       ],
-      "id": 43,
       "alternativeIds": [],
-      "kind": "cardio",
       "videos": [],
-      "mediaFile": "bike.webp"
+      "mediaFile": "bike-interna.webp"
     },
     {
       "name": "Mesa Flexora",
@@ -756,6 +758,34 @@
       "alternativeIds": [],
       "videos": [],
       "mediaFile": "corrida-interna.webp"
+    },
+    {
+      "id": 54,
+      "name": "Bike Trilha",
+      "kind": "cardio",
+      "categoryIds": [
+        7,
+        9,
+        11
+      ],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "bike-trilha.webp"
+    },
+    {
+      "id": 55,
+      "name": "Agachamento Búlgaro (halteres)",
+      "kind": "strength",
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        38
+      ],
+      "videos": [],
+      "mediaFile": "agachamento-bulgaro-halteres.webp"
     }
   ]
 }

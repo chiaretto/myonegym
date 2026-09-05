@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(52)
+    expect(officialExercises()).toHaveLength(54)
   })
 
   it('keeps every id inside the official range', () => {
@@ -122,7 +122,7 @@ describe('officialCatalog', () => {
       [40, 'Crossover na Polia'],
       [41, 'Natação'],
       [42, 'Corrida Externa'],
-      [43, 'Bike'],
+      [43, 'Bike Interna'],
       [44, 'Mesa Flexora'],
       [45, 'Supino Reto Máquina'],
       [46, 'Elevação de pernas colchonete'],
@@ -133,6 +133,8 @@ describe('officialCatalog', () => {
       [51, 'Barra fixa braço fechado'],
       [52, 'Tríceps testa polia alta'],
       [53, 'Corrida Interna'],
+      [54, 'Bike Trilha'],
+      [55, 'Agachamento Búlgaro (halteres)'],
     ]
 
     it('still numbers every category the way it always did', () => {
