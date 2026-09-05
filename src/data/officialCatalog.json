@@ -116,7 +116,12 @@
       "alternativeIds": [
         59
       ],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=PbZrNU1NjDw",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "triceps-pulley-barra-reta.webp"
     },
     {
@@ -217,7 +222,12 @@
         8
       ],
       "alternativeIds": [],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/LUBsQKkQdFo",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "remada-curvada-com-barra.webp"
     },
     {
@@ -258,13 +268,13 @@
       "mediaFile": "rosca-martelo-com-halteres.webp"
     },
     {
-      "name": "Rosca Concentrada (1 Braço)",
       "id": 16,
+      "name": "Rosca Concentrada (1 Braço)",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [
         {
           "url": "https://youtube.com/shorts/vhsiLQ6nDEo?is=Z_e2trv-s6AT6_AJ"
@@ -288,28 +298,42 @@
       "mediaFile": "barra-fixa-braco-aberto.webp"
     },
     {
-      "name": "Desenvolvimento com Halteres",
       "id": 18,
+      "name": "Desenvolvimento com Halteres",
+      "kind": "strength",
       "categoryIds": [
         5,
         4,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=IcG3iMJPOps&list=LL&index=1",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "desenvolvimento-com-halteres.webp"
     },
     {
-      "name": "Elevação Lateral",
       "id": 19,
+      "name": "Elevação Lateral",
+      "kind": "strength",
       "categoryIds": [
         5,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/osTCQ6RaX-Y",
+          "title": "Execução"
+        },
+        {
+          "url": "https://www.youtube.com/shorts/Nt6DnIkxD3M",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "elevacao-lateral.webp"
     },
     {
@@ -414,8 +438,9 @@
       "mediaFile": "voador-inverso-peck-deck-reverso.webp"
     },
     {
-      "name": "Agachamento Hack",
       "id": 28,
+      "name": "Agachamento Hack",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
@@ -424,13 +449,18 @@
       "alternativeIds": [
         29
       ],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/pPykSuk0uGM",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "agachamento-hack.webp"
     },
     {
-      "name": "Leg press 45°",
       "id": 29,
+      "name": "Leg press 45°",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
@@ -439,8 +469,12 @@
       "alternativeIds": [
         28
       ],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/auDOkCF-jsw",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "leg-press-45.webp"
     },
     {
@@ -549,9 +583,15 @@
         10
       ],
       "alternativeIds": [
-        55
+        55,
+        60
       ],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/m4YyYZzCjWs",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "agachamento-bulgaro-smith.webp"
     },
     {
@@ -794,9 +834,15 @@
         10
       ],
       "alternativeIds": [
-        38
+        38,
+        60
       ],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/m4YyYZzCjWs",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "agachamento-bulgaro-halteres.webp"
     },
     {
@@ -841,7 +887,12 @@
       "alternativeIds": [
         14
       ],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/uul2vnr9Plw",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "rosca-direta-com-barra-reta-polia.webp"
     },
     {
@@ -856,6 +907,27 @@
       ],
       "videos": [],
       "mediaFile": "triceps-pulley-corda.webp"
+    },
+    {
+      "id": 60,
+      "name": "Agachamento Afundo (halteres / Barra)",
+      "kind": "strength",
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        38,
+        55
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/LRNDWr5yLrk",
+          "title": "Execução"
+        }
+      ],
+      "mediaFile": "agachamento-afundo-halteres-barra.webp"
     }
   ]
 }
