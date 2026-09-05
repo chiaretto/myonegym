@@ -11,7 +11,10 @@
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
+import { relative } from 'node:path'
 import {
+  CATALOG,
+  OUT,
   convertMaster,
   copyMedia,
   downloadMaster,
@@ -320,11 +323,46 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')
 }
 
+/**
+ * How long after a write this plugin's own file changes are ignored by HMR.
+ *
+ * Long enough for the watcher to notice — it debounces, and sharp finishes
+ * writing the webp after the response has gone out — and short enough that a
+ * hand edit made straight afterwards still reloads the page.
+ */
+const HMR_QUIET_MS = 2000
+
+/** Files this tool writes, and only those. */
+export function isCatalogFile(file: string): boolean {
+  return file === CATALOG || !relative(OUT, file).startsWith('..')
+}
+
 export function adminApi(): Plugin {
+  /** Until when a change to those files is this plugin's own doing. */
+  let quietUntil = 0
+
   return {
     name: 'myonegym-admin-api',
     // Dev server only. There is no build output for any of this.
     apply: 'serve',
+
+    /**
+     * Keep the tool's own writes from reloading the page.
+     *
+     * `officialCatalog.json` is imported by `src/data/officialCatalog.ts`, so it
+     * is part of the app's module graph — and a JSON import accepts no hot
+     * update, so Vite falls back to a **full reload**. Which means saving an
+     * exercise reloaded the whole app underneath the screen doing the saving:
+     * the form closed, the scroll jumped, the filter emptied.
+     *
+     * Only *this plugin's* writes are silenced, and only for a moment after one.
+     * Editing the file by hand still reloads, which is what you want when the
+     * app — rather than the tool — is what you are looking at.
+     */
+    handleHotUpdate({ file }) {
+      if (Date.now() < quietUntil && isCatalogFile(file)) return []
+    },
+
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const path = (req.url ?? '').split('?')[0]
@@ -335,9 +373,15 @@ export function adminApi(): Plugin {
           return
         }
 
-        void handleAdminRequest(req.method ?? 'GET', path, () => readJson(req)).then(
-          ({ status, body }) => send(res, status, body),
-        )
+        const method = req.method ?? 'GET'
+        // Opened before the write and extended after it: the watcher reports
+        // late, and sharp is still writing the webp when the answer goes out.
+        if (method !== 'GET') quietUntil = Date.now() + HMR_QUIET_MS
+
+        void handleAdminRequest(method, path, () => readJson(req)).then(({ status, body }) => {
+          if (method !== 'GET') quietUntil = Date.now() + HMR_QUIET_MS
+          send(res, status, body)
+        })
       })
     },
   }

@@ -51,8 +51,12 @@ vi.mock('./exerciseMedia.mjs', async (importOriginal) => {
   }
 })
 
+const { CATALOG, OUT } = await import('./exerciseMedia.mjs')
+
 const {
   USER_ID_BASE,
+  adminApi,
+  isCatalogFile,
   deleteCategory,
   deleteExercise,
   fromLocalhost,
@@ -431,5 +435,71 @@ describe('the catalog on disk', () => {
     for (const id of raw.retiredCategoryIds ?? []) {
       expect(raw.categories.some((c) => c.id === id)).toBe(false)
     }
+  })
+})
+
+/**
+ * Saving must not reload the app underneath the screen doing the saving.
+ *
+ * `officialCatalog.json` is imported by `src/data/officialCatalog.ts`, so it is
+ * in the app's module graph — and a JSON import accepts no hot update, so Vite
+ * falls back to a **full page reload**. Every save closed the form, reset the
+ * scroll and emptied the filter.
+ */
+describe('the tool’s own writes do not reload the page', () => {
+
+  /** The plugin, plus a way to send it one request. */
+  function mounted() {
+    const plugin = adminApi()
+    let handler: (req: unknown, res: unknown, next: () => void) => void = () => {}
+    ;(plugin.configureServer as (s: unknown) => void)({
+      middlewares: { use: (fn: typeof handler) => (handler = fn) },
+    })
+
+    const request = (method: string, url: string, body: unknown) =>
+      new Promise<void>((resolve) => {
+        const req = {
+          method,
+          url,
+          socket: { remoteAddress: '127.0.0.1' },
+          async *[Symbol.asyncIterator]() {
+            yield Buffer.from(JSON.stringify(body))
+          },
+        }
+        handler(req, { statusCode: 200, setHeader() {}, end: () => resolve() }, () => resolve())
+      })
+
+    const hot = (file: string) =>
+      (plugin.handleHotUpdate as (c: { file: string }) => unknown)({ file })
+
+    return { request, hot }
+  }
+
+  it('recognises the files it writes, and nothing else', () => {
+    expect(isCatalogFile(CATALOG)).toBe(true)
+    expect(isCatalogFile(`${OUT}/supino-reto.webp`)).toBe(true)
+    // Not the app's own source, which must keep reloading normally.
+    expect(isCatalogFile(`${OUT}/../../src/App.tsx`)).toBe(false)
+  })
+
+  it('swallows the update that its own save caused', async () => {
+    const { request, hot } = mounted()
+    await request('PUT', '/api/admin/catalog/exercise', { id: 1, name: 'Supino Reto' })
+    // An empty list is how a plugin tells Vite there is nothing to update.
+    expect(hot(CATALOG)).toEqual([])
+    expect(hot(`${OUT}/supino-reto.webp`)).toEqual([])
+  })
+
+  it('leaves a hand edit alone, and everything outside those files', async () => {
+    const { request, hot } = mounted()
+    // Nothing was written: editing the file by hand must still reload, which is
+    // what you want when the app — not the tool — is what you are looking at.
+    expect(hot(CATALOG)).toBeUndefined()
+
+    await request('GET', '/api/admin/catalog', {})
+    expect(hot(CATALOG)).toBeUndefined()
+
+    await request('PUT', '/api/admin/catalog/exercise', { id: 1, name: 'Supino Reto' })
+    expect(hot(`${OUT}/../../src/App.tsx`)).toBeUndefined()
   })
 })
