@@ -1,0 +1,235 @@
+/**
+ * The catalog maintenance screen.
+ *
+ * The only wide layout in a mobile-first app, and deliberately so: it is a tool
+ * the maintainer opens on the computer that holds the repository, never
+ * something a user reaches. That is what buys it two columns, a table-ish list
+ * and forms that spread out — none of which the app itself is allowed.
+ *
+ * Its colours are the app's tokens, because it is served by the app in dev and a
+ * second palette would just be another thing to keep in step.
+ */
+
+.admin {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px 80px;
+}
+
+.admin-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-head h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.admin-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  max-width: 70ch;
+}
+
+.admin-cols {
+  display: grid;
+  /* Categories are a short list of short names; exercises are the work. */
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .admin-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.admin-toolbar input[type='search'] {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ------------------------------------------------------------- the lists */
+
+.admin-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.admin-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-item:last-child {
+  border-bottom: 0;
+}
+
+.admin-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.admin-item-head .admin-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.admin-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex: none;
+}
+
+.admin-item-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-item-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-id {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: none;
+  min-width: 3ch;
+}
+
+/* --------------------------------------------------------------- the form */
+
+.admin-form {
+  padding: 4px 12px 16px;
+  border-top: 1px dashed var(--border);
+  display: grid;
+  gap: 14px;
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.admin-form label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  width: 100%;
+}
+
+/* A scrolling checklist beats a multi-select nobody can operate: the whole
+   point of this screen is picking categories and alternatives by name. */
+.admin-picker {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 8px;
+  display: grid;
+  gap: 2px;
+  background: var(--surface-0);
+}
+
+.admin-picker label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 3px 2px;
+  cursor: pointer;
+}
+
+.admin-picker input {
+  width: auto;
+  flex: none;
+}
+
+.admin-videos {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-video {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-video input {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-status.ok {
+  color: var(--text-secondary);
+}
+
+/* --danger is the app's warning amber, not red: red is the accent here. */
+.admin-status.bad {
+  color: var(--danger);
+}

@@ -3,6 +3,10 @@
   "kind": "exerciseLibrary",
   "version": 6,
   "exportedAt": 1788559785346,
+  "retiredCategoryIds": [],
+  "retiredExerciseIds": [
+    10
+  ],
   "categories": [
     {
       "name": "Peito",

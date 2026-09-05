@@ -196,3 +196,25 @@ no server** — all data lives in the browser.
   All masters are versioned, so any of these commands can be re-run from a fresh
   checkout, and their output is committed so `npm run build` never needs the
   image toolchain. Edit a master and re-run; never edit a generated file.
+- The official catalog is edited through **`/admin`**, a maintenance tool that
+  exists **only in development**:
+  - The screen is `src/features/admin/`, behind `import.meta.env.DEV` in
+    `App.tsx` so the build folds it away — dynamic import and all.
+    `admin-not-shipped.test.ts` fails if a refactor ever lets it into `dist`.
+  - Its back end is `scripts/adminApi.ts`, a Vite plugin with `apply: 'serve'`.
+    It **refuses every request that is not from localhost, before anything
+    else**: the dev server runs with `host: true` so the PWA can be opened from
+    a phone, and this API writes files into the repository and fetches
+    arbitrary URLs.
+  - Saving an exercise also **produces its picture** — downloaded, converted,
+    named after the exercise — through `scripts/exerciseMedia.mjs`, the same
+    module `npm run exercise-media` uses. One implementation, or the two would
+    diverge the first time either was tuned. `scripts/exerciseMedia.d.mts` is
+    what lets the type-checked config and plugin import the plain `.mjs`.
+  - `retiredCategoryIds` / `retiredExerciseIds` in `officialCatalog.json` are
+    how a deleted id stays spent. Deleting the record erases the only other
+    trace that its number was handed out, and an id is what ties a weight
+    somebody already recorded to the movement they did. Id 10 has been vacant
+    since the file was exported.
+  - It is a tool, not a feature: large-screen layout in a mobile-first app, no
+    offline state, outside the backup, outside the bundle. Its undo is `git`.

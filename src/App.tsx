@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { db } from './db/db'
 import { hasAnyRegisteredData } from './db/repos'
@@ -29,6 +29,19 @@ import { AppearancePage } from './features/settings/AppearancePage'
 import { AssistantPage } from './features/settings/AssistantPage'
 import { InstallPage } from './features/settings/InstallPage'
 import { UpdatePage } from './features/settings/UpdatePage'
+
+/**
+ * The official-catalog maintenance tool, and **only in development**.
+ *
+ * `import.meta.env.DEV` is a constant the build folds to `false`, which makes
+ * the whole ternary — the `import()` included — dead code, so neither the route
+ * nor a chunk for the screen ends up in `dist`. That is deliberate, and
+ * `admin-not-shipped.test.ts` is what notices if it stops being true: published,
+ * this could only be a screen that fails at everything it tries (the API it
+ * talks to is the dev server), and a "hidden" URL in the open invites whoever
+ * finds it.
+ */
+const AdminPage = import.meta.env.DEV ? lazy(() => import('./features/admin/AdminPage')) : null
 
 export function App() {
   const reconcile = useActiveGym((s) => s.reconcile)
@@ -113,6 +126,16 @@ export function App() {
           <Route path="/settings/assistant" element={<AssistantPage />} />
           <Route path="/settings/install" element={<InstallPage />} />
           <Route path="/settings/update" element={<UpdatePage />} />
+          {AdminPage && (
+            <Route
+              path="/admin"
+              element={
+                <Suspense fallback={null}>
+                  <AdminPage />
+                </Suspense>
+              }
+            />
+          )}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
 
