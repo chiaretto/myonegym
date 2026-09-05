@@ -496,7 +496,7 @@ function ExerciseForm({
     setSaving(true)
     setStatus(null)
     try {
-      const { catalog: next, id: savedId, warning } = await saveExercise({
+      const { catalog: next, id: savedId, warning, media } = await saveExercise({
         ...(id != null && !asNew ? { id } : {}),
         ...(asNew && id != null ? { copyMediaFrom: id } : {}),
         name: draft.name,
@@ -515,7 +515,16 @@ function ExerciseForm({
       setStatus(
         warning
           ? { tone: 'bad', text: warning }
-          : { tone: 'ok', text: asNew ? `Salvo como novo (id ${savedId}).` : 'Salvo.' },
+          : {
+              tone: 'ok',
+              // Naming the file is not decoration: downloading and converting is
+              // the half of a save that leaves no trace on the form — the name
+              // usually does not even change — so without this there is no way
+              // to tell it happened, or that it stopped happening.
+              text:
+                (asNew ? `Salvo como novo (id ${savedId}).` : 'Salvo.') +
+                (media ? ` Imagem convertida: ${media}` : ''),
+            },
       )
       // The list is sorted by name, so renaming moves this row — and the form
       // the user is still working in goes with it, off the screen. A no-op when

@@ -563,10 +563,12 @@ describe('v13 migration: the catalog moves to the bundle', () => {
     await db.open()
     try {
       const ids = (await db.days.get(day))!.exerciseIds
-      const names = await Promise.all(ids.map(async (id) => (await getExercise(id, db))?.name))
       // The same movements the device had before the upgrade — read from the
-      // bundle now instead of from a row.
-      expect(names).toEqual(['Supino Reto com Barra', 'Rosca Direta com Barra'])
+      // bundle now instead of from a row. Compared by id, because that is what
+      // the upgrade had to preserve; the names are the catalog's to improve.
+      const resolved = await Promise.all(ids.map((id) => getExercise(id, db)))
+      expect(resolved.map((e) => e?.id)).toEqual([1, 14])
+      expect(resolved.every((e) => e?.name)).toBe(true)
       expect((await resolveWeight(GLOBAL_GYM_ID, 1, db)).weight?.value).toBe(60)
     } finally {
       db.close()

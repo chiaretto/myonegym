@@ -77,12 +77,13 @@ export function fetchCatalog(): Promise<AdminCatalog> {
  * side that knows which numbers are already spent. `copyMediaFrom` names the
  * exercise a new one was derived from, so it inherits that picture.
  *
- * `warning` comes back when the record was saved but the picture was not — a
- * dead host, a 404. Losing the whole edit over that would be worse.
+ * `media` comes back naming the file the conversion produced, and `warning`
+ * when the record was saved but the picture was not — a dead host, a 404.
+ * Losing the whole edit over that would be worse.
  */
 export function saveExercise(
   exercise: Partial<AdminExercise> & { mediaUrl?: string; copyMediaFrom?: number },
-): Promise<{ catalog: AdminCatalog; id: number; warning?: string }> {
+): Promise<{ catalog: AdminCatalog; id: number; warning?: string; media?: string }> {
   return request('PUT', '/api/admin/catalog/exercise', exercise)
 }
 

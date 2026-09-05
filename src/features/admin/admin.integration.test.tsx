@@ -79,7 +79,12 @@ beforeEach(() => {
       const saved = { ...body, id, mediaFile: catalog.exercises[at]?.mediaFile }
       if (at >= 0) catalog.exercises[at] = saved
       else catalog.exercises.push(saved)
-      return Response.json({ catalog, id, ...(warnWith ? { warning: warnWith } : {}) })
+      return Response.json({
+        catalog,
+        id,
+        ...(body.mediaUrl && !warnWith ? { media: `${id}.webp` } : {}),
+        ...(warnWith ? { warning: warnWith } : {}),
+      })
     }
     if (path === '/api/admin/catalog/category') {
       const at = catalog.categories.findIndex((c) => c.id === body.id)
@@ -205,6 +210,31 @@ describe('the admin screen', () => {
     // It is not a stored field — leaving it filled would read as one that never
     // matches the catalog.
     await waitFor(() => expect(media).toHaveValue(''))
+  })
+
+  it('names the file it produced, so the conversion is not an invisible step', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+
+    // The download and the conversion leave no other trace on the form — the
+    // file name usually does not even change — so without this there is no way
+    // to tell they happened, or that they stopped happening.
+    expect(await within(row).findByRole('status')).toHaveTextContent('Imagem convertida: 1.webp')
+  })
+
+  it('says nothing about a picture when no address was given', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+
+    const status = await within(row).findByRole('status')
+    expect(status).toHaveTextContent('Salvo.')
+    expect(status).not.toHaveTextContent('convertida')
   })
 
   it('keeps the edit and reports the failure when the picture does not come down', async () => {

@@ -170,7 +170,7 @@ function cleanExercise(input: Partial<CatalogExercise>, catalog: Catalog): Catal
  */
 export async function saveExercise(
   input: Partial<CatalogExercise> & { mediaUrl?: string; copyMediaFrom?: number },
-): Promise<{ catalog: Catalog; id: number; warning?: string }> {
+): Promise<{ catalog: Catalog; id: number; warning?: string; media?: string }> {
   const catalog = readCatalog()
   const slugsBefore = slugsByExercise(catalog.exercises)
   const clean = cleanExercise(input, catalog)
@@ -185,10 +185,16 @@ export async function saveExercise(
   const base = reslug(catalog, slugsBefore).get(clean.id)!
 
   let warning: string | undefined
+  // What the save *did* to the picture, so the screen can say so. Downloading
+  // and converting is the half of this that leaves no trace on the form: the
+  // file name usually does not change, and a step nobody can see is a step
+  // nobody can tell has stopped working.
+  let media: string | undefined
   const url = String(input.mediaUrl ?? '').trim()
   if (url) {
     try {
       clean.mediaFile = await convertMaster(await downloadMaster(url, base), base)
+      media = clean.mediaFile
     } catch (err) {
       warning = `Não consegui baixar a imagem: ${err instanceof Error ? err.message : String(err)}`
     }
@@ -198,7 +204,10 @@ export async function saveExercise(
     // rather than a decision — and the original keeps its own copy.
     const source = slugsBefore.get(input.copyMediaFrom)
     const master = source && copyMedia(source, base)
-    if (master) clean.mediaFile = await convertMaster(master, base)
+    if (master) {
+      clean.mediaFile = await convertMaster(master, base)
+      media = clean.mediaFile
+    }
   }
 
   // The served file is named after the exercise, always: whether it was
@@ -208,7 +217,7 @@ export async function saveExercise(
 
   sweepServed(catalog)
   writeCatalog(catalog)
-  return { catalog, id: clean.id, warning }
+  return { catalog, id: clean.id, warning, media }
 }
 
 export function deleteExercise(id: number): Catalog {
@@ -291,6 +300,15 @@ export async function handleAdminRequest(
     }
     if (method === 'PUT' && path === '/api/admin/catalog/exercise') {
       const saved = await saveExercise((await body()) as Partial<CatalogExercise>)
+      // Also on the terminal running the dev server: the conversion happens
+      // there, and its failures (a host that refuses, a format sharp declines)
+      // are only legible there.
+      const name = saved.catalog.exercises.find((e) => e.id === saved.id)?.name
+      console.log(
+        `[admin] ${saved.id} ${name}` +
+          (saved.media ? ` — imagem: ${saved.media}` : '') +
+          (saved.warning ? ` — ${saved.warning}` : ''),
+      )
       return { status: 200, body: saved }
     }
     if (method === 'DELETE' && /^\/api\/admin\/catalog\/exercise\/\d+$/.test(path)) {

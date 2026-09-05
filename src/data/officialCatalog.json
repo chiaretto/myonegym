@@ -81,7 +81,9 @@
         5,
         4
       ],
-      "alternativeIds": [],
+      "alternativeIds": [
+        39
+      ],
       "kind": "strength",
       "videos": [],
       "mediaFile": "supino-inclinado-com-barra.webp"
@@ -105,13 +107,15 @@
       "mediaFile": "crucifixo-reto-voador-peck-deck.webp"
     },
     {
-      "name": "Tríceps Pulley (Barra Reta)",
       "id": 4,
+      "name": "Tríceps Pulley (Barra Reta)",
+      "kind": "strength",
       "categoryIds": [
         4
       ],
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        59
+      ],
       "videos": [],
       "mediaFile": "triceps-pulley-barra-reta.webp"
     },
@@ -189,8 +193,9 @@
       "mediaFile": "abdominal-obliquo-solo.webp"
     },
     {
-      "name": "Barra Fixa Braço Fechado (Graviton)",
       "id": 11,
+      "name": "Barra Fixa Braço Fechado (Graviton)",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
@@ -199,20 +204,19 @@
       "alternativeIds": [
         51
       ],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "barra-fixa-braco-fechado-graviton.webp"
     },
     {
-      "name": "Remada Curvada com Barra",
       "id": 12,
+      "name": "Remada Curvada com Barra",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "remada-curvada-com-barra.webp"
     },
@@ -230,24 +234,26 @@
       "mediaFile": "pulldown-na-polia.webp"
     },
     {
-      "name": "Rosca Direta com Barra",
       "id": 14,
+      "name": "Rosca Direta com Barra Reta",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        58
+      ],
       "videos": [],
-      "mediaFile": "rosca-direta-com-barra.webp"
+      "mediaFile": "rosca-direta-com-barra-reta.webp"
     },
     {
-      "name": "Rosca Martelo com Halteres",
       "id": 15,
+      "name": "Rosca Martelo com Halteres",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "rosca-martelo-com-halteres.webp"
     },
@@ -267,15 +273,17 @@
       "mediaFile": "rosca-concentrada-1-braco.webp"
     },
     {
-      "name": "Barra Fixa Braço Aberto",
       "id": 17,
+      "name": "Barra Fixa Braço Aberto",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
         8
       ],
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        57
+      ],
       "videos": [],
       "mediaFile": "barra-fixa-braco-aberto.webp"
     },
@@ -317,15 +325,15 @@
       "mediaFile": "elevacao-frontal-com-anilha.webp"
     },
     {
-      "name": "Remada Alta com Barra",
       "id": 21,
+      "name": "Remada Alta com Barra",
+      "kind": "strength",
       "categoryIds": [
         5,
         8,
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "remada-alta-com-barra.webp"
     },
@@ -547,15 +555,17 @@
       "mediaFile": "agachamento-bulgaro-smith.webp"
     },
     {
+      "id": 39,
       "name": "Supino Inclinado com Halteres",
+      "kind": "strength",
       "categoryIds": [
         1,
         5,
         4
       ],
-      "id": 39,
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        2
+      ],
       "videos": [
         {
           "url": "https://youtube.com/shorts/Unn3S3NysHY?is=pyQr94lHYdMH3M-n"
@@ -805,6 +815,47 @@
       ],
       "videos": [],
       "mediaFile": "banco-romano-hiperextensao-com-peso.webp"
+    },
+    {
+      "id": 57,
+      "name": "Barra Fixa Braço Aberto (Graviton)",
+      "kind": "strength",
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [
+        17
+      ],
+      "videos": [],
+      "mediaFile": "barra-fixa-braco-aberto-graviton.webp"
+    },
+    {
+      "id": 58,
+      "name": "Rosca Direta com Barra Reta (Polia)",
+      "kind": "strength",
+      "categoryIds": [
+        3
+      ],
+      "alternativeIds": [
+        14
+      ],
+      "videos": [],
+      "mediaFile": "rosca-direta-com-barra-reta-polia.webp"
+    },
+    {
+      "id": 59,
+      "name": "Tríceps Pulley (Corda)",
+      "kind": "strength",
+      "categoryIds": [
+        4
+      ],
+      "alternativeIds": [
+        4
+      ],
+      "videos": [],
+      "mediaFile": "triceps-pulley-corda.webp"
     }
   ]
 }
