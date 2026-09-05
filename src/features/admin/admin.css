@@ -241,11 +241,59 @@
   min-width: 0;
 }
 
+/* ---------------------------------------------------------- the action row */
+
 .admin-actions {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* `.btn` is width:100% for the app's stacked action bars; here they sit in a
+   row and take the width of their own label. */
+.admin-actions .btn {
+  width: auto;
+  flex: none;
+  padding: 10px 18px;
+}
+
+/*
+ * Four buttons, four colours, ordered by how much they cost you: leave, remove,
+ * overwrite, branch. The palette is the tool's own — the app has no black and
+ * no blue, and inventing tokens for a screen that never ships would put them in
+ * everyone's stylesheet for nothing.
+ */
+.admin-btn-cancel {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.admin-btn-delete {
+  background: #000;
+  color: #fff;
+  border-color: var(--border-strong);
+}
+
+/* Red is the app's accent, and Salvar is the ordinary thing this screen does. */
+.admin-btn-save {
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* Blue, because it is not a variant of Salvar: it leaves the record on screen
+   untouched and writes a second one. */
+.admin-btn-new {
+  background: #1f6feb;
+  color: #fff;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.admin-actions .btn:active {
+  filter: brightness(0.9);
 }
 
 .admin-status {

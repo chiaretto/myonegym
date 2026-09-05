@@ -747,14 +747,15 @@
       "mediaFile": "triceps-testa-polia-alta.webp"
     },
     {
-      "name": "Hit interno",
+      "id": 53,
+      "name": "Corrida Interna",
       "kind": "cardio",
       "categoryIds": [
         7
       ],
       "alternativeIds": [],
       "videos": [],
-      "id": 53
+      "mediaFile": "corrida-interna.webp"
     }
   ]
 }

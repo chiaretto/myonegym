@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
@@ -381,6 +381,68 @@ describe('the admin screen', () => {
     // A replaced picture keeps its file name — the name comes from the exercise
     // — so without a fresh URL the browser shows the one just replaced.
     await waitFor(() => expect(hero().getAttribute('src')).not.toBe(before))
+  })
+
+  it('previews the address as it is typed, in the picture’s own place', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
+    const preview = within(row).getByRole('img', { name: 'Pré-visualização da URL' })
+    // Straight from the source: what the conversion does to it is settled, and
+    // whether it is the right picture is the part only eyes can answer.
+    expect(preview).toHaveAttribute('src', 'https://x.test/novo.gif')
+    expect(row).toHaveTextContent(/baixada e convertida ao salvar/)
+  })
+
+  it('does not call a picture wrong just because the page could not load it', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/bloqueado.gif')
+    fireEvent.error(within(row).getByRole('img', { name: 'Pré-visualização da URL' }))
+
+    // Several of these hosts refuse a bare browser request but answer the
+    // download, which sends a browser-ish user agent.
+    expect(row).toHaveTextContent(/ainda pode funcionar/)
+  })
+
+  it('saves as a new exercise without touching the one on screen', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    await user.clear(within(row).getByLabelText('Nome'))
+    await user.type(within(row).getByLabelText('Nome'), 'Supino Reto Máquina')
+    await user.click(within(row).getByRole('button', { name: 'Salvar novo' }))
+
+    await waitFor(() => expect(within(row).getByRole('status')).toHaveTextContent('id 12'))
+    // No id goes out — that is what makes it new, and the API is the only side
+    // that knows which numbers are spent. It names the source so the copy
+    // inherits the picture instead of starting blank.
+    expect(calls.at(-1)?.body).toMatchObject({
+      name: 'Supino Reto Máquina',
+      copyMediaFrom: 1,
+    })
+    expect(calls.at(-1)?.body).not.toHaveProperty('id')
+    // The original is still there, under its own name.
+    expect(within(panel('Exercícios')).getByText('Supino Reto')).toBeInTheDocument()
+  })
+
+  it('closes the form without writing anything when Cancelar is used', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    await user.clear(within(row).getByLabelText('Nome'))
+    await user.type(within(row).getByLabelText('Nome'), 'Descartado')
+    await user.click(within(row).getByRole('button', { name: 'Cancelar' }))
+
+    await waitFor(() => expect(screen.queryByLabelText('Imagem')).not.toBeInTheDocument())
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([])
+    expect(within(panel('Exercícios')).getByText('Supino Reto')).toBeInTheDocument()
   })
 
   it('filters the alternatives, but never hides one that is already ticked', async () => {

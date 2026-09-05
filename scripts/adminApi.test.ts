@@ -19,6 +19,7 @@ const disk = vi.hoisted(() => ({
   catalog: null as unknown as Catalog,
   written: [] as Catalog[],
   renamed: [] as [string, string][],
+  copied: [] as [string, string][],
   removed: [] as string[],
   downloaded: [] as [string, string][],
   /** Set to make the next download fail, the way a dead host does. */
@@ -35,6 +36,10 @@ vi.mock('./exerciseMedia.mjs', async (importOriginal) => {
       disk.written.push(structuredClone(c))
     },
     renameMedia: (from: string, to: string) => void disk.renamed.push([from, to]),
+    copyMedia: (from: string, to: string) => {
+      disk.copied.push([from, to])
+      return `${to}.gif`
+    },
     removeMedia: (base: string) => void disk.removed.push(base),
     sweepServed: () => [],
     downloadMaster: async (url: string, base: string) => {
@@ -89,6 +94,7 @@ beforeEach(() => {
   disk.catalog = seed()
   disk.written = []
   disk.renamed = []
+  disk.copied = []
   disk.removed = []
   disk.downloaded = []
   disk.downloadFails = null
@@ -262,6 +268,60 @@ describe('saving an exercise', () => {
     expect(warning).toMatch(/HTTP 404/)
     // The edit is not lost just because the picture is.
     expect(disk.catalog.exercises.find((e) => e.id === 1)?.name).toBe('Supino Reto Novo')
+  })
+
+  it('names the served file after the exercise, always', async () => {
+    // The rule the whole naming scheme rests on: the file is named after the
+    // exercise, so a rename must move it, and a save must never leave the
+    // catalog pointing at a name the file no longer answers to.
+    await saveExercise({ id: 11, name: 'Barra Fixa Pronada' })
+    expect(disk.catalog.exercises.find((e) => e.id === 11)?.mediaFile).toBe(
+      'barra-fixa-pronada.webp',
+    )
+  })
+
+  it('moves the file the catalog actually points at, not the one the old name implies', async () => {
+    // A hand-edited entry can disagree with its own slug. Renaming from the old
+    // *name* would move nothing and then rewrite mediaFile to a file that is
+    // not there — an exercise pointing at nothing, and nothing to say so.
+    disk.catalog.exercises[1].mediaFile = 'foto-antiga.webp'
+    await saveExercise({ id: 11, name: 'Barra Fixa Pronada' })
+    expect(disk.copied).toEqual([])
+    expect(disk.renamed).toEqual([['foto-antiga', 'barra-fixa-pronada']])
+  })
+
+  describe('saved as a new exercise', () => {
+    it('leaves the original alone and takes the next free id', async () => {
+      const { id } = await saveExercise({ name: 'Barra Fixa Pronada', copyMediaFrom: 11 })
+      expect(id).toBe(12)
+      expect(disk.catalog.exercises.find((e) => e.id === 11)?.name).toBe('Barra Fixa')
+    })
+
+    it('inherits the picture of the one it came from, under its own name', async () => {
+      // A variant that starts blank would be a surprise rather than a decision,
+      // and the original keeps its own copy.
+      await saveExercise({ name: 'Barra Fixa Pronada', copyMediaFrom: 11 })
+      expect(disk.copied).toEqual([['barra-fixa', 'barra-fixa-pronada']])
+      expect(disk.catalog.exercises.at(-1)?.mediaFile).toBe('barra-fixa-pronada.webp')
+      expect(disk.catalog.exercises.find((e) => e.id === 11)?.mediaFile).toBe('barra-fixa.webp')
+    })
+
+    it('prefers a fresh download over the inherited picture', async () => {
+      await saveExercise({
+        name: 'Barra Fixa Pronada',
+        copyMediaFrom: 11,
+        mediaUrl: 'https://x.test/a.gif',
+      })
+      expect(disk.copied).toEqual([])
+      expect(disk.downloaded).toEqual([['https://x.test/a.gif', 'barra-fixa-pronada']])
+    })
+
+    it('does not copy onto an existing exercise', async () => {
+      // `copyMediaFrom` alongside an id would overwrite a picture that is
+      // already right; only a creation may inherit one.
+      await saveExercise({ id: 1, name: 'Supino Reto', copyMediaFrom: 11 })
+      expect(disk.copied).toEqual([])
+    })
   })
 
   it('refuses to edit an exercise that is not in the catalog', async () => {

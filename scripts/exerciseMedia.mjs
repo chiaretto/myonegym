@@ -14,6 +14,7 @@
  * the plugin type-check.
  */
 import {
+  copyFileSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -185,6 +186,28 @@ export function removeMedia(base) {
     delete sources[base]
     writeSources(sources)
   }
+}
+
+/**
+ * Copy a picture from one slug to another — master and provenance.
+ *
+ * For an exercise saved **as a new one**: it is a variant of the one on screen,
+ * and starting it with no picture would be a surprise, not a decision. The
+ * served webp is not copied because the caller converts it, which is also what
+ * gives the copy its own `mediaFile`.
+ *
+ * Answers the new master's file name, or `undefined` when there was nothing to
+ * copy.
+ */
+export function copyMedia(from, to) {
+  const master = masterFor(from)
+  if (!master) return undefined
+  const file = master.replace(/^[^.]*/, to)
+  copyFileSync(resolve(MASTERS, master), resolve(MASTERS, file))
+
+  const sources = readSources()
+  if (from in sources) writeSources({ ...sources, [to]: sources[from] })
+  return file
 }
 
 /**

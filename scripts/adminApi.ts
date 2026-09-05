@@ -13,6 +13,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import {
   convertMaster,
+  copyMedia,
   downloadMaster,
   readCatalog,
   removeMedia,
@@ -102,9 +103,15 @@ export function mirrorAlternatives(exercises: CatalogExercise[], id: number): vo
 export function reslug(catalog: Catalog, before: Map<number, string>): Map<number, string> {
   const after = slugsByExercise(catalog.exercises)
   for (const ex of catalog.exercises) {
-    const from = before.get(ex.id)
     const to = after.get(ex.id)
-    if (!from || !to || from === to) continue
+    if (!to) continue
+    // Where the picture actually is *now*. What the catalog points at wins over
+    // what the old name would have slugged to: the two can disagree (a
+    // hand-edited entry, a file from an older naming), and it is the served copy
+    // that has to be found and moved — a name it no longer answers to would
+    // leave the exercise pointing at nothing.
+    const from = ex.mediaFile?.replace(/\.webp$/, '') ?? before.get(ex.id)
+    if (!from || from === to) continue
     renameMedia(from, to)
     if (ex.mediaFile) ex.mediaFile = `${to}.webp`
   }
@@ -159,7 +166,7 @@ function cleanExercise(input: Partial<CatalogExercise>, catalog: Catalog): Catal
  * screen already renders that — and the failure comes back as a warning.
  */
 export async function saveExercise(
-  input: Partial<CatalogExercise> & { mediaUrl?: string },
+  input: Partial<CatalogExercise> & { mediaUrl?: string; copyMediaFrom?: number },
 ): Promise<{ catalog: Catalog; id: number; warning?: string }> {
   const catalog = readCatalog()
   const slugsBefore = slugsByExercise(catalog.exercises)
@@ -182,7 +189,19 @@ export async function saveExercise(
     } catch (err) {
       warning = `Não consegui baixar a imagem: ${err instanceof Error ? err.message : String(err)}`
     }
+  } else if (at < 0 && input.copyMediaFrom != null) {
+    // Saved as a new exercise: it is a variant of the one that was on screen,
+    // so it inherits that one's picture. Starting it blank would be a surprise
+    // rather than a decision — and the original keeps its own copy.
+    const source = slugsBefore.get(input.copyMediaFrom)
+    const master = source && copyMedia(source, base)
+    if (master) clean.mediaFile = await convertMaster(master, base)
   }
+
+  // The served file is named after the exercise, always: whether it was
+  // renamed, downloaded fresh or inherited by a copy, this is the one name it
+  // may have. Stated once here rather than trusted at each of those branches.
+  if (clean.mediaFile) clean.mediaFile = `${base}.webp`
 
   sweepServed(catalog)
   writeCatalog(catalog)

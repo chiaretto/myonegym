@@ -433,12 +433,28 @@ function ExerciseForm({
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<Status>(null)
   const [altSearch, setAltSearch] = useState('')
+  const [previewFailed, setPreviewFailed] = useState(false)
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
 
   const id = exercise?.id
   const fieldId = (name: string) => `admin-ex-${id ?? 'new'}-${name}`
+
+  /**
+   * The address being typed, once it is one — shown in the picture's place so
+   * the choice is visible before it is committed.
+   *
+   * Straight from the source, not through the conversion, so it is the picture
+   * and not the file that will be produced. That is the useful half: what the
+   * conversion does to it (720px cap, animation kept) is settled and tested,
+   * while *whether this is the right image* is the thing only eyes can answer.
+   */
+  const typedUrl = /^https?:\/\//i.test(draft.mediaUrl.trim()) ? draft.mediaUrl.trim() : null
+
+  useEffect(() => {
+    setPreviewFailed(false)
+  }, [typedUrl])
 
   /**
    * The alternatives to offer: every other exercise, narrowed by the filter —
@@ -456,12 +472,22 @@ function ExerciseForm({
     )
   }, [catalog.exercises, id, altSearch, draft.alternativeIds])
 
-  const save = async () => {
+  /**
+   * Write the form.
+   *
+   * `asNew` sends **no id**, which is what makes it a new exercise: the API
+   * hands out the number, because it is the only side that knows which are
+   * already spent. It also names the exercise this one came from, so the copy
+   * inherits its picture — a variant that starts blank would be a surprise
+   * rather than a decision, and the original keeps its own.
+   */
+  const save = async (asNew = false) => {
     setSaving(true)
     setStatus(null)
     try {
-      const { catalog: next, warning } = await saveExercise({
-        ...(id != null ? { id } : {}),
+      const { catalog: next, id: savedId, warning } = await saveExercise({
+        ...(id != null && !asNew ? { id } : {}),
+        ...(asNew && id != null ? { copyMediaFrom: id } : {}),
         name: draft.name,
         kind: draft.kind,
         categoryIds: draft.categoryIds,
@@ -473,7 +499,11 @@ function ExerciseForm({
       // The address was an instruction, and it has been carried out; leaving it
       // in the box would look like a stored field that never matches the file.
       set('mediaUrl', '')
-      setStatus(warning ? { tone: 'bad', text: warning } : { tone: 'ok', text: 'Salvo.' })
+      setStatus(
+        warning
+          ? { tone: 'bad', text: warning }
+          : { tone: 'ok', text: asNew ? `Salvo como novo (id ${savedId}).` : 'Salvo.' },
+      )
       if (id == null) onDone()
     } catch (e) {
       setStatus({
@@ -544,11 +574,13 @@ function ExerciseForm({
           wrong in the conversion and exactly what nothing else would report.
         */}
         <div className="admin-hero">
-          {exercise?.mediaFile ? (
+          {typedUrl && !previewFailed ? (
+            <img src={typedUrl} alt="Pré-visualização da URL" onError={() => setPreviewFailed(true)} />
+          ) : exercise?.mediaFile && !typedUrl ? (
             <img src={mediaSrc(exercise.mediaFile, rev)} alt={exercise.name} />
           ) : (
             <span className="admin-hero-empty">
-              <Icon name="photo-off" />
+              <Icon name={previewFailed ? 'photo-x' : 'photo-off'} />
             </span>
           )}
         </div>
@@ -559,9 +591,16 @@ function ExerciseForm({
           onChange={(e) => set('mediaUrl', e.target.value)}
         />
         <p className="admin-item-sub">
-          {exercise?.mediaFile
-            ? `${exercise.mediaFile} — informe uma URL para trocar.`
-            : 'Sem imagem. A URL é baixada e convertida ao salvar.'}
+          {previewFailed
+            ? /* Several of these hosts refuse a bare browser request but answer
+                 the download, which sends a browser-ish user agent — so this is
+                 a warning, not a verdict. */
+              'Não consegui pré-visualizar esta URL. O download ao salvar ainda pode funcionar.'
+            : typedUrl
+              ? 'Pré-visualização da URL. Ela é baixada e convertida ao salvar.'
+              : exercise?.mediaFile
+                ? `${exercise.mediaFile} — informe uma URL para trocar.`
+                : 'Sem imagem. A URL é baixada e convertida ao salvar.'}
         </p>
       </div>
 
@@ -663,12 +702,25 @@ function ExerciseForm({
       </div>
 
       <div className="admin-actions">
-        <button className="btn primary" disabled={saving} onClick={() => void save()}>
-          {saving ? 'Salvando…' : 'Salvar'}
+        <button className="btn admin-btn-cancel" onClick={onDone}>
+          Cancelar
         </button>
         {id != null && (
-          <button className="btn subtle" onClick={() => void remove()}>
+          <button className="btn admin-btn-delete" onClick={() => void remove()}>
             Excluir
+          </button>
+        )}
+        <button className="btn admin-btn-save" disabled={saving} onClick={() => void save()}>
+          {saving ? 'Salvando…' : 'Salvar'}
+        </button>
+        {/* Only from an existing one: on a brand-new exercise this *is* Salvar. */}
+        {id != null && (
+          <button
+            className="btn admin-btn-new"
+            disabled={saving}
+            onClick={() => void save(true)}
+          >
+            Salvar novo
           </button>
         )}
         {status && (

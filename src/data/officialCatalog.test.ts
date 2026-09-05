@@ -117,7 +117,7 @@ describe('officialCatalog', () => {
       [35, 'Panturrilha em pé'],
       [36, 'Stiff com Barra'],
       [37, 'Recuo Reverso com Halteres'],
-      [38, 'Agachamento Búlgaro'],
+      [38, 'Agachamento Búlgaro (smith)'],
       [39, 'Supino Inclinado com Halteres'],
       [40, 'Crossover na Polia'],
       [41, 'Natação'],

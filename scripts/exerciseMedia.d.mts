@@ -57,6 +57,7 @@ export function convertMaster(master: string, base: string): Promise<string>
 export function downloadMaster(url: string, base: string): Promise<string>
 export function removeMedia(base: string): void
 export function renameMedia(from: string, to: string): void
+export function copyMedia(from: string, to: string): string | undefined
 export function readSources(): Record<string, string>
 export function writeSources(sources: Record<string, string>): void
 export function readCatalog(): Catalog
