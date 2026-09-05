@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(55)
+    expect(officialExercises()).toHaveLength(58)
   })
 
   it('keeps every id inside the official range', () => {
@@ -93,7 +93,7 @@ describe('officialCatalog', () => {
       [11, 'Barra Fixa Braço Fechado (Graviton)'],
       [12, 'Remada Curvada com Barra'],
       [13, 'Pulldown na Polia'],
-      [14, 'Rosca Direta com Barra'],
+      [14, 'Rosca Direta com Barra Reta'],
       [15, 'Rosca Martelo com Halteres'],
       [16, 'Rosca Concentrada (1 Braço)'],
       [17, 'Barra Fixa Braço Aberto'],
@@ -136,6 +136,9 @@ describe('officialCatalog', () => {
       [54, 'Bike Trilha'],
       [55, 'Agachamento Búlgaro (halteres)'],
       [56, 'Banco Romano (Hiperextensão com peso)'],
+      [57, 'Barra Fixa Braço Aberto (Graviton)'],
+      [58, 'Rosca Direta com Barra Reta (Polia)'],
+      [59, 'Tríceps Pulley (Corda)'],
     ]
 
     it('still numbers every category the way it always did', () => {
