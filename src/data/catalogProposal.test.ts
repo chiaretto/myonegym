@@ -127,11 +127,27 @@ describe('catalogSnapshot', () => {
     const snapshot = await catalogSnapshot(d)
 
     expect(Object.keys(snapshot).sort()).toEqual(['categories', 'days', 'exercises'])
-    // Nothing personal anywhere in the serialized payload.
+
+    // Nothing personal anywhere in the payload — asserted by the **shape**, so
+    // that a field carrying a weight, a note or a gym could not ride along
+    // unnoticed. Searching the serialized text for the weight's value used to
+    // stand in for this, and the day an official exercise took id 60 that
+    // search started matching `"id":60`.
+    for (const c of snapshot.categories) {
+      expect(Object.keys(c).filter((k) => !['id', 'name', 'readOnly'].includes(k))).toEqual([])
+    }
+    for (const e of snapshot.exercises) {
+      const allowed = ['id', 'name', 'mediaUrl', 'categoryIds', 'alternativeIds', 'readOnly']
+      expect(Object.keys(e).filter((k) => !allowed.includes(k))).toEqual([])
+    }
+    for (const day of snapshot.days) {
+      expect(Object.keys(day).filter((k) => !['id', 'name', 'exerciseIds'].includes(k))).toEqual([])
+    }
+
+    // And the personal values themselves, by name, where they cannot collide.
     const json = JSON.stringify(snapshot)
     expect(json).not.toContain('banco na altura 3')
     expect(json).not.toContain('Academia')
-    expect(json).not.toContain('60')
   })
 
   it('reports an exercise with no media as null rather than omitting it', async () => {

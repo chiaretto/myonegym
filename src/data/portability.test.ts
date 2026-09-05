@@ -947,9 +947,12 @@ describe('exercise videos travel through a backup', () => {
 describe('restoring a backup made before the catalog moved to the bundle', () => {
   /** A document shaped like a pre-v13 export: the catalog inside it. */
   function legacyDoc(gymId: number) {
-    const supino = officialExercises().find((e) => e.name === 'Supino Reto com Barra')!
-    const rosca = officialExercises().find((e) => e.name === 'Rosca Direta com Barra')!
-    const peito = officialCategories().find((c) => c.name === 'Peito')!
+    // By id, not by name: the id is the contract the catalog keeps (see
+    // `officialCatalog.test.ts`), while a name may be improved at any time —
+    // and a rename has no business breaking a test about restoring a backup.
+    const supino = officialExercises().find((e) => e.id === 1)!
+    const rosca = officialExercises().find((e) => e.id === 14)!
+    const peito = officialCategories().find((c) => c.id === 1)!
     return {
       app: 'myonegym',
       kind: 'backup',

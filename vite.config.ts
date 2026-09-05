@@ -4,6 +4,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { buildDefine } from './scripts/buildInfo'
+import { adminApi } from './scripts/adminApi'
 
 /**
  * Serve the dev server over https when `./scripts/dev-cert.sh` has been run.
@@ -47,6 +48,10 @@ export default defineConfig(({ command }) => {
     },
     plugins: [
       react(),
+      // The catalog maintenance tool's back end. `apply: 'serve'` inside keeps
+      // it out of every build, and it answers localhost only — `host: true`
+      // above is why that matters.
+      adminApi(),
       VitePWA({
         registerType: 'autoUpdate',
         // The app registers the service worker itself, from src/lib/appUpdate.ts:

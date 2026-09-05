@@ -1,0 +1,359 @@
+/**
+ * The catalog maintenance screen.
+ *
+ * The only wide layout in a mobile-first app, and deliberately so: it is a tool
+ * the maintainer opens on the computer that holds the repository, never
+ * something a user reaches. That is what buys it two columns, a table-ish list
+ * and forms that spread out — none of which the app itself is allowed.
+ *
+ * Its colours are the app's tokens, because it is served by the app in dev and a
+ * second palette would just be another thing to keep in step.
+ */
+
+/**
+ * The app shell is a 480px phone column (`.app` in global.css) wrapped around
+ * every route, this one included — so widening `.admin` alone does nothing.
+ *
+ * `:has()` lets the tool lift that cap **for itself**, from its own stylesheet,
+ * without a mobile-first shell learning that a desktop screen exists. The rule
+ * leaves with this file when the build folds the admin away, and it can only
+ * ever match while the tool is on screen.
+ */
+.app:has(.admin) {
+  max-width: none;
+}
+
+.admin {
+  /* No cap: it is a maintenance tool on the monitor that holds the repository,
+     and the whole point of it is seeing the catalog at once. */
+  width: 100%;
+  padding: 20px 28px 80px;
+}
+
+.admin-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.admin-head h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.admin-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 20px;
+  max-width: 70ch;
+}
+
+.admin-cols {
+  display: grid;
+  /* Categories are a short list of short names; exercises are the work, and
+     their form spreads into several fields per row — so the space goes there
+     rather than stretching two-word category names across a monitor. */
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 4fr);
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .admin-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-panel h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.admin-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.admin-toolbar input[type='search'] {
+  flex: 1;
+  min-width: 180px;
+}
+
+.admin-toolbar select {
+  flex: none;
+  width: auto;
+}
+
+/* ------------------------------------------------------------- the lists */
+
+.admin-list {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.admin-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-item:last-child {
+  border-bottom: 0;
+}
+
+.admin-item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.admin-item-head .admin-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.admin-thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex: none;
+}
+
+.admin-item-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-item-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-id {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: none;
+  min-width: 3ch;
+}
+
+/* --------------------------------------------------------------- the form */
+
+.admin-form {
+  padding: 4px 12px 16px;
+  border-top: 1px dashed var(--border);
+  display: grid;
+  gap: 14px;
+}
+
+/*
+ * The form's two halves: the exercise itself on the left (name, kind, picture),
+ * everything that points at something else on the right (categories,
+ * alternatives, videos). Split by what you are looking at, not by field type —
+ * down a single column these read as eight unrelated boxes.
+ */
+.admin-form-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.admin-form-col {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* One column below the width where two would just make both too narrow to
+   use — the picture alone wants ~440px. */
+@media (max-width: 1100px) {
+  .admin-form-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.admin-form label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.admin-form input,
+.admin-form select,
+.admin-form textarea {
+  width: 100%;
+}
+
+/*
+ * `.kind-seg` has no rule of its own in the app, so `.unit-seg`'s three-column
+ * grid is what a two-button segment gets there. Corrected here rather than in
+ * `exercise.css`: this tool has no business changing how the app looks.
+ */
+.admin-form .kind-seg {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* The chips wrap freely; a long catalog would otherwise push the form's own
+   actions off the bottom of a screen. */
+.admin-form .chip-select {
+  max-height: 260px;
+  overflow-y: auto;
+  align-content: start;
+  padding: 2px;
+}
+
+.admin-videos {
+  display: grid;
+  gap: 6px;
+}
+
+.admin-video {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-video input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------- the action row */
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* `.btn` is width:100% for the app's stacked action bars; here they sit in a
+   row and take the width of their own label. */
+.admin-actions .btn {
+  width: auto;
+  flex: none;
+  padding: 10px 18px;
+}
+
+/*
+ * Four buttons, four colours, ordered by how much they cost you: leave, remove,
+ * overwrite, branch. The palette is the tool's own — the app has no black and
+ * no blue, and inventing tokens for a screen that never ships would put them in
+ * everyone's stylesheet for nothing.
+ */
+.admin-btn-cancel {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.admin-btn-delete {
+  background: #000;
+  color: #fff;
+  border-color: var(--border-strong);
+}
+
+/* Red is the app's accent, and Salvar is the ordinary thing this screen does. */
+.admin-btn-save {
+  background: var(--accent-grad);
+  color: var(--on-accent);
+  border-color: transparent;
+  font-weight: 700;
+}
+
+/* Blue, because it is not a variant of Salvar: it leaves the record on screen
+   untouched and writes a second one. */
+.admin-btn-new {
+  background: #1f6feb;
+  color: #fff;
+  border-color: transparent;
+  font-weight: 700;
+}
+
+.admin-actions .btn:active {
+  filter: brightness(0.9);
+}
+
+.admin-status {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.admin-status.ok {
+  color: var(--text-secondary);
+}
+
+/* --danger is the app's warning amber, not red: red is the accent here. */
+.admin-status.bad {
+  color: var(--danger);
+}
+
+/* --------------------------------------------------------- the exercise's image */
+
+/*
+ * The picture as the **app** shows it: same card, same contain-fit, and capped
+ * at the width of the phone column (`.app` is 480px, less its padding), so what
+ * the maintainer judges is what the user will get — not the same file stretched
+ * across a monitor.
+ */
+.admin-hero {
+  width: 100%;
+  max-width: 444px;
+  margin-bottom: 8px;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.admin-hero img {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+  display: block;
+}
+
+.admin-hero-empty {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 40px;
+}

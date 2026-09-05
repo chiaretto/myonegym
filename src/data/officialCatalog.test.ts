@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(52)
+    expect(officialExercises()).toHaveLength(59)
   })
 
   it('keeps every id inside the official range', () => {
@@ -93,7 +93,7 @@ describe('officialCatalog', () => {
       [11, 'Barra Fixa Braço Fechado (Graviton)'],
       [12, 'Remada Curvada com Barra'],
       [13, 'Pulldown na Polia'],
-      [14, 'Rosca Direta com Barra'],
+      [14, 'Rosca Direta com Barra Reta'],
       [15, 'Rosca Martelo com Halteres'],
       [16, 'Rosca Concentrada (1 Braço)'],
       [17, 'Barra Fixa Braço Aberto'],
@@ -117,22 +117,29 @@ describe('officialCatalog', () => {
       [35, 'Panturrilha em pé'],
       [36, 'Stiff com Barra'],
       [37, 'Recuo Reverso com Halteres'],
-      [38, 'Agachamento Búlgaro'],
+      [38, 'Agachamento Búlgaro (smith)'],
       [39, 'Supino Inclinado com Halteres'],
       [40, 'Crossover na Polia'],
       [41, 'Natação'],
-      [42, 'Corrida'],
-      [43, 'Bike'],
+      [42, 'Corrida Externa'],
+      [43, 'Bike Interna'],
       [44, 'Mesa Flexora'],
       [45, 'Supino Reto Máquina'],
       [46, 'Elevação de pernas colchonete'],
       [47, 'Prancha Lateral'],
-      [48, 'Banco Romano'],
+      [48, 'Banco Romano (Hiperextensão)'],
       [49, 'Elevação quadril'],
       [50, 'Mergulho em paralelas (Graviton)'],
       [51, 'Barra fixa braço fechado'],
       [52, 'Tríceps testa polia alta'],
-      [53, 'Hit interno'],
+      [53, 'Corrida Interna'],
+      [54, 'Bike Trilha'],
+      [55, 'Agachamento Búlgaro (halteres)'],
+      [56, 'Banco Romano (Hiperextensão com peso)'],
+      [57, 'Barra Fixa Braço Aberto (Graviton)'],
+      [58, 'Rosca Direta com Barra Reta (Polia)'],
+      [59, 'Tríceps Pulley (Corda)'],
+      [60, 'Agachamento Afundo (halteres / Barra)'],
     ]
 
     it('still numbers every category the way it always did', () => {

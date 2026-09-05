@@ -3,6 +3,10 @@
   "kind": "exerciseLibrary",
   "version": 6,
   "exportedAt": 1788559785346,
+  "retiredCategoryIds": [],
+  "retiredExerciseIds": [
+    10
+  ],
   "categories": [
     {
       "name": "Peito",
@@ -55,8 +59,9 @@
   ],
   "exercises": [
     {
-      "name": "Supino Reto com Barra",
       "id": 1,
+      "name": "Supino Reto com Barra",
+      "kind": "strength",
       "categoryIds": [
         1,
         4,
@@ -65,7 +70,6 @@
       "alternativeIds": [
         45
       ],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "supino-reto-com-barra.webp"
     },
@@ -77,7 +81,9 @@
         5,
         4
       ],
-      "alternativeIds": [],
+      "alternativeIds": [
+        39
+      ],
       "kind": "strength",
       "videos": [],
       "mediaFile": "supino-inclinado-com-barra.webp"
@@ -101,14 +107,21 @@
       "mediaFile": "crucifixo-reto-voador-peck-deck.webp"
     },
     {
-      "name": "Tríceps Pulley (Barra Reta)",
       "id": 4,
+      "name": "Tríceps Pulley (Barra Reta)",
+      "kind": "strength",
       "categoryIds": [
         4
       ],
-      "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "alternativeIds": [
+        59
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=PbZrNU1NjDw",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "triceps-pulley-barra-reta.webp"
     },
     {
@@ -166,7 +179,8 @@
       ],
       "alternativeIds": [
         46,
-        48
+        48,
+        56
       ],
       "kind": "strength",
       "videos": [],
@@ -184,8 +198,9 @@
       "mediaFile": "abdominal-obliquo-solo.webp"
     },
     {
-      "name": "Barra Fixa Braço Fechado (Graviton)",
       "id": 11,
+      "name": "Barra Fixa Braço Fechado (Graviton)",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
@@ -194,21 +209,25 @@
       "alternativeIds": [
         51
       ],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "barra-fixa-braco-fechado-graviton.webp"
     },
     {
-      "name": "Remada Curvada com Barra",
       "id": 12,
+      "name": "Remada Curvada com Barra",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/LUBsQKkQdFo",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "remada-curvada-com-barra.webp"
     },
     {
@@ -225,35 +244,37 @@
       "mediaFile": "pulldown-na-polia.webp"
     },
     {
-      "name": "Rosca Direta com Barra",
       "id": 14,
+      "name": "Rosca Direta com Barra Reta",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        58
+      ],
       "videos": [],
-      "mediaFile": "rosca-direta-com-barra.webp"
+      "mediaFile": "rosca-direta-com-barra-reta.webp"
     },
     {
-      "name": "Rosca Martelo com Halteres",
       "id": 15,
+      "name": "Rosca Martelo com Halteres",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "rosca-martelo-com-halteres.webp"
     },
     {
-      "name": "Rosca Concentrada (1 Braço)",
       "id": 16,
+      "name": "Rosca Concentrada (1 Braço)",
+      "kind": "strength",
       "categoryIds": [
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [
         {
           "url": "https://youtube.com/shorts/vhsiLQ6nDEo?is=Z_e2trv-s6AT6_AJ"
@@ -262,41 +283,57 @@
       "mediaFile": "rosca-concentrada-1-braco.webp"
     },
     {
-      "name": "Barra Fixa Braço Aberto",
       "id": 17,
+      "name": "Barra Fixa Braço Aberto",
+      "kind": "strength",
       "categoryIds": [
         2,
         3,
         8
       ],
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        57
+      ],
       "videos": [],
       "mediaFile": "barra-fixa-braco-aberto.webp"
     },
     {
-      "name": "Desenvolvimento com Halteres",
       "id": 18,
+      "name": "Desenvolvimento com Halteres",
+      "kind": "strength",
       "categoryIds": [
         5,
         4,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/watch?v=IcG3iMJPOps&list=LL&index=1",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "desenvolvimento-com-halteres.webp"
     },
     {
-      "name": "Elevação Lateral",
       "id": 19,
+      "name": "Elevação Lateral",
+      "kind": "strength",
       "categoryIds": [
         5,
         8
       ],
       "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/osTCQ6RaX-Y",
+          "title": "Execução"
+        },
+        {
+          "url": "https://www.youtube.com/shorts/Nt6DnIkxD3M",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "elevacao-lateral.webp"
     },
     {
@@ -312,15 +349,15 @@
       "mediaFile": "elevacao-frontal-com-anilha.webp"
     },
     {
-      "name": "Remada Alta com Barra",
       "id": 21,
+      "name": "Remada Alta com Barra",
+      "kind": "strength",
       "categoryIds": [
         5,
         8,
         3
       ],
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "remada-alta-com-barra.webp"
     },
@@ -401,8 +438,9 @@
       "mediaFile": "voador-inverso-peck-deck-reverso.webp"
     },
     {
-      "name": "Agachamento Hack",
       "id": 28,
+      "name": "Agachamento Hack",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
@@ -411,13 +449,18 @@
       "alternativeIds": [
         29
       ],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/pPykSuk0uGM",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "agachamento-hack.webp"
     },
     {
-      "name": "Leg press 45°",
       "id": 29,
+      "name": "Leg press 45°",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
@@ -426,8 +469,12 @@
       "alternativeIds": [
         28
       ],
-      "kind": "strength",
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/auDOkCF-jsw",
+          "title": "Execução"
+        }
+      ],
       "mediaFile": "leg-press-45.webp"
     },
     {
@@ -527,28 +574,38 @@
       "mediaFile": "recuo-reverso-com-halteres.webp"
     },
     {
-      "name": "Agachamento Búlgaro",
+      "id": 38,
+      "name": "Agachamento Búlgaro (smith)",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
         10
       ],
-      "id": 38,
-      "alternativeIds": [],
-      "kind": "strength",
-      "videos": [],
-      "mediaFile": "agachamento-bulgaro.webp"
+      "alternativeIds": [
+        55,
+        60
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/m4YyYZzCjWs",
+          "title": "Execução"
+        }
+      ],
+      "mediaFile": "agachamento-bulgaro-smith.webp"
     },
     {
+      "id": 39,
       "name": "Supino Inclinado com Halteres",
+      "kind": "strength",
       "categoryIds": [
         1,
         5,
         4
       ],
-      "id": 39,
-      "alternativeIds": [],
-      "kind": "strength",
+      "alternativeIds": [
+        2
+      ],
       "videos": [
         {
           "url": "https://youtube.com/shorts/Unn3S3NysHY?is=pyQr94lHYdMH3M-n"
@@ -589,30 +646,30 @@
       "mediaFile": "natacao.webp"
     },
     {
-      "name": "Corrida",
+      "id": 42,
+      "name": "Corrida Externa",
+      "kind": "cardio",
       "categoryIds": [
         7,
         12,
         9
       ],
-      "id": 42,
       "alternativeIds": [],
-      "kind": "cardio",
       "videos": [],
-      "mediaFile": "corrida.webp"
+      "mediaFile": "corrida-externa.webp"
     },
     {
-      "name": "Bike",
+      "id": 43,
+      "name": "Bike Interna",
+      "kind": "cardio",
       "categoryIds": [
         7,
         9,
         11
       ],
-      "id": 43,
       "alternativeIds": [],
-      "kind": "cardio",
       "videos": [],
-      "mediaFile": "bike.webp"
+      "mediaFile": "bike-interna.webp"
     },
     {
       "name": "Mesa Flexora",
@@ -671,7 +728,9 @@
       "mediaFile": "prancha-lateral.webp"
     },
     {
-      "name": "Banco Romano",
+      "id": 48,
+      "name": "Banco Romano (Hiperextensão)",
+      "kind": "strength",
       "categoryIds": [
         2,
         11,
@@ -679,12 +738,11 @@
         6
       ],
       "alternativeIds": [
-        8
+        8,
+        56
       ],
-      "id": 48,
-      "kind": "strength",
       "videos": [],
-      "mediaFile": "banco-romano.webp"
+      "mediaFile": "banco-romano-hiperextensao.webp"
     },
     {
       "name": "Elevação quadril",
@@ -743,14 +801,133 @@
       "mediaFile": "triceps-testa-polia-alta.webp"
     },
     {
-      "name": "Hit interno",
+      "id": 53,
+      "name": "Corrida Interna",
       "kind": "cardio",
       "categoryIds": [
         7
       ],
       "alternativeIds": [],
       "videos": [],
-      "id": 53
+      "mediaFile": "corrida-interna.webp"
+    },
+    {
+      "id": 54,
+      "name": "Bike Trilha",
+      "kind": "cardio",
+      "categoryIds": [
+        7,
+        9,
+        11
+      ],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "bike-trilha.webp"
+    },
+    {
+      "id": 55,
+      "name": "Agachamento Búlgaro (halteres)",
+      "kind": "strength",
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        38,
+        60
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/m4YyYZzCjWs",
+          "title": "Execução"
+        }
+      ],
+      "mediaFile": "agachamento-bulgaro-halteres.webp"
+    },
+    {
+      "id": 56,
+      "name": "Banco Romano (Hiperextensão com peso)",
+      "kind": "strength",
+      "categoryIds": [
+        2,
+        11,
+        10,
+        6
+      ],
+      "alternativeIds": [
+        8,
+        48
+      ],
+      "videos": [],
+      "mediaFile": "banco-romano-hiperextensao-com-peso.webp"
+    },
+    {
+      "id": 57,
+      "name": "Barra Fixa Braço Aberto (Graviton)",
+      "kind": "strength",
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [
+        17
+      ],
+      "videos": [],
+      "mediaFile": "barra-fixa-braco-aberto-graviton.webp"
+    },
+    {
+      "id": 58,
+      "name": "Rosca Direta com Barra Reta (Polia)",
+      "kind": "strength",
+      "categoryIds": [
+        3
+      ],
+      "alternativeIds": [
+        14
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/uul2vnr9Plw",
+          "title": "Execução"
+        }
+      ],
+      "mediaFile": "rosca-direta-com-barra-reta-polia.webp"
+    },
+    {
+      "id": 59,
+      "name": "Tríceps Pulley (Corda)",
+      "kind": "strength",
+      "categoryIds": [
+        4
+      ],
+      "alternativeIds": [
+        4
+      ],
+      "videos": [],
+      "mediaFile": "triceps-pulley-corda.webp"
+    },
+    {
+      "id": 60,
+      "name": "Agachamento Afundo (halteres / Barra)",
+      "kind": "strength",
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        38,
+        55
+      ],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/LRNDWr5yLrk",
+          "title": "Execução"
+        }
+      ],
+      "mediaFile": "agachamento-afundo-halteres-barra.webp"
     }
   ]
 }
