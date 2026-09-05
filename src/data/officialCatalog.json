@@ -59,8 +59,9 @@
   ],
   "exercises": [
     {
-      "name": "Supino Reto com Barra",
       "id": 1,
+      "name": "Supino Reto com Barra",
+      "kind": "strength",
       "categoryIds": [
         1,
         4,
@@ -69,7 +70,6 @@
       "alternativeIds": [
         45
       ],
-      "kind": "strength",
       "videos": [],
       "mediaFile": "supino-reto-com-barra.webp"
     },
@@ -170,7 +170,8 @@
       ],
       "alternativeIds": [
         46,
-        48
+        48,
+        56
       ],
       "kind": "strength",
       "videos": [],
@@ -677,7 +678,9 @@
       "mediaFile": "prancha-lateral.webp"
     },
     {
-      "name": "Banco Romano",
+      "id": 48,
+      "name": "Banco Romano (Hiperextensão)",
+      "kind": "strength",
       "categoryIds": [
         2,
         11,
@@ -685,12 +688,11 @@
         6
       ],
       "alternativeIds": [
-        8
+        8,
+        56
       ],
-      "id": 48,
-      "kind": "strength",
       "videos": [],
-      "mediaFile": "banco-romano.webp"
+      "mediaFile": "banco-romano-hiperextensao.webp"
     },
     {
       "name": "Elevação quadril",
@@ -786,6 +788,23 @@
       ],
       "videos": [],
       "mediaFile": "agachamento-bulgaro-halteres.webp"
+    },
+    {
+      "id": 56,
+      "name": "Banco Romano (Hiperextensão com peso)",
+      "kind": "strength",
+      "categoryIds": [
+        2,
+        11,
+        10,
+        6
+      ],
+      "alternativeIds": [
+        8,
+        48
+      ],
+      "videos": [],
+      "mediaFile": "banco-romano-hiperextensao-com-peso.webp"
     }
   ]
 }

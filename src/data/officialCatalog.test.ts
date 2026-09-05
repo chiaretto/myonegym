@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(54)
+    expect(officialExercises()).toHaveLength(55)
   })
 
   it('keeps every id inside the official range', () => {
@@ -127,7 +127,7 @@ describe('officialCatalog', () => {
       [45, 'Supino Reto Máquina'],
       [46, 'Elevação de pernas colchonete'],
       [47, 'Prancha Lateral'],
-      [48, 'Banco Romano'],
+      [48, 'Banco Romano (Hiperextensão)'],
       [49, 'Elevação quadril'],
       [50, 'Mergulho em paralelas (Graviton)'],
       [51, 'Barra fixa braço fechado'],
@@ -135,6 +135,7 @@ describe('officialCatalog', () => {
       [53, 'Corrida Interna'],
       [54, 'Bike Trilha'],
       [55, 'Agachamento Búlgaro (halteres)'],
+      [56, 'Banco Romano (Hiperextensão com peso)'],
     ]
 
     it('still numbers every category the way it always did', () => {
