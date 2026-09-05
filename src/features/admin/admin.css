@@ -79,12 +79,18 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 
 .admin-toolbar input[type='search'] {
   flex: 1;
-  min-width: 0;
+  min-width: 180px;
+}
+
+.admin-toolbar select {
+  flex: none;
+  width: auto;
 }
 
 /* ------------------------------------------------------------- the lists */
@@ -184,6 +190,12 @@
   width: 100%;
 }
 
+/* The alternatives list is the whole catalog; scrolling 52 names to find one
+   is worse than typing three letters. */
+.admin-picker-search {
+  margin-bottom: 6px;
+}
+
 /* A scrolling checklist beats a multi-select nobody can operate: the whole
    point of this screen is picking categories and alternatives by name. */
 .admin-picker {
@@ -248,4 +260,41 @@
 /* --danger is the app's warning amber, not red: red is the accent here. */
 .admin-status.bad {
   color: var(--danger);
+}
+
+/* --------------------------------------------------------- the exercise's image */
+
+/*
+ * The picture as the **app** shows it: same card, same contain-fit, and capped
+ * at the width of the phone column (`.app` is 480px, less its padding), so what
+ * the maintainer judges is what the user will get — not the same file stretched
+ * across a monitor.
+ */
+.admin-hero {
+  width: 100%;
+  max-width: 444px;
+  margin-bottom: 8px;
+  background: var(--surface-1);
+  border: 0.5px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+.admin-hero img {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+  display: block;
+}
+
+.admin-hero-empty {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 40px;
 }

@@ -61,9 +61,28 @@ function toggle(ids: number[], id: number): number[] {
   return ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
 }
 
+/**
+ * Where the app serves an official picture, plus `rev`.
+ *
+ * The cache-buster is not decoration. Replacing a picture usually keeps the file
+ * name — the name comes from the exercise, not from the image — so the browser
+ * would go on showing the old one from cache, and the maintainer would be
+ * looking at the picture they just replaced while believing the download failed.
+ */
+function mediaSrc(file: string, rev: number): string {
+  return `${import.meta.env.BASE_URL}exercises/${file}?v=${rev}`
+}
+
 export default function AdminPage() {
   const [catalog, setCatalog] = useState<AdminCatalog | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  // Bumped on every write, and fed to every image URL — see `mediaSrc`.
+  const [rev, setRev] = useState(0)
+
+  const applyCatalog = (next: AdminCatalog) => {
+    setCatalog(next)
+    setRev((n) => n + 1)
+  }
 
   useEffect(() => {
     void fetchCatalog()
@@ -112,8 +131,8 @@ export default function AdminPage() {
       </p>
 
       <div className="admin-cols">
-        <CategoryPanel catalog={catalog} onChange={setCatalog} />
-        <ExercisePanel catalog={catalog} onChange={setCatalog} />
+        <CategoryPanel catalog={catalog} onChange={applyCatalog} />
+        <ExercisePanel catalog={catalog} onChange={applyCatalog} rev={rev} />
       </div>
     </main>
   )
@@ -172,7 +191,7 @@ function CategoryPanel({
   }
 
   return (
-    <section className="admin-panel">
+    <section className="admin-panel" aria-label="Categorias">
       <h2>Categorias</h2>
       <div className="admin-toolbar">
         <button className="btn primary" onClick={() => start('new', '')}>
@@ -256,20 +275,31 @@ function CategoryPanel({
 function ExercisePanel({
   catalog,
   onChange,
+  rev,
 }: {
   catalog: AdminCatalog
   onChange: (c: AdminCatalog) => void
+  rev: number
 }) {
   const [search, setSearch] = useState('')
+  const [category, setCategory] = useState<number | 'all' | 'none'>('all')
+  const [kind, setKind] = useState<'all' | 'strength' | 'cardio'>('all')
   const [open, setOpen] = useState<number | 'new' | null>(null)
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase()
-    const list = q
-      ? catalog.exercises.filter((e) => e.name.toLowerCase().includes(q))
-      : catalog.exercises
-    return [...list].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
-  }, [catalog.exercises, search])
+    return catalog.exercises
+      .filter((e) => (q ? e.name.toLowerCase().includes(q) : true))
+      .filter((e) => {
+        if (category === 'all') return true
+        // "Sem categoria" is a real thing to go looking for: an exercise with
+        // none shows up nowhere the app groups by category.
+        if (category === 'none') return (e.categoryIds ?? []).length === 0
+        return (e.categoryIds ?? []).includes(category)
+      })
+      .filter((e) => (kind === 'all' ? true : (e.kind ?? 'strength') === kind))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  }, [catalog.exercises, search, category, kind])
 
   const categoryNames = (e: AdminExercise) =>
     (e.categoryIds ?? [])
@@ -278,7 +308,7 @@ function ExercisePanel({
       .join(', ') || 'Sem categoria'
 
   return (
-    <section className="admin-panel">
+    <section className="admin-panel" aria-label="Exercícios">
       <h2>Exercícios</h2>
       <div className="admin-toolbar">
         <input
@@ -288,6 +318,31 @@ function ExercisePanel({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select
+          aria-label="Filtrar por categoria"
+          value={category}
+          onChange={(e) => {
+            const v = e.target.value
+            setCategory(v === 'all' || v === 'none' ? v : Number(v))
+          }}
+        >
+          <option value="all">Todas as categorias</option>
+          <option value="none">Sem categoria</option>
+          {catalog.categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Filtrar por tipo"
+          value={kind}
+          onChange={(e) => setKind(e.target.value as typeof kind)}
+        >
+          <option value="all">Força e cardio</option>
+          <option value="strength">Força</option>
+          <option value="cardio">Cardio</option>
+        </select>
         <button className="btn primary" onClick={() => setOpen(open === 'new' ? null : 'new')}>
           <Icon name="plus" /> Novo exercício
         </button>
@@ -302,6 +357,7 @@ function ExercisePanel({
               catalog={catalog}
               onChange={onChange}
               onDone={() => setOpen(null)}
+              rev={rev}
             />
           </div>
         </div>
@@ -318,11 +374,7 @@ function ExercisePanel({
                 onClick={() => setOpen(open === e.id ? null : e.id)}
               >
                 {e.mediaFile ? (
-                  <img
-                    className="admin-thumb"
-                    src={`${import.meta.env.BASE_URL}exercises/${e.mediaFile}`}
-                    alt=""
-                  />
+                  <img className="admin-thumb" src={mediaSrc(e.mediaFile, rev)} alt="" />
                 ) : (
                   <span className="admin-thumb" />
                 )}
@@ -345,6 +397,7 @@ function ExercisePanel({
                 catalog={catalog}
                 onChange={onChange}
                 onDone={() => setOpen(null)}
+                rev={rev}
               />
             )}
           </div>
@@ -352,7 +405,7 @@ function ExercisePanel({
         {shown.length === 0 && (
           <div className="admin-item">
             <div className="admin-item-head">
-              <span className="admin-item-sub">Nenhum exercício com esse nome.</span>
+              <span className="admin-item-sub">Nenhum exercício com esse filtro.</span>
             </div>
           </div>
         )}
@@ -366,23 +419,42 @@ function ExerciseForm({
   catalog,
   onChange,
   onDone,
+  rev,
 }: {
   exercise: AdminExercise | null
   catalog: AdminCatalog
   onChange: (c: AdminCatalog) => void
   onDone: () => void
+  rev: number
 }) {
   const toast = useToast()
   const confirm = useConfirm()
   const [draft, setDraft] = useState<Draft>(() => toDraft(exercise))
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<Status>(null)
+  const [altSearch, setAltSearch] = useState('')
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
 
   const id = exercise?.id
   const fieldId = (name: string) => `admin-ex-${id ?? 'new'}-${name}`
+
+  /**
+   * The alternatives to offer: every other exercise, narrowed by the filter —
+   * except that an **already-checked** one always stays on screen.
+   *
+   * Filtering a ticked box out of view reads as having unticked it, and the
+   * next save would silently drop a link the maintainer never touched.
+   */
+  const alternatives = useMemo(() => {
+    const q = altSearch.trim().toLowerCase()
+    return catalog.exercises.filter(
+      (o) =>
+        o.id !== id &&
+        (!q || o.name.toLowerCase().includes(q) || draft.alternativeIds.includes(o.id)),
+    )
+  }, [catalog.exercises, id, altSearch, draft.alternativeIds])
 
   const save = async () => {
     setSaving(true)
@@ -463,7 +535,23 @@ function ExerciseForm({
       </div>
 
       <div>
-        <label htmlFor={fieldId('media')}>URL da imagem</label>
+        <label htmlFor={fieldId('media')}>Imagem</label>
+        {/*
+          Shown at the width the phone gives it, not at whatever the desktop has
+          spare — the point is seeing what the user will see. The 44px row
+          thumbnail cannot tell a good conversion from a cropped one or from an
+          animation that got flattened to a still, which is exactly what goes
+          wrong in the conversion and exactly what nothing else would report.
+        */}
+        <div className="admin-hero">
+          {exercise?.mediaFile ? (
+            <img src={mediaSrc(exercise.mediaFile, rev)} alt={exercise.name} />
+          ) : (
+            <span className="admin-hero-empty">
+              <Icon name="photo-off" />
+            </span>
+          )}
+        </div>
         <input
           id={fieldId('media')}
           placeholder={exercise?.mediaFile ?? 'https://…'}
@@ -472,7 +560,7 @@ function ExerciseForm({
         />
         <p className="admin-item-sub">
           {exercise?.mediaFile
-            ? `Hoje: ${exercise.mediaFile}. Informe uma URL para trocar.`
+            ? `${exercise.mediaFile} — informe uma URL para trocar.`
             : 'Sem imagem. A URL é baixada e convertida ao salvar.'}
         </p>
       </div>
@@ -496,19 +584,28 @@ function ExerciseForm({
 
         <div>
           <label id={fieldId('alts-label')}>Alternativas</label>
+          <input
+            type="search"
+            className="admin-picker-search"
+            aria-label="Filtrar alternativas"
+            placeholder="Filtrar…"
+            value={altSearch}
+            onChange={(e) => setAltSearch(e.target.value)}
+          />
           <div className="admin-picker" role="group" aria-labelledby={fieldId('alts-label')}>
-            {catalog.exercises
-              .filter((o) => o.id !== id)
-              .map((o) => (
-                <label key={o.id}>
-                  <input
-                    type="checkbox"
-                    checked={draft.alternativeIds.includes(o.id)}
-                    onChange={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
-                  />
-                  {o.name}
-                </label>
-              ))}
+            {alternatives.map((o) => (
+              <label key={o.id}>
+                <input
+                  type="checkbox"
+                  checked={draft.alternativeIds.includes(o.id)}
+                  onChange={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
+                />
+                {o.name}
+              </label>
+            ))}
+            {alternatives.length === 0 && (
+              <span className="admin-item-sub">Nenhum exercício com esse nome.</span>
+            )}
           </div>
         </div>
       </div>

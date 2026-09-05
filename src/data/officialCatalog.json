@@ -531,17 +531,17 @@
       "mediaFile": "recuo-reverso-com-halteres.webp"
     },
     {
-      "name": "Agachamento Búlgaro",
+      "id": 38,
+      "name": "Agachamento Búlgaro (smith)",
+      "kind": "strength",
       "categoryIds": [
         9,
         11,
         10
       ],
-      "id": 38,
       "alternativeIds": [],
-      "kind": "strength",
       "videos": [],
-      "mediaFile": "agachamento-bulgaro.webp"
+      "mediaFile": "agachamento-bulgaro-smith.webp"
     },
     {
       "name": "Supino Inclinado com Halteres",

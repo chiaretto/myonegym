@@ -116,6 +116,10 @@ function renderAdmin() {
   )
 }
 
+/** One of the two panels, so a name can be looked up where it belongs: category
+ *  names also appear as options in the exercise filter. */
+const panel = (name: 'Categorias' | 'Exercícios') => screen.getByRole('region', { name })
+
 /** Open one exercise's form and hand back a scope limited to it. */
 async function openExercise(user: ReturnType<typeof userEvent.setup>, name: string) {
   const row = (await screen.findByRole('button', { name: new RegExp(name) })).closest(
@@ -133,8 +137,8 @@ describe('the admin screen', () => {
     renderAdmin()
 
     expect(await screen.findByText('Supino Reto')).toBeInTheDocument()
-    expect(screen.getByText('Barra Fixa')).toBeInTheDocument()
-    expect(screen.getByText('Peitoral')).toBeInTheDocument()
+    expect(within(panel('Exercícios')).getByText('Barra Fixa')).toBeInTheDocument()
+    expect(within(panel('Categorias')).getByText('Peitoral')).toBeInTheDocument()
     expect(screen.queryByText('Meu exercício')).not.toBeInTheDocument()
   })
 
@@ -177,7 +181,7 @@ describe('the admin screen', () => {
     renderAdmin()
     const row = await openExercise(user, 'Barra Fixa')
 
-    const media = within(row).getByLabelText('URL da imagem')
+    const media = within(row).getByLabelText('Imagem')
     await user.type(media, 'https://x.test/barra.gif')
     await user.click(within(row).getByRole('button', { name: 'Salvar' }))
 
@@ -195,7 +199,7 @@ describe('the admin screen', () => {
     renderAdmin()
     const row = await openExercise(user, 'Barra Fixa')
 
-    await user.type(within(row).getByLabelText('URL da imagem'), 'https://x.test/morto.gif')
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/morto.gif')
     await user.click(within(row).getByRole('button', { name: 'Salvar' }))
 
     expect(await within(row).findByRole('status')).toHaveTextContent('HTTP 404')
@@ -260,19 +264,23 @@ describe('the admin screen', () => {
     await user.click(await screen.findByRole('button', { name: /Nova categoria/ }))
     await user.type(screen.getByLabelText('Nome'), 'Ombros')
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
-    expect(await screen.findByText('Ombros')).toBeInTheDocument()
+    await waitFor(() => expect(within(panel('Categorias')).getByText('Ombros')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: 'Editar Ombros' }))
     await user.clear(screen.getByLabelText('Nome de Ombros'))
     await user.type(screen.getByLabelText('Nome de Ombros'), 'Deltoides')
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
-    expect(await screen.findByText('Deltoides')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(within(panel('Categorias')).getByText('Deltoides')).toBeInTheDocument(),
+    )
 
     await user.click(screen.getByRole('button', { name: 'Excluir Deltoides' }))
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent(/id fica vago para sempre/)
     await user.click(within(dialog).getByRole('button', { name: 'Excluir' }))
-    await waitFor(() => expect(screen.queryByText('Deltoides')).not.toBeInTheDocument())
+    await waitFor(() =>
+      expect(within(panel('Categorias')).queryByText('Deltoides')).not.toBeInTheDocument(),
+    )
   })
 
   it('narrows the list by name, because the catalog outgrows one screen', async () => {
@@ -282,5 +290,113 @@ describe('the admin screen', () => {
 
     expect(screen.getByText('Barra Fixa')).toBeInTheDocument()
     expect(screen.queryByText('Supino Reto')).not.toBeInTheDocument()
+  })
+
+  it('narrows it by category, and can ask for the ones with none', async () => {
+    catalog.exercises.push({
+      id: 20,
+      name: 'Órfão',
+      kind: 'strength',
+      categoryIds: [],
+      alternativeIds: [],
+      videos: [],
+    })
+    const user = userEvent.setup()
+    renderAdmin()
+    const filter = await screen.findByLabelText('Filtrar por categoria')
+
+    await user.selectOptions(filter, 'Peitoral')
+    expect(screen.getByText('Supino Reto')).toBeInTheDocument()
+    expect(within(panel('Exercícios')).queryByText('Barra Fixa')).not.toBeInTheDocument()
+
+    // An exercise with no category shows up nowhere the app groups by one, so
+    // finding those is the point of the filter, not an afterthought.
+    await user.selectOptions(filter, 'Sem categoria')
+    expect(screen.getByText('Órfão')).toBeInTheDocument()
+    expect(screen.queryByText('Supino Reto')).not.toBeInTheDocument()
+  })
+
+  it('narrows it by kind, treating an unset kind as strength', async () => {
+    catalog.exercises.push({
+      id: 21,
+      name: 'Corrida',
+      kind: 'cardio',
+      categoryIds: [],
+      alternativeIds: [],
+      videos: [],
+    })
+    // No `kind` at all — what an exercise was before the field existed.
+    catalog.exercises.push({ id: 22, name: 'Antigo', categoryIds: [], alternativeIds: [] })
+    const user = userEvent.setup()
+    renderAdmin()
+    const filter = await screen.findByLabelText('Filtrar por tipo')
+
+    await user.selectOptions(filter, 'Cardio')
+    expect(screen.getByText('Corrida')).toBeInTheDocument()
+    expect(screen.queryByText('Antigo')).not.toBeInTheDocument()
+
+    await user.selectOptions(filter, 'Força')
+    expect(screen.getByText('Antigo')).toBeInTheDocument()
+    expect(screen.queryByText('Corrida')).not.toBeInTheDocument()
+  })
+
+  it('says so when nothing matches, instead of showing an empty box', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    await user.type(await screen.findByLabelText('Buscar exercício'), 'zzz')
+    expect(screen.getByText('Nenhum exercício com esse filtro.')).toBeInTheDocument()
+  })
+
+  it('shows the picture on the form, at the size the app gives it', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+
+    // The 44px row thumbnail cannot tell a good conversion from a cropped one,
+    // or from an animation flattened to a still frame.
+    const withImage = await openExercise(user, 'Supino Reto')
+    expect(within(withImage).getByRole('img', { name: 'Supino Reto' })).toHaveAttribute(
+      'src',
+      expect.stringContaining('exercises/supino-reto.webp'),
+    )
+    expect(withImage).toHaveTextContent('supino-reto.webp')
+
+    // An exercise with no picture gets the empty card, not a broken image.
+    const without = await openExercise(user, 'Barra Fixa')
+    expect(within(without).queryByRole('img')).not.toBeInTheDocument()
+    expect(without).toHaveTextContent('Sem imagem')
+  })
+
+  it('asks for the picture afresh after a save, instead of the cached old one', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    const hero = () => within(row).getByRole('img', { name: 'Supino Reto' })
+    const before = hero().getAttribute('src')
+
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(within(row).getByRole('status')).toHaveTextContent('Salvo.'))
+
+    // A replaced picture keeps its file name — the name comes from the exercise
+    // — so without a fresh URL the browser shows the one just replaced.
+    await waitFor(() => expect(hero().getAttribute('src')).not.toBe(before))
+  })
+
+  it('filters the alternatives, but never hides one that is already ticked', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    const alts = within(row).getByRole('group', { name: 'Alternativas' })
+    await user.click(within(alts).getByLabelText('Barra Fixa'))
+
+    await user.type(within(row).getByLabelText('Filtrar alternativas'), 'zzz')
+    // Filtering a ticked box out of view reads as having unticked it, and the
+    // next save would silently drop a link nobody touched.
+    expect(within(alts).getByLabelText('Barra Fixa')).toBeChecked()
+
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(calls.at(-1)?.body).toMatchObject({ alternativeIds: [11] }))
   })
 })
