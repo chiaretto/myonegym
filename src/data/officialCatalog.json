@@ -593,17 +593,17 @@
       "mediaFile": "natacao.webp"
     },
     {
-      "name": "Corrida",
+      "id": 42,
+      "name": "Corrida Externa",
+      "kind": "cardio",
       "categoryIds": [
         7,
         12,
         9
       ],
-      "id": 42,
       "alternativeIds": [],
-      "kind": "cardio",
       "videos": [],
-      "mediaFile": "corrida.webp"
+      "mediaFile": "corrida-externa.webp"
     },
     {
       "name": "Bike",

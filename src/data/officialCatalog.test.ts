@@ -121,7 +121,7 @@ describe('officialCatalog', () => {
       [39, 'Supino Inclinado com Halteres'],
       [40, 'Crossover na Polia'],
       [41, 'Natação'],
-      [42, 'Corrida'],
+      [42, 'Corrida Externa'],
       [43, 'Bike'],
       [44, 'Mesa Flexora'],
       [45, 'Supino Reto Máquina'],
@@ -132,7 +132,7 @@ describe('officialCatalog', () => {
       [50, 'Mergulho em paralelas (Graviton)'],
       [51, 'Barra fixa braço fechado'],
       [52, 'Tríceps testa polia alta'],
-      [53, 'Hit interno'],
+      [53, 'Corrida Interna'],
     ]
 
     it('still numbers every category the way it always did', () => {
