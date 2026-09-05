@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import {
@@ -62,26 +62,34 @@ function toggle(ids: number[], id: number): number[] {
 }
 
 /**
- * Where the app serves an official picture, plus `rev`.
+ * Where the app serves an official picture.
  *
- * The cache-buster is not decoration. Replacing a picture usually keeps the file
- * name — the name comes from the exercise, not from the image — so the browser
- * would go on showing the old one from cache, and the maintainer would be
- * looking at the picture they just replaced while believing the download failed.
+ * `rev` is a cache-buster, and it is **per exercise** on purpose. Replacing a
+ * picture usually keeps the file name — the name comes from the exercise, not
+ * from the image — so without it the browser goes on showing the old one and
+ * the maintainer studies the picture they just replaced, believing the download
+ * failed.
+ *
+ * One shared counter did that job and cost far too much: bumping it changed the
+ * address of *every* thumbnail, so saving one exercise made the browser re-fetch
+ * all fifty. That is what read as the whole screen reloading. Only the picture
+ * that actually changed gets a new address.
  */
-function mediaSrc(file: string, rev: number): string {
-  return `${import.meta.env.BASE_URL}exercises/${file}?v=${rev}`
+function mediaSrc(file: string, rev = 0): string {
+  return rev ? `${import.meta.env.BASE_URL}exercises/${file}?v=${rev}` : `${import.meta.env.BASE_URL}exercises/${file}`
 }
 
 export default function AdminPage() {
   const [catalog, setCatalog] = useState<AdminCatalog | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  // Bumped on every write, and fed to every image URL — see `mediaSrc`.
-  const [rev, setRev] = useState(0)
+  // Bumped only for an exercise whose picture actually changed — see `mediaSrc`.
+  const [revs, setRevs] = useState<Record<number, number>>({})
 
-  const applyCatalog = (next: AdminCatalog) => {
+  const applyCatalog = (next: AdminCatalog, mediaChangedFor?: number) => {
     setCatalog(next)
-    setRev((n) => n + 1)
+    if (mediaChangedFor != null) {
+      setRevs((r) => ({ ...r, [mediaChangedFor]: (r[mediaChangedFor] ?? 0) + 1 }))
+    }
   }
 
   useEffect(() => {
@@ -132,7 +140,7 @@ export default function AdminPage() {
 
       <div className="admin-cols">
         <CategoryPanel catalog={catalog} onChange={applyCatalog} />
-        <ExercisePanel catalog={catalog} onChange={applyCatalog} rev={rev} />
+        <ExercisePanel catalog={catalog} onChange={applyCatalog} revs={revs} />
       </div>
     </main>
   )
@@ -275,11 +283,11 @@ function CategoryPanel({
 function ExercisePanel({
   catalog,
   onChange,
-  rev,
+  revs,
 }: {
   catalog: AdminCatalog
-  onChange: (c: AdminCatalog) => void
-  rev: number
+  onChange: (c: AdminCatalog, mediaChangedFor?: number) => void
+  revs: Record<number, number>
 }) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<number | 'all' | 'none'>('all')
@@ -357,7 +365,7 @@ function ExercisePanel({
               catalog={catalog}
               onChange={onChange}
               onDone={() => setOpen(null)}
-              rev={rev}
+              rev={0}
             />
           </div>
         </div>
@@ -374,7 +382,15 @@ function ExercisePanel({
                 onClick={() => setOpen(open === e.id ? null : e.id)}
               >
                 {e.mediaFile ? (
-                  <img className="admin-thumb" src={mediaSrc(e.mediaFile, rev)} alt="" />
+                  <img
+                    className="admin-thumb"
+                    src={mediaSrc(e.mediaFile, revs[e.id])}
+                    alt=""
+                    width={44}
+                    height={44}
+                    loading="lazy"
+                    decoding="async"
+                  />
                 ) : (
                   <span className="admin-thumb" />
                 )}
@@ -397,7 +413,7 @@ function ExercisePanel({
                 catalog={catalog}
                 onChange={onChange}
                 onDone={() => setOpen(null)}
-                rev={rev}
+                rev={revs[e.id] ?? 0}
               />
             )}
           </div>
@@ -423,7 +439,7 @@ function ExerciseForm({
 }: {
   exercise: AdminExercise | null
   catalog: AdminCatalog
-  onChange: (c: AdminCatalog) => void
+  onChange: (c: AdminCatalog, mediaChangedFor?: number) => void
   onDone: () => void
   rev: number
 }) {
@@ -434,6 +450,7 @@ function ExerciseForm({
   const [status, setStatus] = useState<Status>(null)
   const [altSearch, setAltSearch] = useState('')
   const [previewFailed, setPreviewFailed] = useState(false)
+  const formRef = useRef<HTMLDivElement>(null)
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }))
@@ -495,7 +512,9 @@ function ExerciseForm({
         videos: draft.videos,
         ...(draft.mediaUrl.trim() ? { mediaUrl: draft.mediaUrl.trim() } : {}),
       })
-      onChange(next)
+      // Only a save that fetched a picture may invalidate one: naming an
+      // exercise here is what keeps the other fifty thumbnails off the network.
+      onChange(next, draft.mediaUrl.trim() && !warning ? savedId : undefined)
       // The address was an instruction, and it has been carried out; leaving it
       // in the box would look like a stored field that never matches the file.
       set('mediaUrl', '')
@@ -504,6 +523,10 @@ function ExerciseForm({
           ? { tone: 'bad', text: warning }
           : { tone: 'ok', text: asNew ? `Salvo como novo (id ${savedId}).` : 'Salvo.' },
       )
+      // The list is sorted by name, so renaming moves this row — and the form
+      // the user is still working in goes with it, off the screen. A no-op when
+      // nothing moved.
+      formRef.current?.scrollIntoView({ block: 'nearest' })
       if (id == null) onDone()
     } catch (e) {
       setStatus({
@@ -541,7 +564,7 @@ function ExerciseForm({
   }
 
   return (
-    <div className="admin-form">
+    <div className="admin-form" ref={formRef}>
       <div className="admin-form-row">
         <div>
           <label htmlFor={fieldId('name')}>Nome</label>

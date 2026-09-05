@@ -366,6 +366,28 @@ describe('the admin screen', () => {
     expect(without).toHaveTextContent('Sem imagem')
   })
 
+  it('leaves every other picture’s address alone, so the list does not re-fetch', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    const others = () =>
+      screen
+        .getAllByRole('img', { hidden: true })
+        .map((i) => i.getAttribute('src'))
+        .filter((src) => src && !src.includes('supino-reto'))
+    const before = others()
+
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+    await waitFor(() => expect(within(row).getByRole('status')).toHaveTextContent('Salvo.'))
+
+    // One shared cache-buster changed the address of all fifty thumbnails, so
+    // saving one exercise made the browser re-fetch the whole list. That is
+    // what read as the screen reloading.
+    expect(others()).toEqual(before)
+  })
+
   it('asks for the picture afresh after a save, instead of the cached old one', async () => {
     const user = userEvent.setup()
     renderAdmin()
