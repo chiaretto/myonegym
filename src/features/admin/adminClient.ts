@@ -41,6 +41,17 @@ export interface AdminCatalog {
   retiredExerciseIds?: number[]
 }
 
+/**
+ * When each served picture was last written, keyed by file name.
+ *
+ * The version in every image address. It has to come from the **file**, not
+ * from a counter in this screen: a page reload resets a counter, and the
+ * service worker caches `/exercises/` CacheFirst for a year — so the bare
+ * address would go on answering with the copy from before the save, for as
+ * long as that cache lives.
+ */
+export type MediaStamps = Record<string, number>
+
 /** A refusal from the tool: the message is meant to be shown as it is. */
 export class AdminRequestError extends Error {}
 
@@ -64,8 +75,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return payload as T
 }
 
-export function fetchCatalog(): Promise<AdminCatalog> {
-  return request<AdminCatalog>('GET', '/api/admin/catalog')
+export function fetchCatalog(): Promise<AdminCatalog & { stamps: MediaStamps }> {
+  return request('GET', '/api/admin/catalog')
 }
 
 /**
@@ -83,21 +94,27 @@ export function fetchCatalog(): Promise<AdminCatalog> {
  */
 export function saveExercise(
   exercise: Partial<AdminExercise> & { mediaUrl?: string; copyMediaFrom?: number },
-): Promise<{ catalog: AdminCatalog; id: number; warning?: string; media?: string }> {
+): Promise<{
+  catalog: AdminCatalog
+  stamps: MediaStamps
+  id: number
+  warning?: string
+  media?: string
+}> {
   return request('PUT', '/api/admin/catalog/exercise', exercise)
 }
 
-export function deleteExercise(id: number): Promise<{ catalog: AdminCatalog }> {
+export function deleteExercise(id: number): Promise<{ catalog: AdminCatalog; stamps: MediaStamps }> {
   return request('DELETE', `/api/admin/catalog/exercise/${id}`)
 }
 
 export function saveCategory(category: {
   id?: number
   name: string
-}): Promise<{ catalog: AdminCatalog }> {
+}): Promise<{ catalog: AdminCatalog; stamps: MediaStamps }> {
   return request('PUT', '/api/admin/catalog/category', category)
 }
 
-export function deleteCategory(id: number): Promise<{ catalog: AdminCatalog }> {
+export function deleteCategory(id: number): Promise<{ catalog: AdminCatalog; stamps: MediaStamps }> {
   return request('DELETE', `/api/admin/catalog/category/${id}`)
 }

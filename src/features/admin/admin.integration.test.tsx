@@ -19,6 +19,8 @@ import type { AdminCatalog } from './adminClient'
  */
 
 let catalog: AdminCatalog
+/** What the API reports as each picture's version — its mtime on disk. */
+let stamps: Record<string, number>
 let calls: { method: string; path: string; body: unknown }[]
 /** Set to make the next write answer with a refusal, the way the API does. */
 let refuseWith: string | null = null
@@ -59,6 +61,7 @@ beforeEach(() => {
   localStorage.clear()
   useOnboarding.getState().markPromptSeen()
   catalog = seed()
+  stamps = { 'supino-reto.webp': 1000 }
   calls = []
   refuseWith = null
   warnWith = null
@@ -68,7 +71,7 @@ beforeEach(() => {
     const body = init?.body ? JSON.parse(init.body as string) : undefined
     calls.push({ method, path, body })
 
-    if (method === 'GET') return Response.json(catalog)
+    if (method === 'GET') return Response.json({ ...catalog, stamps })
     if (refuseWith) return Response.json({ error: refuseWith }, { status: 400 })
 
     // A crude stand-in for the real handlers: enough for the screen to have
@@ -79,8 +82,13 @@ beforeEach(() => {
       const saved = { ...body, id, mediaFile: catalog.exercises[at]?.mediaFile }
       if (at >= 0) catalog.exercises[at] = saved
       else catalog.exercises.push(saved)
+      // A fresh download rewrites the file, so its stamp moves.
+      if (body.mediaUrl && !warnWith && saved.mediaFile) {
+        stamps = { ...stamps, [saved.mediaFile]: 2000 }
+      }
       return Response.json({
         catalog,
+        stamps,
         id,
         ...(body.mediaUrl && !warnWith ? { media: `${id}.webp` } : {}),
         ...(warnWith ? { warning: warnWith } : {}),
@@ -90,18 +98,18 @@ beforeEach(() => {
       const at = catalog.categories.findIndex((c) => c.id === body.id)
       if (at >= 0) catalog.categories[at] = { id: body.id, name: body.name }
       else catalog.categories.push({ id: 3, name: body.name })
-      return Response.json({ catalog })
+      return Response.json({ catalog, stamps })
     }
     if (path.startsWith('/api/admin/catalog/exercise/')) {
       const id = Number(path.split('/').pop())
       catalog.exercises = catalog.exercises.filter((e) => e.id !== id)
       catalog.retiredExerciseIds = [...(catalog.retiredExerciseIds ?? []), id]
-      return Response.json({ catalog })
+      return Response.json({ catalog, stamps })
     }
     if (path.startsWith('/api/admin/catalog/category/')) {
       const id = Number(path.split('/').pop())
       catalog.categories = catalog.categories.filter((c) => c.id !== id)
-      return Response.json({ catalog })
+      return Response.json({ catalog, stamps })
     }
     return Response.json({ error: 'Rota desconhecida.' }, { status: 404 })
   })
@@ -432,21 +440,40 @@ describe('the admin screen', () => {
     expect(others()).toEqual(before)
   })
 
-  it('asks for the picture afresh after a save, instead of the cached old one', async () => {
+  it('asks for the picture at the version on disk, not the one it had', async () => {
     const user = userEvent.setup()
     renderAdmin()
     const row = await openExercise(user, 'Supino Reto')
-
     const hero = () => within(row).getByRole('img', { name: 'Supino Reto' })
-    const before = hero().getAttribute('src')
+    expect(hero()).toHaveAttribute('src', expect.stringContaining('?v=1000'))
 
+    await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
+    await user.click(within(row).getByRole('button', { name: 'Salvar' }))
+
+    // A replaced picture keeps its file name — the name comes from the exercise
+    // — so the address has to carry the version or nothing ever changes.
+    await waitFor(() => expect(hero()).toHaveAttribute('src', expect.stringContaining('?v=2000')))
+  })
+
+  it('still asks for the new one after a reload, because the version is the file’s', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
     await user.type(within(row).getByLabelText('Imagem'), 'https://x.test/novo.gif')
     await user.click(within(row).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(within(row).getByRole('status')).toHaveTextContent('Salvo.'))
 
-    // A replaced picture keeps its file name — the name comes from the exercise
-    // — so without a fresh URL the browser shows the one just replaced.
-    await waitFor(() => expect(hero().getAttribute('src')).not.toBe(before))
+    // The screen starts over — which is what a page reload is. A counter kept
+    // here would go back to zero and the bare address would answer from the
+    // service worker's cache, which holds `/exercises/` CacheFirst for a year:
+    // the picture from before the save, for as long as that cache lives.
+    cleanup()
+    renderAdmin()
+    const reopened = await openExercise(user, 'Supino Reto')
+    expect(within(reopened).getByRole('img', { name: 'Supino Reto' })).toHaveAttribute(
+      'src',
+      expect.stringContaining('?v=2000'),
+    )
   })
 
   it('previews the address as it is typed, in the picture’s own place', async () => {

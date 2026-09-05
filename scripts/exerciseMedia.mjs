@@ -16,6 +16,7 @@
 import {
   copyFileSync,
   existsSync,
+  statSync,
   mkdirSync,
   readFileSync,
   readdirSync,
@@ -249,6 +250,32 @@ export function readCatalog() {
  */
 export function writeCatalog(catalog) {
   writeFileSync(CATALOG, `${JSON.stringify(catalog, null, 2)}\n`)
+}
+
+/**
+ * When each served picture was last written, keyed by file name.
+ *
+ * The address the browser asks for has to change when the picture changes, and
+ * here the **name usually does not**: it comes from the exercise, so replacing
+ * the image of "Remada Curvada" writes `remada-curvada-com-barra.webp` again.
+ * The service worker caches `/exercises/` CacheFirst for a year — on the
+ * assumption, written into `vite.config.ts`, that these never change without
+ * their name changing — so a stale copy would be served for as long as the
+ * cache lives.
+ *
+ * The modification time is the right stamp: it survives a page reload (a
+ * counter in the screen's state does not), it changes exactly when the file is
+ * rewritten, and it never invalidates a picture that did not move.
+ */
+export function servedStamps(catalog) {
+  mkdirSync(OUT, { recursive: true })
+  const out = {}
+  for (const ex of catalog.exercises) {
+    if (!ex.mediaFile) continue
+    const at = resolve(OUT, ex.mediaFile)
+    if (existsSync(at)) out[ex.mediaFile] = Math.round(statSync(at).mtimeMs)
+  }
+  return out
 }
 
 /**

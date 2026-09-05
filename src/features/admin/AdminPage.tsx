@@ -11,6 +11,7 @@ import {
   type AdminCatalog,
   type AdminExercise,
   type AdminVideo,
+  type MediaStamps,
 } from './adminClient'
 import '../exercise/exercise.css'
 import './admin.css'
@@ -63,39 +64,39 @@ function toggle(ids: number[], id: number): number[] {
 }
 
 /**
- * Where the app serves an official picture.
+ * Where the app serves an official picture, at the version on disk.
  *
- * `rev` is a cache-buster, and it is **per exercise** on purpose. Replacing a
- * picture usually keeps the file name — the name comes from the exercise, not
- * from the image — so without it the browser goes on showing the old one and
- * the maintainer studies the picture they just replaced, believing the download
- * failed.
- *
- * One shared counter did that job and cost far too much: bumping it changed the
- * address of *every* thumbnail, so saving one exercise made the browser re-fetch
- * all fifty. That is what read as the whole screen reloading. Only the picture
- * that actually changed gets a new address.
+ * The stamp is not decoration. Replacing a picture keeps the file name — the
+ * name comes from the exercise, not from the image — and the service worker
+ * caches `/exercises/` **CacheFirst for a year**, on the assumption written into
+ * `vite.config.ts` that these never change without their name changing. This
+ * tool breaks that assumption on purpose, so the address has to carry the
+ * version, and the version has to come from the **file**: a counter in this
+ * screen's state resets on the next page reload, and the bare address then
+ * answers from cache with the picture from before the save — for good.
  */
-function mediaSrc(file: string, rev = 0): string {
-  return rev ? `${import.meta.env.BASE_URL}exercises/${file}?v=${rev}` : `${import.meta.env.BASE_URL}exercises/${file}`
+function mediaSrc(file: string, stamps: MediaStamps): string {
+  const stamp = stamps[file]
+  const at = `${import.meta.env.BASE_URL}exercises/${file}`
+  return stamp ? `${at}?v=${stamp}` : at
 }
 
 export default function AdminPage() {
   const [catalog, setCatalog] = useState<AdminCatalog | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  // Bumped only for an exercise whose picture actually changed — see `mediaSrc`.
-  const [revs, setRevs] = useState<Record<number, number>>({})
+  // The version of every picture on disk — see `mediaSrc`. Comes back with the
+  // catalog from every read and every write, so it is never guessed at.
+  const [stamps, setStamps] = useState<MediaStamps>({})
 
-  const applyCatalog = (next: AdminCatalog, mediaChangedFor?: number) => {
+  const applyCatalog = (next: AdminCatalog, nextStamps?: MediaStamps) => {
     setCatalog(next)
-    if (mediaChangedFor != null) {
-      setRevs((r) => ({ ...r, [mediaChangedFor]: (r[mediaChangedFor] ?? 0) + 1 }))
-    }
+    // An answer with no stamps costs a stale picture, never a broken screen.
+    setStamps(nextStamps ?? {})
   }
 
   useEffect(() => {
     void fetchCatalog()
-      .then(setCatalog)
+      .then(({ stamps: s, ...c }) => applyCatalog(c, s))
       .catch((e: unknown) =>
         setLoadError(e instanceof AdminRequestError ? e.message : 'Erro ao ler o catálogo.'),
       )
@@ -141,7 +142,7 @@ export default function AdminPage() {
 
       <div className="admin-cols">
         <CategoryPanel catalog={catalog} onChange={applyCatalog} />
-        <ExercisePanel catalog={catalog} onChange={applyCatalog} revs={revs} />
+        <ExercisePanel catalog={catalog} onChange={applyCatalog} stamps={stamps} />
       </div>
     </main>
   )
@@ -154,7 +155,7 @@ function CategoryPanel({
   onChange,
 }: {
   catalog: AdminCatalog
-  onChange: (c: AdminCatalog) => void
+  onChange: (c: AdminCatalog, stamps: MediaStamps) => void
 }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -168,11 +169,11 @@ function CategoryPanel({
 
   const save = async () => {
     try {
-      const { catalog: next } = await saveCategory({
+      const { catalog: next, stamps } = await saveCategory({
         ...(editing === 'new' ? {} : { id: editing as number }),
         name,
       })
-      onChange(next)
+      onChange(next, stamps)
       setEditing(null)
       toast('Categoria salva.')
     } catch (e) {
@@ -191,8 +192,8 @@ function CategoryPanel({
     })
     if (!ok) return
     try {
-      const { catalog: next } = await deleteCategory(id)
-      onChange(next)
+      const { catalog: next, stamps } = await deleteCategory(id)
+      onChange(next, stamps)
       toast('Categoria excluída.')
     } catch (e) {
       toast(e instanceof AdminRequestError ? e.message : 'Erro ao excluir.')
@@ -284,11 +285,11 @@ function CategoryPanel({
 function ExercisePanel({
   catalog,
   onChange,
-  revs,
+  stamps,
 }: {
   catalog: AdminCatalog
-  onChange: (c: AdminCatalog, mediaChangedFor?: number) => void
-  revs: Record<number, number>
+  onChange: (c: AdminCatalog, stamps: MediaStamps) => void
+  stamps: MediaStamps
 }) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState<number | 'all' | 'none'>('all')
@@ -366,7 +367,7 @@ function ExercisePanel({
               catalog={catalog}
               onChange={onChange}
               onDone={() => setOpen(null)}
-              rev={0}
+              stamps={stamps}
             />
           </div>
         </div>
@@ -385,7 +386,7 @@ function ExercisePanel({
                 {e.mediaFile ? (
                   <img
                     className="admin-thumb"
-                    src={mediaSrc(e.mediaFile, revs[e.id])}
+                    src={mediaSrc(e.mediaFile, stamps)}
                     alt=""
                     width={44}
                     height={44}
@@ -414,7 +415,7 @@ function ExercisePanel({
                 catalog={catalog}
                 onChange={onChange}
                 onDone={() => setOpen(null)}
-                rev={revs[e.id] ?? 0}
+                stamps={stamps}
               />
             )}
           </div>
@@ -436,13 +437,13 @@ function ExerciseForm({
   catalog,
   onChange,
   onDone,
-  rev,
+  stamps,
 }: {
   exercise: AdminExercise | null
   catalog: AdminCatalog
-  onChange: (c: AdminCatalog, mediaChangedFor?: number) => void
+  onChange: (c: AdminCatalog, stamps: MediaStamps) => void
   onDone: () => void
-  rev: number
+  stamps: MediaStamps
 }) {
   const toast = useToast()
   const confirm = useConfirm()
@@ -496,7 +497,13 @@ function ExerciseForm({
     setSaving(true)
     setStatus(null)
     try {
-      const { catalog: next, id: savedId, warning, media } = await saveExercise({
+      const {
+        catalog: next,
+        stamps: nextStamps,
+        id: savedId,
+        warning,
+        media,
+      } = await saveExercise({
         ...(id != null && !asNew ? { id } : {}),
         ...(asNew && id != null ? { copyMediaFrom: id } : {}),
         name: draft.name,
@@ -506,9 +513,7 @@ function ExerciseForm({
         videos: draft.videos,
         ...(draft.mediaUrl.trim() ? { mediaUrl: draft.mediaUrl.trim() } : {}),
       })
-      // Only a save that fetched a picture may invalidate one: naming an
-      // exercise here is what keeps the other fifty thumbnails off the network.
-      onChange(next, draft.mediaUrl.trim() && !warning ? savedId : undefined)
+      onChange(next, nextStamps)
       // The address was an instruction, and it has been carried out; leaving it
       // in the box would look like a stored field that never matches the file.
       set('mediaUrl', '')
@@ -557,8 +562,8 @@ function ExerciseForm({
     })
     if (!ok) return
     try {
-      const { catalog: next } = await deleteExercise(id)
-      onChange(next)
+      const { catalog: next, stamps } = await deleteExercise(id)
+      onChange(next, stamps)
       onDone()
       toast('Exercício excluído.')
     } catch (e) {
@@ -599,7 +604,7 @@ function ExerciseForm({
               {typedUrl && !previewFailed ? (
                 <img src={typedUrl} alt="Pré-visualização da URL" onError={() => setPreviewFailed(true)} />
               ) : exercise?.mediaFile && !typedUrl ? (
-                <img src={mediaSrc(exercise.mediaFile, rev)} alt={exercise.name} />
+                <img src={mediaSrc(exercise.mediaFile, stamps)} alt={exercise.name} />
               ) : (
                 <span className="admin-hero-empty">
                   <Icon name={previewFailed ? 'photo-x' : 'photo-off'} />

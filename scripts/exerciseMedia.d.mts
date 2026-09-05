@@ -63,3 +63,4 @@ export function writeSources(sources: Record<string, string>): void
 export function readCatalog(): Catalog
 export function writeCatalog(catalog: Catalog): void
 export function sweepServed(catalog: Catalog): string[]
+export function servedStamps(catalog: Catalog): Record<string, number>

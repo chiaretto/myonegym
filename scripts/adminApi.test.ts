@@ -379,10 +379,12 @@ describe('categories', () => {
 describe('routing', () => {
   const body = (value: unknown) => () => Promise.resolve(value)
 
-  it('hands the catalog over as it is on disk', async () => {
+  it('hands the catalog over as it is on disk, with each picture’s version', async () => {
     const res = await handleAdminRequest('GET', '/api/admin/catalog', body({}))
     expect(res.status).toBe(200)
-    expect(res.body).toEqual(disk.catalog)
+    // The stamps come from the real `public/exercises/`, which the fixture's
+    // file names are not in — what matters here is that the field is there.
+    expect(res.body).toEqual({ ...disk.catalog, stamps: expect.any(Object) })
   })
 
   it('routes each write to its own handler', async () => {

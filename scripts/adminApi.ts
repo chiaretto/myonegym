@@ -21,6 +21,7 @@ import {
   readCatalog,
   removeMedia,
   renameMedia,
+  servedStamps,
   slugsByExercise,
   sweepServed,
   writeCatalog,
@@ -287,6 +288,11 @@ export function deleteCategory(id: number): Catalog {
   return catalog
 }
 
+/** A catalog answer, with the version stamp of every picture it names. */
+function withStamps(catalog: Catalog): { catalog: Catalog; stamps: Record<string, number> } {
+  return { catalog, stamps: servedStamps(catalog) }
+}
+
 /** Route one admin request. Exported so the routing can be tested without a server. */
 export async function handleAdminRequest(
   method: string,
@@ -296,7 +302,8 @@ export async function handleAdminRequest(
   const tail = Number(path.split('/').pop())
   try {
     if (method === 'GET' && path === '/api/admin/catalog') {
-      return { status: 200, body: readCatalog() }
+      const catalog = readCatalog()
+      return { status: 200, body: { ...catalog, stamps: servedStamps(catalog) } }
     }
     if (method === 'PUT' && path === '/api/admin/catalog/exercise') {
       const saved = await saveExercise((await body()) as Partial<CatalogExercise>)
@@ -309,16 +316,16 @@ export async function handleAdminRequest(
           (saved.media ? ` — imagem: ${saved.media}` : '') +
           (saved.warning ? ` — ${saved.warning}` : ''),
       )
-      return { status: 200, body: saved }
+      return { status: 200, body: { ...saved, stamps: servedStamps(saved.catalog) } }
     }
     if (method === 'DELETE' && /^\/api\/admin\/catalog\/exercise\/\d+$/.test(path)) {
-      return { status: 200, body: { catalog: deleteExercise(tail) } }
+      return { status: 200, body: withStamps(deleteExercise(tail)) }
     }
     if (method === 'PUT' && path === '/api/admin/catalog/category') {
-      return { status: 200, body: { catalog: saveCategory((await body()) as { name?: string }) } }
+      return { status: 200, body: withStamps(saveCategory((await body()) as { name?: string })) }
     }
     if (method === 'DELETE' && /^\/api\/admin\/catalog\/category\/\d+$/.test(path)) {
-      return { status: 200, body: { catalog: deleteCategory(tail) } }
+      return { status: 200, body: withStamps(deleteCategory(tail)) }
     }
     return { status: 404, body: { error: 'Rota desconhecida.' } }
   } catch (err) {
@@ -342,13 +349,14 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
 }
 
 /**
- * How long after a write this plugin's own file changes are ignored by HMR.
+ * How long **after a write finishes** its file changes are still ignored by HMR.
  *
- * Long enough for the watcher to notice — it debounces, and sharp finishes
- * writing the webp after the response has gone out — and short enough that a
- * hand edit made straight afterwards still reloads the page.
+ * A grace period only, not a budget for the work: the write itself is tracked
+ * while it is in flight. Downloading a 3 MB GIF and converting it takes as long
+ * as it takes, and a fixed window would expire mid-conversion and let the very
+ * reload it exists to prevent through.
  */
-const HMR_QUIET_MS = 2000
+const HMR_QUIET_MS = 1500
 
 /** Files this tool writes, and only those. */
 export function isCatalogFile(file: string): boolean {
@@ -356,7 +364,9 @@ export function isCatalogFile(file: string): boolean {
 }
 
 export function adminApi(): Plugin {
-  /** Until when a change to those files is this plugin's own doing. */
+  /** Writes in flight. While any is, every change to those files is ours. */
+  let writing = 0
+  /** And for a moment after the last one, since the watcher reports late. */
   let quietUntil = 0
 
   return {
@@ -378,7 +388,7 @@ export function adminApi(): Plugin {
      * app — rather than the tool — is what you are looking at.
      */
     handleHotUpdate({ file }) {
-      if (Date.now() < quietUntil && isCatalogFile(file)) return []
+      if ((writing > 0 || Date.now() < quietUntil) && isCatalogFile(file)) return []
     },
 
     configureServer(server) {
@@ -392,12 +402,16 @@ export function adminApi(): Plugin {
         }
 
         const method = req.method ?? 'GET'
-        // Opened before the write and extended after it: the watcher reports
-        // late, and sharp is still writing the webp when the answer goes out.
-        if (method !== 'GET') quietUntil = Date.now() + HMR_QUIET_MS
+        const writes = method !== 'GET'
+        if (writes) writing++
 
         void handleAdminRequest(method, path, () => readJson(req)).then(({ status, body }) => {
-          if (method !== 'GET') quietUntil = Date.now() + HMR_QUIET_MS
+          if (writes) {
+            writing--
+            // The watcher reports after the fact, so the window closes a beat
+            // after the work does, never while it is still going.
+            quietUntil = Date.now() + HMR_QUIET_MS
+          }
           send(res, status, body)
         })
       })
