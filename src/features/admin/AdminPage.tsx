@@ -12,6 +12,7 @@ import {
   type AdminExercise,
   type AdminVideo,
 } from './adminClient'
+import '../exercise/exercise.css'
 import './admin.css'
 
 /**
@@ -474,30 +475,23 @@ function ExerciseForm({
   }, [typedUrl])
 
   /**
-   * The alternatives to offer: every other exercise, narrowed by the filter —
-   * except that an **already-checked** one always stays on screen.
+   * The alternatives, in two groups: the ones already chosen and the rest.
    *
-   * Filtering a ticked box out of view reads as having unticked it, and the
-   * next save would silently drop a link the maintainer never touched.
+   * Chosen first and **never filtered out**. Hiding a chosen one reads as
+   * having unchosen it, and the next save would drop a link the maintainer
+   * never touched — same rule the app's own form follows.
    */
-  const alternatives = useMemo(() => {
+  const [chosenAlts, offeredAlts] = useMemo(() => {
     const q = altSearch.trim().toLowerCase()
-    return catalog.exercises.filter(
-      (o) =>
-        o.id !== id &&
-        (!q || o.name.toLowerCase().includes(q) || draft.alternativeIds.includes(o.id)),
-    )
+    const others = catalog.exercises.filter((o) => o.id !== id)
+    return [
+      others.filter((o) => draft.alternativeIds.includes(o.id)),
+      others.filter(
+        (o) => !draft.alternativeIds.includes(o.id) && (!q || o.name.toLowerCase().includes(q)),
+      ),
+    ]
   }, [catalog.exercises, id, altSearch, draft.alternativeIds])
 
-  /**
-   * Write the form.
-   *
-   * `asNew` sends **no id**, which is what makes it a new exercise: the API
-   * hands out the number, because it is the only side that knows which are
-   * already spent. It also names the exercise this one came from, so the copy
-   * inherits its picture — a variant that starts blank would be a surprise
-   * rather than a decision, and the original keeps its own.
-   */
   const save = async (asNew = false) => {
     setSaving(true)
     setStatus(null)
@@ -574,26 +568,13 @@ function ExerciseForm({
       */}
       <div className="admin-form-cols">
         <div className="admin-form-col">
-          <div className="admin-form-row">
-            <div>
-              <label htmlFor={fieldId('name')}>Nome</label>
-              <input
-                id={fieldId('name')}
-                value={draft.name}
-                onChange={(e) => set('name', e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor={fieldId('kind')}>Tipo</label>
-              <select
-                id={fieldId('kind')}
-                value={draft.kind}
-                onChange={(e) => set('kind', e.target.value as Draft['kind'])}
-              >
-                <option value="strength">Força</option>
-                <option value="cardio">Cardio</option>
-              </select>
-            </div>
+          <div>
+            <label htmlFor={fieldId('name')}>Nome</label>
+            <input
+              id={fieldId('name')}
+              value={draft.name}
+              onChange={(e) => set('name', e.target.value)}
+            />
           </div>
 
           <div>
@@ -638,49 +619,87 @@ function ExerciseForm({
         </div>
 
         <div className="admin-form-col">
-          <div className="admin-form-row">
-            <div>
-              <label id={fieldId('cats-label')}>Categorias</label>
-              <div className="admin-picker" role="group" aria-labelledby={fieldId('cats-label')}>
-                {catalog.categories.map((c) => (
-                  <label key={c.id}>
-                    <input
-                      type="checkbox"
-                      checked={draft.categoryIds.includes(c.id)}
-                      onChange={() => set('categoryIds', toggle(draft.categoryIds, c.id))}
-                    />
-                    {c.name}
-                  </label>
-                ))}
-              </div>
+          <div>
+            <label>Tipo</label>
+            {/* The app's own segmented control, the weight-unit picker's: two
+                closed options, both always visible, no hidden state. */}
+            <div className="unit-seg kind-seg" role="group" aria-label="Tipo">
+              {(['strength', 'cardio'] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={draft.kind === k ? 'on' : ''}
+                  aria-pressed={draft.kind === k}
+                  onClick={() => set('kind', k)}
+                >
+                  {k === 'strength' ? 'Força' : 'Cardio'}
+                </button>
+              ))}
             </div>
+          </div>
 
-            <div>
-              <label id={fieldId('alts-label')}>Alternativas</label>
-              <input
-                type="search"
-                className="admin-picker-search"
-                aria-label="Filtrar alternativas"
-                placeholder="Filtrar…"
-                value={altSearch}
-                onChange={(e) => setAltSearch(e.target.value)}
-              />
-              <div className="admin-picker" role="group" aria-labelledby={fieldId('alts-label')}>
-                {alternatives.map((o) => (
-                  <label key={o.id}>
-                    <input
-                      type="checkbox"
-                      checked={draft.alternativeIds.includes(o.id)}
-                      onChange={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
-                    />
-                    {o.name}
-                  </label>
-                ))}
-                {alternatives.length === 0 && (
-                  <span className="admin-item-sub">Nenhum exercício com esse nome.</span>
-                )}
-              </div>
+          <div>
+            <label>Categorias</label>
+            {/* Toggle chips, exactly as the app's exercise form does it: what is
+                on is legible at a glance, and this screen is judged against
+                that one. */}
+            <div className="chip-select" role="group" aria-label="Categorias">
+              {catalog.categories.map((c) => {
+                const on = draft.categoryIds.includes(c.id)
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`chip-toggle${on ? ' on' : ''}`}
+                    aria-pressed={on}
+                    onClick={() => set('categoryIds', toggle(draft.categoryIds, c.id))}
+                  >
+                    {on && <Icon name="check" size={12} />} {c.name}
+                  </button>
+                )
+              })}
             </div>
+          </div>
+
+          <div>
+            <label>Alternativas</label>
+            <input
+              type="search"
+              aria-label="Filtrar alternativas"
+              placeholder="Buscar por nome"
+              value={altSearch}
+              onChange={(e) => setAltSearch(e.target.value)}
+            />
+            <div className="chip-select" role="group" aria-label="Alternativas">
+              {/* Chosen first and always shown — a search that hid them would
+                  make unticking a scavenger hunt, and the next save would drop
+                  a link nobody meant to touch. */}
+              {chosenAlts.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  className="chip-toggle on"
+                  aria-pressed={true}
+                  onClick={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
+                >
+                  <Icon name="check" size={12} /> {o.name}
+                </button>
+              ))}
+              {offeredAlts.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  className="chip-toggle"
+                  aria-pressed={false}
+                  onClick={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
+                >
+                  {o.name}
+                </button>
+              ))}
+            </div>
+            {offeredAlts.length === 0 && altSearch.trim() !== '' && (
+              <p className="note-empty">Nenhum exercício encontrado.</p>
+            )}
           </div>
 
           <div>

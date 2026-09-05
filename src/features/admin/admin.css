@@ -218,39 +218,22 @@
   width: 100%;
 }
 
-/* The alternatives list is the whole catalog; scrolling 52 names to find one
-   is worse than typing three letters. */
-.admin-picker-search {
-  margin-bottom: 6px;
+/*
+ * `.kind-seg` has no rule of its own in the app, so `.unit-seg`'s three-column
+ * grid is what a two-button segment gets there. Corrected here rather than in
+ * `exercise.css`: this tool has no business changing how the app looks.
+ */
+.admin-form .kind-seg {
+  grid-template-columns: repeat(2, 1fr);
 }
 
-/* A scrolling checklist beats a multi-select nobody can operate: the whole
-   point of this screen is picking categories and alternatives by name. */
-.admin-picker {
-  max-height: 190px;
+/* The chips wrap freely; a long catalog would otherwise push the form's own
+   actions off the bottom of a screen. */
+.admin-form .chip-select {
+  max-height: 260px;
   overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 6px 8px;
-  display: grid;
-  gap: 2px;
-  background: var(--surface-0);
-}
-
-.admin-picker label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--text-primary);
-  margin: 0;
-  padding: 3px 2px;
-  cursor: pointer;
-}
-
-.admin-picker input {
-  width: auto;
-  flex: none;
+  align-content: start;
+  padding: 2px;
 }
 
 .admin-videos {

@@ -120,13 +120,27 @@ function renderAdmin() {
  *  names also appear as options in the exercise filter. */
 const panel = (name: 'Categorias' | 'Exercícios') => screen.getByRole('region', { name })
 
-/** Open one exercise's form and hand back a scope limited to it. */
+/**
+ * Open one exercise's form and hand back a scope limited to it.
+ *
+ * Found by the row's own opener rather than by name alone: an alternatives chip
+ * carries the very same name as the row it points at.
+ */
 async function openExercise(user: ReturnType<typeof userEvent.setup>, name: string) {
-  const row = (await screen.findByRole('button', { name: new RegExp(name) })).closest(
-    '.admin-item',
-  ) as HTMLElement
-  await user.click(within(row).getByRole('button', { name: new RegExp(name) }))
-  return row
+  const opener = await waitFor(() => {
+    const found = within(panel('Exercícios'))
+      .getAllByRole('button')
+      .find((b) => b.classList.contains('admin-open') && b.textContent?.includes(name))
+    if (!found) throw new Error(`sem linha para ${name}`)
+    return found
+  })
+  await user.click(opener)
+  return opener.closest('.admin-item') as HTMLElement
+}
+
+/** Toggle a chip inside one of the form's groups. */
+function chip(row: HTMLElement, group: 'Categorias' | 'Alternativas', name: string) {
+  return within(within(row).getByRole('group', { name: group })).getByRole('button', { name })
 }
 
 describe('the admin screen', () => {
@@ -159,8 +173,8 @@ describe('the admin screen', () => {
 
     await user.clear(within(row).getByLabelText('Nome'))
     await user.type(within(row).getByLabelText('Nome'), 'Supino Reto com Barra')
-    await user.selectOptions(within(row).getByLabelText('Tipo'), 'cardio')
-    await user.click(within(row).getByLabelText('Dorsais'))
+    await user.click(within(within(row).getByRole('group', { name: 'Tipo' })).getByRole('button', { name: 'Cardio' }))
+    await user.click(chip(row, 'Categorias', 'Dorsais'))
     await user.click(within(row).getByRole('button', { name: 'Salvar' }))
 
     await waitFor(() => expect(within(row).getByRole('status')).toHaveTextContent('Salvo.'))
@@ -467,18 +481,39 @@ describe('the admin screen', () => {
     expect(within(panel('Exercícios')).getByText('Supino Reto')).toBeInTheDocument()
   })
 
+  it('uses the app’s own controls, so the two screens are judged alike', async () => {
+    const user = userEvent.setup()
+    renderAdmin()
+    const row = await openExercise(user, 'Supino Reto')
+
+    // Segmented control for the kind, toggle chips for what points elsewhere —
+    // the same vocabulary as the app's exercise form.
+    const seg = within(row).getByRole('group', { name: 'Tipo' })
+    expect(within(seg).getByRole('button', { name: 'Força' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(within(seg).getByRole('button', { name: 'Cardio' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+
+    // Categories start from the exercise's own, and a chip says which it is.
+    expect(chip(row, 'Categorias', 'Peitoral')).toHaveAttribute('aria-pressed', 'true')
+    expect(chip(row, 'Categorias', 'Dorsais')).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('filters the alternatives, but never hides one that is already ticked', async () => {
     const user = userEvent.setup()
     renderAdmin()
     const row = await openExercise(user, 'Supino Reto')
 
-    const alts = within(row).getByRole('group', { name: 'Alternativas' })
-    await user.click(within(alts).getByLabelText('Barra Fixa'))
+    await user.click(chip(row, 'Alternativas', 'Barra Fixa'))
 
     await user.type(within(row).getByLabelText('Filtrar alternativas'), 'zzz')
-    // Filtering a ticked box out of view reads as having unticked it, and the
+    // Filtering a chosen one out of view reads as having unchosen it, and the
     // next save would silently drop a link nobody touched.
-    expect(within(alts).getByLabelText('Barra Fixa')).toBeChecked()
+    expect(chip(row, 'Alternativas', 'Barra Fixa')).toHaveAttribute('aria-pressed', 'true')
 
     await user.click(within(row).getByRole('button', { name: 'Salvar' }))
     await waitFor(() => expect(calls.at(-1)?.body).toMatchObject({ alternativeIds: [11] }))
