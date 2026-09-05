@@ -565,161 +565,174 @@ function ExerciseForm({
 
   return (
     <div className="admin-form" ref={formRef}>
-      <div className="admin-form-row">
-        <div>
-          <label htmlFor={fieldId('name')}>Nome</label>
-          <input
-            id={fieldId('name')}
-            value={draft.name}
-            onChange={(e) => set('name', e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor={fieldId('kind')}>Tipo</label>
-          <select
-            id={fieldId('kind')}
-            value={draft.kind}
-            onChange={(e) => set('kind', e.target.value as Draft['kind'])}
-          >
-            <option value="strength">Força</option>
-            <option value="cardio">Cardio</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor={fieldId('media')}>Imagem</label>
-        {/*
-          Shown at the width the phone gives it, not at whatever the desktop has
-          spare — the point is seeing what the user will see. The 44px row
-          thumbnail cannot tell a good conversion from a cropped one or from an
-          animation that got flattened to a still, which is exactly what goes
-          wrong in the conversion and exactly what nothing else would report.
-        */}
-        <div className="admin-hero">
-          {typedUrl && !previewFailed ? (
-            <img src={typedUrl} alt="Pré-visualização da URL" onError={() => setPreviewFailed(true)} />
-          ) : exercise?.mediaFile && !typedUrl ? (
-            <img src={mediaSrc(exercise.mediaFile, rev)} alt={exercise.name} />
-          ) : (
-            <span className="admin-hero-empty">
-              <Icon name={previewFailed ? 'photo-x' : 'photo-off'} />
-            </span>
-          )}
-        </div>
-        <input
-          id={fieldId('media')}
-          placeholder={exercise?.mediaFile ?? 'https://…'}
-          value={draft.mediaUrl}
-          onChange={(e) => set('mediaUrl', e.target.value)}
-        />
-        <p className="admin-item-sub">
-          {previewFailed
-            ? /* Several of these hosts refuse a bare browser request but answer
-                 the download, which sends a browser-ish user agent — so this is
-                 a warning, not a verdict. */
-              'Não consegui pré-visualizar esta URL. O download ao salvar ainda pode funcionar.'
-            : typedUrl
-              ? 'Pré-visualização da URL. Ela é baixada e convertida ao salvar.'
-              : exercise?.mediaFile
-                ? `${exercise.mediaFile} — informe uma URL para trocar.`
-                : 'Sem imagem. A URL é baixada e convertida ao salvar.'}
-        </p>
-      </div>
-
-      <div className="admin-form-row">
-        <div>
-          <label id={fieldId('cats-label')}>Categorias</label>
-          <div className="admin-picker" role="group" aria-labelledby={fieldId('cats-label')}>
-            {catalog.categories.map((c) => (
-              <label key={c.id}>
-                <input
-                  type="checkbox"
-                  checked={draft.categoryIds.includes(c.id)}
-                  onChange={() => set('categoryIds', toggle(draft.categoryIds, c.id))}
-                />
-                {c.name}
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <label id={fieldId('alts-label')}>Alternativas</label>
-          <input
-            type="search"
-            className="admin-picker-search"
-            aria-label="Filtrar alternativas"
-            placeholder="Filtrar…"
-            value={altSearch}
-            onChange={(e) => setAltSearch(e.target.value)}
-          />
-          <div className="admin-picker" role="group" aria-labelledby={fieldId('alts-label')}>
-            {alternatives.map((o) => (
-              <label key={o.id}>
-                <input
-                  type="checkbox"
-                  checked={draft.alternativeIds.includes(o.id)}
-                  onChange={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
-                />
-                {o.name}
-              </label>
-            ))}
-            {alternatives.length === 0 && (
-              <span className="admin-item-sub">Nenhum exercício com esse nome.</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label>Vídeos</label>
-        <div className="admin-videos">
-          {draft.videos.map((v, i) => (
-            <div key={i} className="admin-video">
+      {/*
+        Two columns, split by what you are looking at rather than by field
+        type: on the left the exercise **itself** — what it is called, what
+        it is, what it looks like — and on the right everything that points
+        at something else. Down a single column these read as eight
+        unrelated boxes.
+      */}
+      <div className="admin-form-cols">
+        <div className="admin-form-col">
+          <div className="admin-form-row">
+            <div>
+              <label htmlFor={fieldId('name')}>Nome</label>
               <input
-                aria-label={`Título do vídeo ${i + 1}`}
-                placeholder="Título"
-                value={v.title ?? ''}
-                onChange={(e) =>
-                  set(
-                    'videos',
-                    draft.videos.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)),
-                  )
-                }
+                id={fieldId('name')}
+                value={draft.name}
+                onChange={(e) => set('name', e.target.value)}
               />
-              <input
-                aria-label={`URL do vídeo ${i + 1}`}
-                placeholder="https://…"
-                value={v.url}
-                onChange={(e) =>
-                  set(
-                    'videos',
-                    draft.videos.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)),
-                  )
-                }
-              />
-              <button
-                className="icon-btn ghost"
-                aria-label={`Remover vídeo ${i + 1}`}
-                onClick={() =>
-                  set(
-                    'videos',
-                    draft.videos.filter((_, j) => j !== i),
-                  )
-                }
-              >
-                <Icon name="trash" />
-              </button>
             </div>
-          ))}
+            <div>
+              <label htmlFor={fieldId('kind')}>Tipo</label>
+              <select
+                id={fieldId('kind')}
+                value={draft.kind}
+                onChange={(e) => set('kind', e.target.value as Draft['kind'])}
+              >
+                <option value="strength">Força</option>
+                <option value="cardio">Cardio</option>
+              </select>
+            </div>
+          </div>
+
           <div>
-            <button
-              className="btn subtle"
-              onClick={() => set('videos', [...draft.videos, { url: '' }])}
-            >
-              <Icon name="plus" /> Adicionar vídeo
-            </button>
+            <label htmlFor={fieldId('media')}>Imagem</label>
+            {/*
+              Shown at the width the phone gives it, not at whatever the desktop has
+              spare — the point is seeing what the user will see. The 44px row
+              thumbnail cannot tell a good conversion from a cropped one or from an
+              animation that got flattened to a still, which is exactly what goes
+              wrong in the conversion and exactly what nothing else would report.
+            */}
+            <div className="admin-hero">
+              {typedUrl && !previewFailed ? (
+                <img src={typedUrl} alt="Pré-visualização da URL" onError={() => setPreviewFailed(true)} />
+              ) : exercise?.mediaFile && !typedUrl ? (
+                <img src={mediaSrc(exercise.mediaFile, rev)} alt={exercise.name} />
+              ) : (
+                <span className="admin-hero-empty">
+                  <Icon name={previewFailed ? 'photo-x' : 'photo-off'} />
+                </span>
+              )}
+            </div>
+            <input
+              id={fieldId('media')}
+              placeholder={exercise?.mediaFile ?? 'https://…'}
+              value={draft.mediaUrl}
+              onChange={(e) => set('mediaUrl', e.target.value)}
+            />
+            <p className="admin-item-sub">
+              {previewFailed
+                ? /* Several of these hosts refuse a bare browser request but answer
+                     the download, which sends a browser-ish user agent — so this is
+                     a warning, not a verdict. */
+                  'Não consegui pré-visualizar esta URL. O download ao salvar ainda pode funcionar.'
+                : typedUrl
+                  ? 'Pré-visualização da URL. Ela é baixada e convertida ao salvar.'
+                  : exercise?.mediaFile
+                    ? `${exercise.mediaFile} — informe uma URL para trocar.`
+                    : 'Sem imagem. A URL é baixada e convertida ao salvar.'}
+            </p>
+          </div>
+        </div>
+
+        <div className="admin-form-col">
+          <div className="admin-form-row">
+            <div>
+              <label id={fieldId('cats-label')}>Categorias</label>
+              <div className="admin-picker" role="group" aria-labelledby={fieldId('cats-label')}>
+                {catalog.categories.map((c) => (
+                  <label key={c.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.categoryIds.includes(c.id)}
+                      onChange={() => set('categoryIds', toggle(draft.categoryIds, c.id))}
+                    />
+                    {c.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label id={fieldId('alts-label')}>Alternativas</label>
+              <input
+                type="search"
+                className="admin-picker-search"
+                aria-label="Filtrar alternativas"
+                placeholder="Filtrar…"
+                value={altSearch}
+                onChange={(e) => setAltSearch(e.target.value)}
+              />
+              <div className="admin-picker" role="group" aria-labelledby={fieldId('alts-label')}>
+                {alternatives.map((o) => (
+                  <label key={o.id}>
+                    <input
+                      type="checkbox"
+                      checked={draft.alternativeIds.includes(o.id)}
+                      onChange={() => set('alternativeIds', toggle(draft.alternativeIds, o.id))}
+                    />
+                    {o.name}
+                  </label>
+                ))}
+                {alternatives.length === 0 && (
+                  <span className="admin-item-sub">Nenhum exercício com esse nome.</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label>Vídeos</label>
+            <div className="admin-videos">
+              {draft.videos.map((v, i) => (
+                <div key={i} className="admin-video">
+                  <input
+                    aria-label={`Título do vídeo ${i + 1}`}
+                    placeholder="Título"
+                    value={v.title ?? ''}
+                    onChange={(e) =>
+                      set(
+                        'videos',
+                        draft.videos.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <input
+                    aria-label={`URL do vídeo ${i + 1}`}
+                    placeholder="https://…"
+                    value={v.url}
+                    onChange={(e) =>
+                      set(
+                        'videos',
+                        draft.videos.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <button
+                    className="icon-btn ghost"
+                    aria-label={`Remover vídeo ${i + 1}`}
+                    onClick={() =>
+                      set(
+                        'videos',
+                        draft.videos.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </div>
+              ))}
+              <div>
+                <button
+                  className="btn subtle"
+                  onClick={() => set('videos', [...draft.videos, { url: '' }])}
+                >
+                  <Icon name="plus" /> Adicionar vídeo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

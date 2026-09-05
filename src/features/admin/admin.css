@@ -171,9 +171,37 @@
   gap: 14px;
 }
 
+/*
+ * The form's two halves: the exercise itself on the left (name, kind, picture),
+ * everything that points at something else on the right (categories,
+ * alternatives, videos). Split by what you are looking at, not by field type —
+ * down a single column these read as eight unrelated boxes.
+ */
+.admin-form-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+.admin-form-col {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+}
+
+/* One column below the width where two would just make both too narrow to
+   use — the picture alone wants ~440px. */
+@media (max-width: 1100px) {
+  .admin-form-cols {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-form-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
 }
 
