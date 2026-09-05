@@ -328,3 +328,138 @@ describe('The video list shows the address, and copies it', () => {
     expect(await screen.findByText('Não consegui copiar o link.')).toBeInTheDocument()
   })
 })
+
+/**
+ * The view walks the list it was opened from. Without it the screen is a dead
+ * end: moving one position costs going back, finding your place and tapping
+ * again — and the catalog alone is 52 exercises long.
+ */
+describe('Walking the exercise list from the view', () => {
+  // The names the shared stepper already uses — the same control the exercise
+  // detail walks a training day with.
+  const prev = () => screen.getByRole('button', { name: 'Exercício anterior' })
+  const next = () => screen.getByRole('button', { name: 'Próximo exercício' })
+  const title = () => screen.getByRole('heading', { level: 1 }).textContent
+
+  /**
+   * Open the view and wait for the **walk** to be there.
+   *
+   * The heading paints from the exercise's own read; the bar needs the whole
+   * list, which arrives a tick later. Waiting on the bar is the point of the
+   * test, not a workaround for it.
+   */
+  const openWalking = async (href: string) => {
+    renderAt(href)
+    await screen.findByRole('button', { name: 'Próximo exercício' }, { timeout: 3000 })
+  }
+
+  /** The list as the screen builds it: both sources, by name. */
+  const byName = [...officialExercises()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
+  it('moves to the next exercise and back, without passing through the list', async () => {
+    await seedGym()
+    const user = userEvent.setup()
+    const start = byName[3]
+    await openWalking(`/settings/exercises/${start.id}/view`)
+    expect(title()).toBe(start.name)
+
+    await user.click(next())
+    await waitFor(() => expect(title()).toBe(byName[4].name))
+
+    await user.click(prev())
+    await waitFor(() => expect(title()).toBe(start.name))
+  })
+
+  it('stays inside the filter it was opened with', async () => {
+    await seedGym()
+    const user = userEvent.setup()
+    const cardios = byName.filter((e) => e.kind === 'cardio')
+    expect(cardios.length).toBeGreaterThan(1)
+
+    await openWalking(`/settings/exercises/${cardios[0].id}/view?kind=cardio`)
+
+    await user.click(next())
+
+    // The next one is another cardio — not the alphabetical neighbour it would
+    // have been in the unfiltered list.
+    await waitFor(() => expect(title()).toBe(cardios[1].name))
+  })
+
+  it('stops at the ends rather than wrapping', async () => {
+    await seedGym()
+    await openWalking(`/settings/exercises/${byName[0].id}/view`)
+
+    expect(prev()).toBeDisabled()
+    expect(next()).toBeEnabled()
+
+    cleanup()
+    const last = byName[byName.length - 1]
+    await openWalking(`/settings/exercises/${last.id}/view`)
+
+    expect(next()).toBeDisabled()
+    expect(prev()).toBeEnabled()
+  })
+
+  it('shows no controls for an exercise with no place in the walk', async () => {
+    await seedGym()
+    // A strength exercise reached with a cardio filter: a shared link, or an
+    // alternative opened from inside here.
+    const strength = byName.find((e) => e.kind === 'strength')!
+    renderAt(`/settings/exercises/${strength.id}/view?kind=cardio`)
+
+    await screen.findByRole('heading', { name: strength.name })
+    expect(screen.queryByRole('button', { name: 'Próximo exercício' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Exercício anterior' })).not.toBeInTheDocument()
+  })
+
+  it('carries the filter through every move, so a reload keeps the walk', async () => {
+    await seedGym()
+    const user = userEvent.setup()
+    const cardios = byName.filter((e) => e.kind === 'cardio')
+    await openWalking(`/settings/exercises/${cardios[0].id}/view?kind=cardio`)
+
+    await user.click(next())
+    await waitFor(() => expect(title()).toBe(cardios[1].name))
+
+    // Still filtered after the move: the next step is the third cardio, not an
+    // alphabetical neighbour.
+    await user.click(next())
+    await waitFor(() => expect(title()).toBe(cardios[2].name))
+  })
+
+  it('opens fine with no filters at all, walking the whole list', async () => {
+    await seedGym()
+    await openWalking(`/settings/exercises/${byName[1].id}/view`)
+
+    expect(title()).toBe(byName[1].name)
+    expect(next()).toBeEnabled()
+    expect(prev()).toBeEnabled()
+  })
+
+  it('does not refuse to open over an unreadable filter', async () => {
+    await seedGym()
+    await openWalking(`/settings/exercises/${byName[1].id}/view?cat=abc&kind=voar`)
+
+    // The screen is worth more than one narrowing nobody would miss.
+    expect(title()).toBe(byName[1].name)
+    expect(next()).toBeEnabled()
+  })
+
+  it('reaches the view from the list carrying the active filter', async () => {
+    await seedGym()
+    const user = userEvent.setup()
+    renderAt('/settings/exercises')
+
+    const group = await screen.findByRole('group', { name: 'Tipo' })
+    await user.click(within(group).getByRole('button', { name: 'Cardio' }))
+
+    const cardios = byName.filter((e) => e.kind === 'cardio')
+    await user.click(await screen.findByLabelText(`Ver ${cardios[0].name}`))
+
+    // Arrived filtered: stepping stays among the cardios.
+    await screen.findByRole('button', { name: 'Próximo exercício' }, { timeout: 3000 })
+    expect(title()).toBe(cardios[0].name)
+    await user.click(next())
+    await waitFor(() => expect(title()).toBe(cardios[1].name))
+  })
+})

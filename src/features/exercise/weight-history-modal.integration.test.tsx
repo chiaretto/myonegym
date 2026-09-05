@@ -390,3 +390,76 @@ describe('The history modal reaches the other gyms', () => {
     expect(within(modal).queryByLabelText('Ver outra academia')).not.toBeInTheDocument()
   })
 })
+
+/**
+ * The gym picker is there to be compared: it lists the gyms so the user can see
+ * where they lift what. Making them switch into each one to read a number — and
+ * lose the previous one on the way — is not a comparison.
+ */
+describe('The gym picker shows what each gym lifts', () => {
+  async function seedThreeGyms() {
+    const a = await createGym('Academia A', db)
+    const b = await createGym('Academia B', db)
+    await createGym('Academia C', db)
+    useActiveGym.setState({ activeGymId: a })
+    const supino = await createExercise({ name: 'Supino Reto' }, db)
+    await saveWeight(a, supino, 22.5, 'KG', 'global', db)
+    await saveWeight(b, supino, 60, 'KG', 'gym', db)
+    return { a, b, supino }
+  }
+
+  const openPicker = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await findOpenBtn())
+    const modal = screen.getByRole('dialog')
+    await user.click(within(modal).getByLabelText('Ver outra academia'))
+    return within(modal).getByRole('group', { name: 'Academias' })
+  }
+
+  const rowFor = (list: HTMLElement, name: string) =>
+    within(list).getByText(name).closest('.row') as HTMLElement
+
+  it('puts each gym’s weight on its own row, without switching to it', async () => {
+    const { supino } = await seedThreeGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const list = await openPicker(user)
+
+    // A's is the global weight; B has an exception of its own; C has neither of
+    // its own and shows the global one too.
+    expect(within(rowFor(list, 'Academia A')).getByText(/22,5 KG/)).toBeInTheDocument()
+    expect(within(rowFor(list, 'Academia B')).getByText(/60 KG/)).toBeInTheDocument()
+    expect(within(rowFor(list, 'Academia C')).getByText(/22,5 KG/)).toBeInTheDocument()
+  })
+
+  it('says nothing rather than zero for a gym with no weight at all', async () => {
+    const a = await createGym('Academia A', db)
+    useActiveGym.setState({ activeGymId: a })
+    const rosca = await createExercise({ name: 'Rosca' }, db)
+    await createGym('Academia B', db)
+    // A history to open the modal with, on a DIFFERENT exercise's scope: this
+    // one has none, so the picker must not invent one.
+    await saveWeight(a, rosca, 10, 'KG', 'global', db)
+    await db.weights.clear()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${rosca}`)
+
+    const list = await openPicker(user)
+    expect(within(rowFor(list, 'Academia B')).getByText('—')).toBeInTheDocument()
+  })
+
+  it('still switches the timeline when a row is picked', async () => {
+    const { supino } = await seedThreeGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const list = await openPicker(user)
+    await user.click(within(list).getByRole('button', { name: /Academia B/ }))
+
+    // The number was readable in the list; picking is still what shows the
+    // history behind it.
+    const modal = screen.getByRole('dialog')
+    await waitFor(() => expect(within(modal).getByText(/só desta academia/i)).toBeInTheDocument())
+    expect(within(modal).getByLabelText('Ver outra academia')).toHaveTextContent('Academia B')
+  })
+})

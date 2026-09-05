@@ -572,6 +572,37 @@ export async function getWeight(
 }
 
 /**
+ * The weight in effect for **one exercise in every gym**, keyed by gym id.
+ *
+ * The mirror image of `weightsForGym`, and the shape the history modal's gym
+ * picker needs: it lists the gyms and wants to show what each one lifts, so the
+ * user can compare without switching into each in turn.
+ *
+ * One indexed read on `exerciseId` rather than a `resolveWeight` per gym — the
+ * fallback to the global row is the same rule, applied in memory over rows that
+ * are already in hand.
+ */
+export async function weightByGym(
+  exerciseId: number,
+  d: MyOneGymDB = db,
+): Promise<Map<number, ResolvedWeight>> {
+  const [rows, gyms] = await Promise.all([
+    d.weights.where('exerciseId').equals(exerciseId).toArray(),
+    d.gyms.toArray(),
+  ])
+  const global = rows.find((w) => w.gymId === GLOBAL_GYM_ID)
+  const exceptions = new Map(rows.filter((w) => w.gymId !== GLOBAL_GYM_ID).map((w) => [w.gymId, w]))
+
+  const out = new Map<number, ResolvedWeight>()
+  for (const gym of gyms) {
+    if (gym.id == null) continue
+    const own = exceptions.get(gym.id)
+    out.set(gym.id, own ? { weight: own, scope: 'gym' } : { weight: global, scope: 'global' })
+  }
+  return out
+}
+
+/**
  * Weights applying to a gym as a Map<exerciseId, Weight> (Home badges, session
  * rows, share card): every global weight, with this gym's exceptions laid over
  * the top.

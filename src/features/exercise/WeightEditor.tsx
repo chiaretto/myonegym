@@ -4,7 +4,7 @@ import { db } from '../../db/db'
 import { deleteHistoryEntry, resolveWeight, saveWeight } from '../../db/repos'
 import { UNITS, type Unit } from '../../db/types'
 import { fmtNumber, fmtWeight, historyDelta, relativeDate } from '../../lib/format'
-import { useGyms, useHistory } from '../../lib/hooks'
+import { useGyms, useHistory, useWeightByGym } from '../../lib/hooks'
 import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Sheet } from '../../ui/Sheet'
@@ -90,6 +90,9 @@ export function WeightEditor({
   const viewedWeight = viewedResolved?.weight
   const viewedIsException = viewedResolved?.scope === 'gym'
   const viewedGym = gyms?.find((g) => g.id === viewedGymId)
+  // Every gym's weight for this exercise, in one read — the picker shows them
+  // all so the user can compare without switching into each.
+  const weightPerGym = useWeightByGym(exerciseId)
   const viewedRows = useHistory(viewedGymId, exerciseId)
   // The active gym's list is already loaded, so switching back to it paints in
   // the same frame instead of blanking the modal for one.
@@ -337,6 +340,15 @@ export function WeightEditor({
                     </span>
                     <span className="row-body">
                       <span className="row-title">{g.name}</span>
+                    </span>
+                    {/* What that gym lifts, on the row itself. The list exists to
+                        be compared, and a comparison that costs a tap per gym —
+                        and loses the previous number on the way — is not one. */}
+                    <span className="hist-gym-weight">
+                      {(() => {
+                        const w = weightPerGym?.get(g.id!)?.weight
+                        return w ? fmtWeight(w.value, w.unit) : '—'
+                      })()}
                     </span>
                     {g.id === viewedGymId && <Icon name="check" className="chev" />}
                   </button>

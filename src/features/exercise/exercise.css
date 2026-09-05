@@ -178,3 +178,8 @@
 .hist-scope { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   font-size: var(--fs-2xs); color: var(--text-secondary); margin-bottom: 12px; }
 .hist-scope strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+/* The weight on a gym row in the history picker. Tabular so the numbers line up
+   down the column — the whole point of the list is reading them against each
+   other. */
+.hist-gym-weight { flex: none; font-size: var(--fs-xs); color: var(--text-secondary);
+  font-variant-numeric: tabular-nums; white-space: nowrap; }
