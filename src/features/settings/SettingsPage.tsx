@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { buildInfo, useAppUpdate } from '../../lib/appUpdate'
-import { useCategories, useDays, useExercises, useGyms, useWarmups } from '../../lib/hooks'
+import { useCategories, useDays, useExercises, useGyms } from '../../lib/hooks'
 import { useInstall } from '../../lib/install'
 import { Icon } from '../../ui/Icon'
 import { TabBar } from '../../ui/Chrome'
@@ -27,7 +27,6 @@ export function SettingsPage() {
   const cats = useCategories()
   const exs = useExercises()
   const days = useDays()
-  const warmups = useWarmups()
   const canInstall = useInstall((s) => s.canInstall)
   const isInstalled = useInstall((s) => s.isInstalled)
   const platform = useInstall((s) => s.platform)
@@ -67,7 +66,6 @@ export function SettingsPage() {
           <NavRow to="/settings/categories" icon="tags" title="Categorias" sub="Grupos musculares (editáveis)" meta={cats?.length} />
           <NavRow to="/settings/exercises" icon="barbell" title="Exercícios" sub="Nome, imagem/GIF e categoria" meta={exs?.length} />
           <NavRow to="/settings/days" icon="calendar-event" title="Dias de treino" sub="Selecione os exercícios de cada dia" meta={days?.length} />
-          <NavRow to="/settings/warmups" icon="stretching" title="Aquecimentos" sub="Imagens, vídeos ou links de preparo" meta={warmups?.length} />
         </div>
 
         <div className="group-label">App</div>

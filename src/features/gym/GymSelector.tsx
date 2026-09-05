@@ -27,7 +27,7 @@ export function GymSelector() {
       </button>
 
       {open && (
-        <Sheet title="Academia ativa" centred onClose={() => setOpen(false)}>
+        <Sheet title="Academia ativa" placement="centre" onClose={() => setOpen(false)}>
           {gyms.length === 0 && (
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
               Nenhuma academia cadastrada. Crie uma em Configurações → Academias.

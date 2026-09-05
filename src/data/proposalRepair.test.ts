@@ -5,6 +5,7 @@ import type {
   ProposedDay,
   ProposedExercise,
 } from './catalogPayload'
+import { officialCategories, officialExercises } from './officialCatalog'
 import { repairProposal, type RepairKind } from './proposalRepair'
 
 /* --------------------------------------------------------------- builders */
@@ -14,38 +15,38 @@ const JPG = 'https://exemplo.test/rosca.jpg'
 
 const snapshot = (over: Partial<CatalogSnapshot> = {}): CatalogSnapshot => ({
   categories: [
-    { id: 1, name: 'Peito' },
-    { id: 7, name: 'Cardio' },
+    { id: 10001, name: 'Peito' },
+    { id: 10007, name: 'Cardio' },
   ],
   exercises: [
-    { id: 1, name: 'Supino Reto', mediaUrl: GIF, categoryIds: [1], alternativeIds: [] },
-    { id: 2, name: 'Corrida', mediaUrl: null, categoryIds: [7], alternativeIds: [] },
+    { id: 10001, name: 'Supino Reto', mediaUrl: GIF, categoryIds: [10001], alternativeIds: [] },
+    { id: 10002, name: 'Corrida', mediaUrl: null, categoryIds: [10007], alternativeIds: [] },
   ],
-  days: [{ id: 1, name: 'Dia 1', exerciseIds: [1, 2] }],
+  days: [{ id: 10001, name: 'Dia 1', exerciseIds: [10001, 10002] }],
   ...over,
 })
 
 const ex = (over: Partial<ProposedExercise> = {}): ProposedExercise => ({
-  ref: '1',
-  id: 1,
+  ref: '10001',
+  id: 10001,
   name: 'Supino Reto',
   mediaUrl: GIF,
-  categoryRefs: ['1'],
+  categoryRefs: ['10001'],
   alternativeRefs: [],
   ...over,
 })
 
 const day = (over: Partial<ProposedDay> = {}): ProposedDay => ({
-  ref: '1',
-  id: 1,
+  ref: '10001',
+  id: 10001,
   name: 'Dia 1',
-  exerciseRefs: ['1'],
+  exerciseRefs: ['10001'],
   ...over,
 })
 
 const proposal = (over: Partial<CatalogProposal> = {}): CatalogProposal => ({
   summary: 'Ajustei.',
-  categories: [{ ref: '1', id: 1, name: 'Peito' }],
+  categories: [{ ref: '10001', id: 10001, name: 'Peito' }],
   exercises: [ex()],
   days: [day()],
   ...over,
@@ -109,8 +110,8 @@ describe('mediaUrl', () => {
     const { proposal: out, repairs } = repairProposal(
       snapshot(),
       proposal({
-        exercises: [ex({ ref: '2', id: 2, name: 'Corrida', mediaUrl: 'sei lá' })],
-        days: [day({ exerciseRefs: ['2'] })],
+        exercises: [ex({ ref: '10002', id: 10002, name: 'Corrida', mediaUrl: 'sei lá' })],
+        days: [day({ exerciseRefs: ['10002'] })],
       }),
     )
 
@@ -149,10 +150,10 @@ describe('dangling references', () => {
   it('unlinks a category the proposal itself dropped, naming it', () => {
     const { proposal: out, repairs } = repairProposal(
       snapshot(),
-      proposal({ exercises: [ex({ categoryRefs: ['1', '7'] })] }),
+      proposal({ exercises: [ex({ categoryRefs: ['10001', '10007'] })] }),
     )
 
-    expect(out.exercises[0].categoryRefs).toEqual(['1'])
+    expect(out.exercises[0].categoryRefs).toEqual(['10001'])
     expect(kinds(repairs)).toEqual(['category-unlinked'])
     expect(repairs[0].text).toContain('Cardio')
   })
@@ -160,7 +161,7 @@ describe('dangling references', () => {
   it('unlinks an alternative that is not in the proposal', () => {
     const { proposal: out, repairs } = repairProposal(
       snapshot(),
-      proposal({ exercises: [ex({ alternativeRefs: ['2'] })] }),
+      proposal({ exercises: [ex({ alternativeRefs: ['10002'] })] }),
     )
 
     expect(out.exercises[0].alternativeRefs).toEqual([])
@@ -171,7 +172,7 @@ describe('dangling references', () => {
   it('drops an alternative pointing at its own exercise, without a word', () => {
     const { proposal: out, repairs } = repairProposal(
       snapshot(),
-      proposal({ exercises: [ex({ alternativeRefs: ['1'] })] }),
+      proposal({ exercises: [ex({ alternativeRefs: ['10001'] })] }),
     )
 
     expect(out.exercises[0].alternativeRefs).toEqual([])
@@ -181,10 +182,10 @@ describe('dangling references', () => {
   it('takes an unknown exercise out of the day it was placed in', () => {
     const { proposal: out, repairs } = repairProposal(
       snapshot(),
-      proposal({ days: [day({ exerciseRefs: ['1', '2'] })] }),
+      proposal({ days: [day({ exerciseRefs: ['10001', '10002'] })] }),
     )
 
-    expect(out.days[0].exerciseRefs).toEqual(['1'])
+    expect(out.days[0].exerciseRefs).toEqual(['10001'])
     expect(kinds(repairs)).toEqual(['exercise-unlinked'])
     expect(repairs[0].text).toContain('Corrida')
   })
@@ -204,12 +205,12 @@ describe('dangling references', () => {
 describe('what the repair must never do', () => {
   const noisy = () =>
     proposal({
-      categories: [{ ref: '1', id: 1, name: 'Peito' }],
+      categories: [{ ref: '10001', id: 10001, name: 'Peito' }],
       exercises: [
-        ex({ mediaUrl: 'null', categoryRefs: ['1', '7'], alternativeRefs: ['2'] }),
+        ex({ mediaUrl: 'null', categoryRefs: ['10001', '10007'], alternativeRefs: ['10002'] }),
         ex({ ref: 'novo1', id: null, name: 'Novo', mediaUrl: 'xx', categoryRefs: ['novo9'] }),
       ],
-      days: [day({ exerciseRefs: ['1', '2', 'novo1'] })],
+      days: [day({ exerciseRefs: ['10001', '10002', 'novo1'] })],
     })
 
   it('never changes how many categories, exercises or days there are', () => {
@@ -245,7 +246,7 @@ describe('what the repair must never do', () => {
   it('leaves a clean proposal exactly as it was', () => {
     const clean = proposal({
       exercises: [ex({ mediaUrl: JPG })],
-      days: [day({ exerciseRefs: ['1'] })],
+      days: [day({ exerciseRefs: ['10001'] })],
     })
     const { proposal: after, repairs } = repairProposal(snapshot(), clean)
 
@@ -257,14 +258,94 @@ describe('what the repair must never do', () => {
     const twice = proposal({ exercises: [ex(), ex({ name: 'Outro' })] })
     const { proposal: after, repairs } = repairProposal(snapshot(), twice)
 
-    expect(after.exercises.map((e) => e.ref)).toEqual(['1', '1'])
+    expect(after.exercises.map((e) => e.ref)).toEqual(['10001', '10001'])
     expect(repairs).toEqual([])
   })
 
   it('leaves an id that is gone from the catalog for the validation to refuse', () => {
-    const stale = proposal({ exercises: [ex({ ref: '99', id: 99, name: 'Sumiu' })] })
+    const stale = proposal({ exercises: [ex({ ref: '10099', id: 10099, name: 'Sumiu' })] })
     const { proposal: after } = repairProposal(snapshot(), stale)
 
-    expect(after.exercises[0].id).toBe(99)
+    expect(after.exercises[0].id).toBe(10099)
+  })
+})
+
+/**
+ * The official catalog reaches the model as context, never as payload: it ships
+ * with the app, so there is no row to rename, re-categorise or delete. The
+ * repair is what stops the card from *claiming* a change the apply will not
+ * make.
+ */
+describe('the official catalog is context, not payload', () => {
+  const OFFICIAL = officialExercises()[0]
+  const OFFICIAL_CAT = officialCategories()[0]
+
+  const withOfficial = (over: Partial<CatalogSnapshot> = {}): CatalogSnapshot => ({
+    categories: [
+      { id: OFFICIAL_CAT.id!, name: OFFICIAL_CAT.name, readOnly: true },
+      { id: 10001, name: 'Peito' },
+    ],
+    exercises: [
+      { id: OFFICIAL.id!, name: OFFICIAL.name, mediaUrl: null, categoryIds: [], alternativeIds: [], readOnly: true },
+      { id: 10001, name: 'Supino Reto', mediaUrl: GIF, categoryIds: [10001], alternativeIds: [] },
+    ],
+    days: [{ id: 10001, name: 'Dia 1', exerciseIds: [10001] }],
+    ...over,
+  })
+
+  it('takes an official exercise out of the proposal', () => {
+    const p = proposal({
+      exercises: [
+        ex(),
+        ex({ ref: String(OFFICIAL.id), id: OFFICIAL.id!, name: OFFICIAL.name, categoryRefs: [] }),
+      ],
+    })
+
+    const { proposal: after, repairs } = repairProposal(withOfficial(), p)
+
+    expect(after.exercises.map((e) => e.id)).toEqual([10001])
+    // Echoed back unchanged, so there is nothing to tell the user about.
+    expect(repairs).toEqual([])
+  })
+
+  it('says so when the model tried to rename one', () => {
+    const p = proposal({
+      exercises: [
+        ex({ ref: String(OFFICIAL.id), id: OFFICIAL.id!, name: 'Outro nome', categoryRefs: [] }),
+      ],
+      days: [],
+    })
+
+    const { proposal: after, repairs } = repairProposal(withOfficial(), p)
+
+    expect(after.exercises).toEqual([])
+    expect(repairs.map((r) => r.kind)).toEqual(['official-kept'])
+    expect(repairs[0].text).toContain(OFFICIAL.name)
+  })
+
+  it('keeps an official exercise inside a proposed day, though the list never carries it', () => {
+    const p = proposal({
+      exercises: [ex()],
+      days: [day({ exerciseRefs: ['10001', String(OFFICIAL.id)] })],
+    })
+
+    const { proposal: after, repairs } = repairProposal(withOfficial(), p)
+
+    // The ref resolves against the catalog, so the day keeps it.
+    expect(after.days[0].exerciseRefs).toEqual(['10001', String(OFFICIAL.id)])
+    expect(repairs).toEqual([])
+  })
+
+  it('takes an official category out too', () => {
+    const p = proposal({
+      categories: [{ ref: String(OFFICIAL_CAT.id), id: OFFICIAL_CAT.id!, name: 'Renomeada' }],
+      exercises: [],
+      days: [],
+    })
+
+    const { proposal: after, repairs } = repairProposal(withOfficial(), p)
+
+    expect(after.categories).toEqual([])
+    expect(repairs.map((r) => r.kind)).toEqual(['official-kept'])
   })
 })

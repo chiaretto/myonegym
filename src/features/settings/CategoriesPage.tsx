@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
-import { createCategory, deleteCategory, renameCategory, ValidationError } from '../../db/repos'
+import { isOfficialId } from '../../data/officialCatalog'
+import {
+  createCategory,
+  deleteCategory,
+  getCategory,
+  renameCategory,
+  ValidationError,
+} from '../../db/repos'
 import { db } from '../../db/db'
 import type { Category } from '../../db/types'
 import { useCategories } from '../../lib/hooks'
@@ -51,18 +58,31 @@ export function CategoriesPage() {
                 <Icon name="tag" />
               </span>
               <span className="row-body">
-                <span className="row-title">{c.name}</span>
+                <span className="row-title">
+                  {c.name}
+                  {isOfficialId(c.id!) && <span className="chip sm">Oficial</span>}
+                </span>
               </span>
-              <button
-                className="icon-btn ghost"
-                aria-label="Editar"
-                onClick={() => nav(`/settings/categories/${c.id}/edit`)}
-              >
-                <Icon name="pencil" />
-              </button>
-              <button className="icon-btn ghost" aria-label="Excluir" onClick={() => onDelete(c)}>
-                <Icon name="trash" />
-              </button>
+              {/* An official category comes with the app: there is no row to
+                  rename and none to delete. */}
+              {!isOfficialId(c.id!) && (
+                <>
+                  <button
+                    className="icon-btn ghost"
+                    aria-label="Editar"
+                    onClick={() => nav(`/settings/categories/${c.id}/edit`)}
+                  >
+                    <Icon name="pencil" />
+                  </button>
+                  <button
+                    className="icon-btn ghost"
+                    aria-label="Excluir"
+                    onClick={() => onDelete(c)}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -82,7 +102,7 @@ export function CategoryFormPage() {
   const editId = id != null ? Number(id) : null
   // undefined = loading, null = not found (or create mode), Category = found.
   const category = useLiveQuery(
-    async () => (editId == null ? null : ((await db.categories.get(editId)) ?? null)),
+    async () => (editId == null ? null : ((await getCategory(editId, db)) ?? null)),
     [editId],
     editId == null ? null : undefined,
   )

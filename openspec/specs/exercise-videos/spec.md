@@ -6,10 +6,9 @@ exercício é uma imagem, e uma imagem não mostra cadência, ângulo de banco n
 onde a pegada muda — quem queria isso mantinha o link fora do app e reprocurava o
 mesmo vídeo toda vez, no segundo zero de um vídeo de dez minutos.
 
-Diferente do **aquecimento**, que é registro próprio porque serve muitos
-exercícios, um vídeo de execução serve **um** e não tem vida fora dele: ele vive
-dentro do exercício, sem tabela, sem id e sem cadastro em Configurações. E como o
-que interessa costuma ser meio minuto no meio do vídeo, ele carrega o **trecho**.
+Um vídeo de execução serve **um** exercício e não tem vida fora dele: vive dentro
+do exercício, sem tabela, sem id e sem cadastro em Configurações. E como o que
+interessa costuma ser meio minuto no meio do vídeo, ele carrega o **trecho**.
 
 ## Requirements
 ### Requirement: Videos Belong to the Exercise, Not to a Record of Their Own
@@ -20,19 +19,18 @@ Configurações. Cada vídeo MUST ter uma **URL** e MAY ter um **rótulo** curto
 **segundo inicial** e um **segundo final**.
 
 A ordem da lista **É** a ordem de apresentação, como já vale para os exercícios
-de um dia e para os aquecimentos de um exercício.
+de um dia.
 
-Um vídeo MUST NOT ser compartilhado entre exercícios. É a diferença que separa
-esta lista dos **aquecimentos**: "Rotação de ombro" serve a dez exercícios e por
-isso é um registro reutilizável; "Supino — pegada fechada, 2:10 a 2:45" serve a
-um e não tem vida fora dele. Dar-lhe registro próprio criaria um CRUD que
-ninguém pediria e uma integridade referencial a manter na exclusão.
+Um vídeo MUST NOT ser compartilhado entre exercícios. "Supino — pegada fechada,
+2:10 a 2:45" serve a um exercício e não tem vida fora dele; dar-lhe registro
+próprio criaria um CRUD que ninguém pediria e uma integridade referencial a
+manter na exclusão.
 
 Excluir o exercício MUST levar seus vídeos junto, sem deixar órfão — consequência
 direta de estarem dentro dele.
 
-Um vídeo MUST NOT pertencer a uma academia: como as alternativas e os
-aquecimentos, ele é propriedade do exercício, não do lugar.
+Um vídeo MUST NOT pertencer a uma academia: como as alternativas, ele é
+propriedade do exercício, não do lugar.
 
 Um exercício **anterior** a esta mudança MUST ser lido como tendo **nenhum**
 vídeo, e não como um registro inválido.
@@ -61,16 +59,14 @@ vídeo, e não como um registro inválido.
 ### Requirement: A Video Is Registered Inside the Exercise Form
 
 O cadastro de vídeos MUST acontecer dentro do **formulário de criação/edição do
-exercício**, junto de onde já se escolhem alternativas e aquecimentos. Ele MUST
+exercício**, junto de onde já se escolhem as alternativas. Ele MUST
 permitir **adicionar**, **editar**, **remover** e **reordenar**, e MUST NOT
 existir como tela própria em Configurações — não há o que administrar fora do
 exercício.
 
 A **URL** MUST ser obrigatória e MUST ser um endereço http(s). O **rótulo** MUST
 ser opcional: um exercício com um vídeo só não precisa nomeá-lo, e exigir nome
-seria cobrar por uma identificação que a lista de um item já dá — ao contrário do
-aquecimento, que é procurado num seletor entre todos os outros e por isso precisa
-de nome.
+seria cobrar por uma identificação que a lista de um item já dá.
 
 Quando **início e fim** forem ambos informados, o fim MUST ser maior que o
 início, e o cadastro MUST ser bloqueado com mensagem quando não for. Cada um
@@ -149,8 +145,8 @@ troca de volta devolve o comportamento.
 
 O app MUST exibir **embutidos**, sem tirar o usuário dele, os vídeos de
 **YouTube** (`watch?v=`, `youtu.be/`, `/shorts/`, `/embed/`) e de **Instagram**
-(`/reel/`, `/p/`, `/tv/`). Qualquer outro endereço MUST continuar tratado como a
-capability `warmups` já trata o que não reconhece.
+(`/reel/`, `/p/`, `/tv/`). Qualquer outro endereço MUST ser tratado como manda
+*Media Is Classified From Its URL*.
 
 A classificação MUST continuar **derivada da URL**, nunca gravada junto dela: a
 URL é o fato, a classificação é uma leitura dela, e uma coluna `kind` seria uma
@@ -163,15 +159,9 @@ YouTube já é: é vertical por definição do formato, e apresentá-lo em paisa
 espremeria numa tira.
 
 Um vídeo de exercício MUST **começar a tocar sozinho** ao ser exibido, e MUST
-começar **mudo**. A regra que os aquecimentos seguem — não tocar nem baixar antes
-de ser pedido — não tem o que proteger aqui: a aba **é** o carrossel, então
-abri-la já é o pedido. O mudo não é preferência e sim o preço: navegador algum
-concede autoplay com áudio, e pedi-lo audível deixaria o vídeo simplesmente
-parado.
-
-O **aquecimento** MUST continuar sem tocar sozinho: ele é alcançado por um botão,
-e quem tocou o botão pediu para *ver*, não necessariamente para gastar dados
-naquele instante.
+começar **mudo**. Abrir a aba já é o pedido para assistir — a aba **é** o
+paginador —, e o mudo não é preferência e sim o preço: navegador algum concede
+autoplay com áudio, e pedi-lo audível deixaria o vídeo simplesmente parado.
 
 #### Scenario: YouTube embutido
 - GIVEN um vídeo com a URL de um `watch?v=`
@@ -194,11 +184,6 @@ naquele instante.
 - THEN o primeiro vídeo começa a tocar sem outra ação
 - AND começa mudo
 
-#### Scenario: O aquecimento não começa sozinho
-- GIVEN um exercício com um aquecimento em vídeo
-- WHEN o usuário abre o visualizador de aquecimentos
-- THEN a reprodução só começa quando ele pedir
-
 ### Requirement: The Videos Tab on Both Exercise Details
 
 O detalhe do exercício MUST apresentar uma aba **"Vídeos"**, tanto no **catálogo**
@@ -206,7 +191,7 @@ O detalhe do exercício MUST apresentar uma aba **"Vídeos"**, tanto no **catál
 não da academia —, e as duas telas são a mesma vista em dois contextos (ver
 *Exercise Note and Photos on the Catalog Detail*, em `exercises`). É durante o
 treino que se confere a execução, e obrigar a sair da sessão para isso derrotaria
-o propósito, pelo mesmo argumento que já trouxe o aquecimento para dentro dela.
+o propósito.
 
 A aba **É** o carrossel: abri-la MUST já exibir o **primeiro vídeo**, sem
 listagem intermediária. Abrir a aba já é o ato de pedir os vídeos, e uma lista
@@ -222,13 +207,16 @@ existia para evitar. Um vídeo de execução é visto muitas vezes seguidas para
 o movimento; tanto o primeiro toque quanto o reinício de cada passagem são atrito
 que não paga nada.
 
-Sem vídeo algum, a aba MUST exibir um **estado vazio** que explica o que ela
-guarda e leva à edição do exercício. Enquanto o exercício não foi lido, ela MUST
-NOT afirmar que está vazia (ver *Estados Vazios Só Depois da Resposta*).
+Sem vídeo algum, a aba MUST exibir um **estado vazio** — e ele MUST se limitar a
+dizer que não há vídeo. MUST NOT explicar o que a aba guarda nem apontar o
+caminho do cadastro: quem chegou aqui abriu uma aba chamada "Vídeos" e já sabe o
+que ela guarda, e a instrução se paga uma vez e depois cobra em toda visita. É a
+mesma decisão que tirou o parágrafo de origem da tela de visualização. Enquanto o
+exercício não foi lido, a aba MUST NOT afirmar que está vazia (ver *Estados
+Vazios Só Depois da Resposta*).
 
 Enquanto uma **alternativa** está sendo vista dentro de uma sessão, a aba MUST
-refletir o exercício **exibido**, como as demais abas e o controle de aquecimento
-já fazem.
+refletir o exercício **exibido**, como as demais abas já fazem.
 
 Dentro de uma sessão, ver um vídeo MUST NOT marcar nada como feito nem avançar o
 stepper: assistir não é executar. Como a aba não abre nada por cima da tela, não
@@ -238,10 +226,9 @@ que é o que o mantém uma aba e não uma tomada de tela.
 A aba MUST exibir, ao lado do seu rótulo, **quantos vídeos** há — assim o usuário
 sabe se vale o toque antes de gastá-lo. A aba **Foto** MUST fazer o mesmo. Um
 número **zero** MUST NOT ser exibido: "Vídeos (0)" gasta largura para dizer que a
-aba está vazia, o que abri-la diz melhor — a mesma decisão que já esconde o botão
-de aquecimento e a seção Alternativas. Enquanto a contagem não é **conhecida**,
-nada MUST ser exibido, e não um zero (ver *Estados Vazios Só Depois da
-Resposta*).
+aba está vazia, o que abri-la diz melhor — a mesma decisão que já esconde a seção
+Alternativas. Enquanto a contagem não é **conhecida**, nada MUST ser exibido, e
+não um zero (ver *Estados Vazios Só Depois da Resposta*).
 
 #### Scenario: A aba abre já no vídeo
 - GIVEN "Supino Reto" tem dois vídeos, o primeiro rotulado "pegada fechada"
@@ -292,31 +279,217 @@ Resposta*).
 - WHEN abre a aba "Vídeos"
 - THEN vê os vídeos do exercício **exibido**, não os da entrada
 
-#### Scenario: Sem vídeo, um estado vazio
+#### Scenario: Sem vídeo, o estado vazio diz só isso
 - GIVEN um exercício sem vídeo algum
 - WHEN o usuário abre a aba "Vídeos"
-- THEN um estado vazio explica a aba e oferece o caminho para cadastrar
+- THEN a aba informa que não há vídeo
+- AND não há texto explicando o que a aba guarda nem como cadastrar
 
-### Requirement: Videos Are Viewed in the Same Full-Screen Viewer as Warmups
+### Requirement: Media Is Classified From Its URL
 
-Os vídeos MUST ser apresentados pelo **mesmo paginador** dos aquecimentos (ver
-*Full-Screen Warmup Viewer*, em `warmups`), e não por uma cópia dele: um item por
-vez, `<` e `>` **flutuando sobre a mídia** nas bordas laterais, circulação
-infinita, posição "N de M", o nome do item, e o estado de falha que oferece abrir
-o endereço fora do app.
+> Requisito herdado da antiga capability de aquecimentos, removida, e reescrito
+> sem a palavra "aquecimento". O código que ele especifica
+> (`lib/embedMedia`) continua vivo e continua sendo usado — pelos vídeos, pelo
+> paginador e pela validação de URL no repositório.
 
-O que difere é a **apresentação**, e apenas ela. O aquecimento, alcançado por um
-botão, MUST continuar em **sobreposição**: diálogo modal, fechar no topo, rolagem
-de trás travada, teclado. Os vídeos, cuja aba já **é** o paginador, MUST ser
-apresentados **na página**: sem diálogo, sem fechar, sem travar rolagem alguma, e
-sem capturar as setas do teclado — elas pertencem à tela que ele divide.
+A forma de exibir uma mídia MUST ser derivada da **própria URL**, e MUST ser a
+mesma classificação na validação e na renderização:
 
-Com um **único** vídeo os controles MUST NOT ser exibidos, como já vale para um
-aquecimento só.
+- URL terminando em extensão de **vídeo** (MP4, WebM) → tocada como vídeo, com
+  controles;
+- URL de um provedor com **endereço de player publicado** (YouTube, Vimeo,
+  Instagram) → **embutida** no visualizador, convertida para esse endereço de
+  player;
+- **qualquer outra** URL http(s) → exibida como **imagem**.
 
-O comportamento do visualizador de **aquecimentos** MUST permanecer exatamente
-como está: ele passa a ser um dos dois clientes de um paginador comum, e não o
-objeto de uma mudança.
+Imagem é o **padrão**, não um quarto caso de "desconhecido". Muita URL de imagem
+real não tem extensão — um caminho de CDN, `?format=jpg`, um recurso assinado —
+e tratá-las como outra coisa tirava o usuário do app por uma figura que teria
+aparecido sem problema. Quando o palpite erra, o próprio `<img>` falha e o
+visualizador MUST cair no seu estado de falha, que mantém o endereço acessível
+(ver *Media Pager*). É essa rede de segurança que torna o palpite otimista
+seguro.
+
+O tipo MUST NOT ser um campo do registro: seria uma segunda fonte de verdade
+sobre a mesma URL, livre para divergir dela. Uma URL que não seja http(s) MUST
+ser recusada.
+
+**Embutir vale só para quem publica um endereço de player.** A página de
+assistir não é o player: `youtube.com/watch?v=ID` recusa ser enquadrada
+(`X-Frame-Options`), `youtube.com/embed/ID` não. O app MUST NOT tentar enquadrar
+um site qualquer — produziria uma caixa em branco sem nada que a explique.
+
+Uma mídia que a URL declara **vertical** (um Short do YouTube, um reel do
+Instagram) MUST ser exibida num quadro vertical que ocupa a **altura disponível**
+da tela, e não no quadro 16:9 — um vídeo vertical dentro de um quadro deitado
+vira uma tira estreita com tarja dos dois lados. As demais MUST continuar em
+16:9, pelo motivo inverso.
+
+A orientação MUST ser decidida apenas pelo que a URL **declara** (`/shorts/`,
+`/reel/`). Um Short compartilhado como `youtu.be/ID` é indistinguível de um vídeo
+em paisagem nesse nível, e adivinhar vertical para esses colocaria todo vídeo
+comum numa tira. Descobrir a proporção real exigiria consultar a API do
+provedor, o que este app não faz.
+
+O embed MUST reduzir o que entrega ao provedor no que estiver ao alcance do
+próprio app: usar o host **sem cookies** quando o provedor publica um
+(`youtube-nocookie.com`) e carregar sob demanda. Isso não torna o embed privado —
+o provedor continua vendo a requisição e o endereço de quem assiste —, e essa é
+uma **troca consciente**: o vídeo que a pessoa tem à mão está quase sempre nesses
+provedores, e mandá-la para fora do app a cada consulta custava mais do que o
+recurso valia.
+
+#### Scenario: URL de imagem vira imagem
+- GIVEN um item cuja URL termina em `.gif`
+- WHEN ele é exibido
+- THEN aparece como imagem, animada quando for um GIF
+
+#### Scenario: URL de vídeo vira player
+- GIVEN um item cuja URL termina em `.mp4`
+- WHEN ele é exibido
+- THEN aparece um player com controles
+
+#### Scenario: Um Short ocupa a altura da tela
+- GIVEN um item cuja URL é um Short do YouTube
+- WHEN ele é exibido
+- THEN o player aparece em quadro vertical, usando a altura disponível
+- AND um vídeo em paisagem, no mesmo visualizador, continua em quadro deitado
+
+#### Scenario: Vídeo de provedor conhecido toca dentro do app
+- GIVEN um item com uma URL de vídeo do YouTube
+- WHEN ele é exibido
+- THEN o player aparece **dentro** do visualizador
+- AND o endereço usado é o de player do provedor, não a página de assistir
+
+#### Scenario: URL sem extensão é exibida como imagem
+- GIVEN um item cuja URL não termina em extensão conhecida e não é de um
+  provedor com player (um caminho de CDN, por exemplo)
+- WHEN ele é exibido
+- THEN o app o exibe como imagem, dentro do visualizador
+- AND o usuário não é mandado para fora do app
+
+#### Scenario: O palpite errado não vira beco sem saída
+- GIVEN um item cuja URL é uma página, não uma imagem
+- WHEN o visualizador tenta exibi-la e a carga falha
+- THEN aparece o estado de falha com o nome do item
+- AND o endereço continua acessível, para abrir fora do app
+- AND avançar e voltar continuam funcionando
+
+#### Scenario: URL inválida é recusada
+- GIVEN o formulário de vídeo
+- WHEN o usuário informa algo que não é http(s)
+- THEN o cadastro é bloqueado com uma mensagem de validação
+
+### Requirement: Media Pager
+
+> Requisito herdado da antiga capability de aquecimentos (*Full-Screen Warmup
+> Viewer*), removida, e reescrito sem a palavra "aquecimento". A apresentação em
+> **sobreposição** chegou a ser removida junto, por falta de cliente, e voltou
+> quando a tela de visualização somente leitura passou a abrir um vídeo — agora
+> com o modo **derivado** de haver um `onClose`, em vez de passado à parte.
+
+Os vídeos de um exercício MUST ser apresentados num **paginador**, com um item
+por vez. Ele MUST oferecer:
+
+- **avançar e voltar**, em controles `<` e `>` que **flutuam sobre a mídia**,
+  nas bordas laterais, para que a mídia use a largura inteira da tela — o que
+  mais importa para um vídeo vertical;
+- **circulação infinita**: depois do último vem o primeiro, e antes do primeiro
+  vem o último. Diferente do Voltar/Avançar do detalhe do exercício, que para
+  nas pontas porque "não há próximo exercício" é informação real, uma pilha de
+  vídeos não tem posição numa rotina — dar a volta é o caminho mais curto de
+  volta ao que se quer rever. Os controles MUST NOT aparecer desabilitados;
+- a **posição atual** ("N de M"), porque uma pilha sem contador não diz quanto
+  falta;
+- o **nome** do item exibido, já que a mídia sozinha pode não identificar o que é.
+
+Com um **único** item os controles MUST NOT ser exibidos: um ciclo de um seria
+dois botões que visivelmente não fazem nada.
+
+O paginador MUST ter **duas** apresentações, e a escolha entre elas MUST ser
+**derivada de haver um jeito de fechar**, e não de um sinalizador próprio —
+assim não existe a combinação quebrada de pedir um diálogo e esquecer a saída:
+
+- **na página**, dentro da aba "Vídeos", que já **é** o paginador: não há o que
+  fechar, não há tela atrás para travar, e as setas do teclado pertencem à
+  página que ele divide;
+- **em sobreposição**, para um vídeo aberto a partir de uma **lista** (a tela de
+  visualização somente leitura). Diálogo modal: `role="dialog"`, `aria-modal`,
+  fechar no topo, rolagem de trás travada e as setas do teclado ligadas —
+  um paginador que só responde a toque não se usa com uma mão num desktop.
+
+O paginador MUST aceitar **em qual item abrir**. Quem abre a partir de uma lista
+clicou num vídeo específico, e começar sempre no primeiro obrigaria a percorrer
+até ele — enquanto a aba, que não tem lista, simplesmente abre no primeiro.
+
+Uma mídia que **falhe ao carregar** MUST degradar para um estado legível, com o
+nome do item visível, em vez de uma tela quebrada ou vazia. Esse estado MUST
+oferecer **abrir o endereço fora do app**: ele atende dois casos — mídia remota
+inalcançável, normal num app offline-first, e uma URL que nunca foi um vídeo, já
+que é assim que o app trata o que não reconhece.
+
+#### Scenario: Percorrer os vídeos
+- GIVEN um exercício com três vídeos e a aba "Vídeos" aberta
+- WHEN o usuário toca `>` duas vezes
+- THEN vê o terceiro, com "3 de 3"
+
+#### Scenario: A navegação dá a volta
+- GIVEN o paginador mostrando o último de três
+- WHEN o usuário toca `>`
+- THEN volta ao primeiro
+- WHEN toca `<` a partir do primeiro
+- THEN vai ao último
+- AND em nenhum momento um controle aparece desabilitado
+
+#### Scenario: As setas ficam sobre a mídia
+- GIVEN a aba "Vídeos" aberta numa tela de celular
+- WHEN o usuário observa a tela
+- THEN os controles aparecem **sobre** a mídia, junto às bordas laterais
+- AND a mídia ocupa a largura da tela, sem espaço reservado para eles
+
+#### Scenario: Um único vídeo
+- GIVEN um exercício com apenas um vídeo
+- WHEN o usuário abre a aba
+- THEN vê "1 de 1" e nenhuma seta
+
+#### Scenario: Mídia que não carrega
+- GIVEN um vídeo cuja URL não responde
+- WHEN ele é exibido
+- THEN um estado de falha é mostrado, com o nome do item legível
+- AND a navegação continua funcionando
+
+#### Scenario: A aba não é um diálogo
+- GIVEN a aba "Vídeos" aberta
+- WHEN o usuário observa a tela
+- THEN não há botão de fechar, e a faixa de abas continua acessível acima dela
+- AND as setas do teclado continuam pertencendo à página
+
+#### Scenario: A partir de uma lista, abre em sobreposição e no item clicado
+- GIVEN uma lista com três vídeos
+- WHEN o usuário toca o **segundo**
+- THEN o paginador abre **sobre** a tela, como diálogo, mostrando "2 de 3"
+- AND fechar devolve a mesma tela, como estava
+- AND `Esc` fecha do mesmo jeito
+
+---
+
+### Requirement: Videos Are Viewed in the Media Pager
+
+> **Renomeou** *Videos Are Viewed in the Same Full-Screen Viewer as Warmups*:
+> o título nomeava o outro cliente do paginador, que deixou de existir. Mesmo
+> requisito, sem a comparação que não tem mais com quem ser feita.
+
+Os vídeos MUST ser apresentados pelo paginador descrito em *Media Pager* — um
+item por vez, `<` e `>` flutuando sobre a mídia nas bordas laterais, circulação
+infinita, posição "N de M", o nome do item, e o estado de falha que oferece
+abrir o endereço fora do app.
+
+O paginador tinha **dois** clientes; agora tem um. Com o aquecimento removido, ele
+deixa de precisar escolher entre duas apresentações e passa a ter só a que a aba
+usa: **na página**, sem diálogo, sem fechar, sem travar rolagem alguma e sem
+capturar as setas do teclado.
+
+Com um **único** vídeo os controles MUST NOT ser exibidos.
 
 #### Scenario: Percorrer os vídeos
 - GIVEN um exercício com três vídeos e a aba "Vídeos" aberta
@@ -328,17 +501,9 @@ objeto de uma mudança.
 - WHEN o usuário toca `>`
 - THEN volta ao primeiro
 
-#### Scenario: O aquecimento continua em sobreposição
-- GIVEN um exercício com aquecimentos
-- WHEN o usuário toca o controle de aquecimento
-- THEN o visualizador abre **sobre** a tela, como diálogo, com fechar no topo
-
 #### Scenario: Um único vídeo
 - GIVEN um exercício com apenas um vídeo
 - WHEN o usuário o abre
 - THEN vê "1 de 1" e nenhuma seta
 
-#### Scenario: O aquecimento não regride
-- GIVEN um exercício com três aquecimentos
-- WHEN o usuário abre o visualizador de aquecimentos
-- THEN ele se comporta exatamente como antes desta mudança
+---

@@ -148,20 +148,46 @@ describe('Weight history opens in a modal', () => {
 
     await user.click(await screen.findByRole('button', { name: /Editar/ }, { timeout: 3000 }))
 
-    // From the top line, opening a modal, it costs the edit form no height — so
-    // Cancelar and Salvar still clear the fold, which is what the scroll-to-top
-    // exists to protect. And what you lifted last time is exactly what you want
-    // while deciding what to type.
-    expect(screen.getByRole('button', { name: /Salvar/ })).toBeInTheDocument()
-    const btn = screen.getByRole('button', { name: /Histórico/ })
-    expect(btn.closest('.wc-head')).not.toBeNull()
+    // The editor is a popup now, so the card's own history button is behind it —
+    // and the popup carries one of its own, on its title line. What you lifted
+    // last time is exactly what you want while deciding what to type.
+    const editor = screen.getByRole('dialog', { name: 'Peso alvo' })
+    expect(within(editor).getByRole('button', { name: /Salvar/ })).toBeInTheDocument()
+    const btn = within(editor).getByRole('button', { name: /Histórico/ })
+    expect(btn.closest('.sheet-head')).not.toBeNull()
 
     await user.click(btn)
     expect(timeline()!.querySelectorAll('.tl-item')).toHaveLength(3)
-    // Closing hands the edit form back, untouched.
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Fechar' }))
-    await waitFor(() => expect(sheet()).toBeNull())
-    expect(screen.getByRole('button', { name: /Salvar/ })).toBeInTheDocument()
+
+    // Closing the history hands the edit popup back, untouched — and Escape
+    // reaches only the top sheet, so it does not take the editor with it.
+    const historyModal = screen.getByRole('dialog', { name: 'Histórico' })
+    await user.click(within(historyModal).getByRole('button', { name: 'Fechar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Histórico' })).toBeNull())
+    expect(
+      within(screen.getByRole('dialog', { name: 'Peso alvo' })).getByRole('button', {
+        name: /Salvar/,
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('Escape closes the history without closing the editor under it', async () => {
+    const { supino, day } = await seed()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}?day=${day}`)
+    await findOpenBtn()
+
+    await user.click(await screen.findByRole('button', { name: /Editar/ }, { timeout: 3000 }))
+    const editor = screen.getByRole('dialog', { name: 'Peso alvo' })
+    await user.click(within(editor).getByRole('button', { name: /Histórico/ }))
+    expect(screen.getByRole('dialog', { name: 'Histórico' })).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Histórico' })).toBeNull())
+    // One keystroke, one sheet: a half-typed weight is not thrown away to
+    // dismiss a list.
+    expect(screen.getByRole('dialog', { name: 'Peso alvo' })).toBeInTheDocument()
   })
 
   it('still deletes an entry from inside the modal', async () => {
@@ -238,5 +264,129 @@ describe('Weight history opens in a modal', () => {
 
     await user.click(btn)
     expect(timeline()!.querySelectorAll('.tl-item')).toHaveLength(3)
+  })
+})
+
+/**
+ * Looking at another gym's weight without leaving the one you are in. The
+ * selector points the timeline elsewhere; everything behind the modal — the
+ * card, the editor, the save — stays about the active gym.
+ */
+describe('The history modal reaches the other gyms', () => {
+  /** Gym A active with a global weight, gym B with an exception of its own. */
+  async function seedTwoGyms() {
+    const a = await createGym('Academia A', db)
+    const b = await createGym('Academia B', db)
+    useActiveGym.setState({ activeGymId: a })
+    const supino = await createExercise({ name: 'Supino Reto' }, db)
+    await saveWeight(a, supino, 20, 'KG', 'global', db)
+    await saveWeight(a, supino, 22.5, 'KG', 'global', db)
+    await saveWeight(b, supino, 60, 'KG', 'gym', db)
+    return { a, b, supino }
+  }
+
+  const openHistory = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await findOpenBtn())
+    return screen.getByRole('dialog')
+  }
+
+  /** Open the pill's list and pick a gym from it. */
+  const pickGym = async (
+    user: ReturnType<typeof userEvent.setup>,
+    modal: HTMLElement,
+    name: string,
+  ) => {
+    await user.click(within(modal).getByLabelText('Ver outra academia'))
+    const list = within(modal).getByRole('group', { name: 'Academias' })
+    await user.click(within(list).getByRole('button', { name: new RegExp(name) }))
+  }
+
+  it('names the gym it is showing, on the title line, and starts on the active one', async () => {
+    const { supino } = await seedTwoGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const modal = await openHistory(user)
+    const pill = within(modal).getByLabelText('Ver outra academia')
+    expect(pill).toHaveTextContent('Academia A')
+    // On the same line as the title, not above the timeline.
+    expect(pill.closest('.sheet-head')).toBeTruthy()
+    // Shut until asked: the list is a detour, not the content.
+    expect(within(modal).queryByRole('group', { name: 'Academias' })).not.toBeInTheDocument()
+
+    // Gym A has no exception, so what it shows IS the global timeline — and the
+    // modal says so, which is what keeps two gyms showing the same entries from
+    // reading as a bug.
+    expect(within(modal).getByText(/Peso global/)).toBeInTheDocument()
+    expect(within(modal).getByText(/22,5 KG/)).toBeInTheDocument()
+  })
+
+  it('switches to the other gym’s own weight and history', async () => {
+    const { supino } = await seedTwoGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const modal = await openHistory(user)
+    await pickGym(user, modal, 'Academia B')
+
+    await waitFor(() => expect(within(modal).getByText(/só desta academia/i)).toBeInTheDocument())
+    expect(within(modal).getByText(/60 KG/)).toBeInTheDocument()
+    // B's exception has one entry; A's global has two.
+    expect(within(modal).getAllByRole('listitem')).toHaveLength(1)
+  })
+
+  it('does not move the card behind it', async () => {
+    const { supino } = await seedTwoGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const modal = await openHistory(user)
+    await pickGym(user, modal, 'Academia B')
+    await waitFor(() => expect(within(modal).getByText(/60 KG/)).toBeInTheDocument())
+
+    await user.click(within(modal).getByRole('button', { name: 'Fechar' }))
+
+    // Still gym A's weight on the card: the selector was a lookup, not a move.
+    await waitFor(() => expect(within(card()).getByText(/22,5/)).toBeInTheDocument())
+    expect(within(card()).queryByText(/60/)).not.toBeInTheDocument()
+  })
+
+  it('reopens on the active gym, not on the last one looked at', async () => {
+    const { supino } = await seedTwoGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    let modal = await openHistory(user)
+    await pickGym(user, modal, 'Academia B')
+    await waitFor(() => expect(within(modal).getByText(/60 KG/)).toBeInTheDocument())
+    await user.click(within(modal).getByRole('button', { name: 'Fechar' }))
+
+    modal = await openHistory(user)
+    expect(within(modal).getByLabelText('Ver outra academia')).toHaveTextContent('Academia A')
+  })
+
+  it('offers no delete while looking at another gym', async () => {
+    const { supino } = await seedTwoGyms()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}`)
+
+    const modal = await openHistory(user)
+    // Deletable in the gym the screen is about…
+    expect(within(modal).getAllByLabelText('Excluir registro').length).toBeGreaterThan(0)
+
+    await pickGym(user, modal, 'Academia B')
+    await waitFor(() => expect(within(modal).getByText(/60 KG/)).toBeInTheDocument())
+
+    // …and not in one that is only being looked at.
+    expect(within(modal).queryByLabelText('Excluir registro')).not.toBeInTheDocument()
+  })
+
+  it('shows no selector when there is only one gym', async () => {
+    const { supino, day } = await seed()
+    const user = userEvent.setup()
+    renderAt(`/exercise/${supino}?day=${day}`)
+
+    const modal = await openHistory(user)
+    expect(within(modal).queryByLabelText('Ver outra academia')).not.toBeInTheDocument()
   })
 })

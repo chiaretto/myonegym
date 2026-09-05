@@ -35,53 +35,62 @@ export interface MediaItem {
 }
 
 /**
- * Pager over external media — an exercise's **warm-ups** or its **execution
- * videos**. One viewer, two callers: the two do exactly the same thing, and a
- * copy would diverge on the first fix.
+ * Pager over external media — one item at a time, arrows floating over the
+ * media, wrapping past the ends.
  *
- * Two presentations of the one pager:
+ * Two presentations, and **`onClose` is what picks between them**:
  *
- * - **overlay** (default), for a warm-up reached from a button. A screen rather
- *   than a `Sheet`: the sheet is a drawer for short actions, and this is content
- *   with navigation of its own. It borrows what the sheet established —
- *   `role="dialog"`, `aria-modal`, Escape to close — and adds the arrow keys,
- *   because a pager that only answers to taps is a pager you cannot use
- *   one-handed on a desktop.
- * - **inline**, for the Vídeos tab, which *is* the pager: opening the tab is
- *   already the act of opening the videos, so there is nothing to dismiss and no
- *   page behind to lock. Being no dialog, it claims no `role`, binds no window
- *   keys — the arrows there belong to the page — and shows no close button.
+ * - **on the page** (no `onClose`), for the Vídeos tab, which *is* the pager:
+ *   opening the tab is already the act of opening the videos, so there is
+ *   nothing to dismiss, no page behind to lock, and no reason to claim the
+ *   arrow keys — they belong to the screen it shares.
+ * - **overlay** (with `onClose`), for a video opened from a list — the
+ *   read-only exercise view. A modal dialog: `role="dialog"`, `aria-modal`,
+ *   close in the top bar, the page behind locked, and the arrow keys bound,
+ *   because a pager that only answers to taps cannot be used one-handed on a
+ *   desktop.
+ *
+ * Deriving the mode from `onClose` rather than from a separate boolean is what
+ * makes the broken combination unrepresentable: there is no way to ask for a
+ * dialog and forget to give it a way out.
+ *
+ * CHANGED: the overlay was **removed** when warm-ups went, on the grounds that
+ * a mode with no caller can only rot. The read-only exercise view brought a
+ * caller back, so it returns — with the mode now derived instead of passed, and
+ * with `initialIndex`, which the old one had no use for because its opener had
+ * no list to click into.
  *
  * It wraps: past the last item comes the first. Unlike the exercise detail's
  * Voltar/Avançar — which steps through a day and stops at its ends, because
- * "there is no next exercise" is real information — a warm-up stack has no
+ * "there is no next exercise" is real information — a stack of videos has no
  * position in a routine, so looping is the cheaper way round to the one you
  * wanted. The arrows float **over** the media rather than beside it, which
  * gives the media the full width; that matters most for a vertical Short or reel.
- *
  */
 export function MediaViewer({
   items,
-  onClose,
-  inline = false,
   title = 'Mídia',
+  initialIndex = 0,
+  onClose,
 }: {
   items: MediaItem[]
-  /** Required for the overlay; meaningless inline, where nothing is dismissed. */
-  onClose?: () => void
-  inline?: boolean
   title?: string
+  /** Which item to open on — the one that was clicked in a list. */
+  initialIndex?: number
+  /** Given only by the overlay caller; its presence IS the overlay. */
+  onClose?: () => void
 }) {
   const total = items.length
-  const [i, setI] = useState(0)
+  const overlay = onClose != null
+  const [i, setI] = useState(initialIndex)
   const current = items[Math.min(i, total - 1)]
 
   // Escape closes, arrows page. Bound on the window because the focused element
-  // could be the video's own controls — which is exactly why the inline pager
-  // does NOT bind them: it shares the page with everything else, and swallowing
-  // the arrow keys there would take them from the rest of the screen.
+  // could be the video's own controls — and NOT bound on the page presentation,
+  // which shares the screen with everything else and would be stealing keys
+  // that belong to it.
   useEffect(() => {
-    if (inline) return
+    if (!overlay) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.()
       else if (e.key === 'ArrowRight') setI((n) => (n + 1) % total)
@@ -89,26 +98,27 @@ export function MediaViewer({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [inline, onClose, total])
+  }, [overlay, onClose, total])
 
-  // The page behind must not scroll under the overlay. Inline there is no page
-  // behind — locking the body would freeze the screen the pager sits on.
+  // The page behind must not scroll under the overlay. On the page presentation
+  // there is no page behind — locking the body would freeze the screen the
+  // pager sits on.
   useEffect(() => {
-    if (inline) return
+    if (!overlay) return
     const previous = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = previous
     }
-  }, [inline])
+  }, [overlay])
 
   if (!current) return null
 
   return (
     <div
-      className={`wu-viewer${inline ? ' inline' : ''}`}
-      role={inline ? 'group' : 'dialog'}
-      aria-modal={inline ? undefined : true}
+      className={`wu-viewer${overlay ? ' overlay' : ''}`}
+      role={overlay ? 'dialog' : 'group'}
+      aria-modal={overlay ? true : undefined}
       aria-label={title}
     >
       <header className="wu-bar">
@@ -116,7 +126,7 @@ export function MediaViewer({
         <span className="wu-count" aria-live="polite">
           {i + 1} de {total}
         </span>
-        {!inline && (
+        {overlay && (
           <button className="icon-btn ghost wu-close" aria-label="Fechar" onClick={onClose}>
             <Icon name="x" />
           </button>

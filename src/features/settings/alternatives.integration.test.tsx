@@ -59,10 +59,16 @@ describe('Exercise form — declaring alternatives', () => {
     await user.click(within(await picker()).getByRole('button', { name: 'Supino Reto' }))
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    const chips = await screen.findAllByText(/Supino/, { selector: '.chip' })
-    expect(chips.map((n) => n.textContent?.trim())).toEqual(
-      expect.arrayContaining(['Supino Reto', 'Supino Máquina']),
-    )
+    // The official catalog has "Supino ..." exercises with alternatives of their
+    // own, so a plain findAllByText resolves on those before the two rows under
+    // test have re-rendered. Waiting on the assertion is what makes this about
+    // the link that was just declared.
+    await waitFor(() => {
+      const chips = screen
+        .getAllByText(/Supino/, { selector: '.chip' })
+        .map((n) => n.textContent?.trim())
+      expect(chips).toEqual(expect.arrayContaining(['Supino Reto', 'Supino Máquina']))
+    })
   })
 
   it('unticking one alternative leaves the others alone', async () => {
@@ -77,7 +83,9 @@ describe('Exercise form — declaring alternatives', () => {
       </MemoryRouter>,
     )
 
-    const chip = within(await picker()).getByRole('button', { name: /Crucifixo/ })
+    // Exact name, not a regex: the official catalog also carries a "Crucifixo
+    // Reto (voador Peck deck)", which a substring match would sweep in.
+    const chip = within(await picker()).getByRole('button', { name: 'Crucifixo' })
     expect(chip).toHaveAttribute('aria-pressed', 'true')
     await user.click(chip)
     await user.click(screen.getByRole('button', { name: 'Salvar' }))

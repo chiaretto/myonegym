@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
+import { officialExercises } from '../../data/officialCatalog'
 import { db } from '../../db/db'
 import {
   createCategory,
@@ -39,14 +40,14 @@ afterEach(async () => {
 async function seed() {
   const gym = await createGym('Academia A', db)
   useActiveGym.setState({ activeGymId: gym })
-  const cardioCat = await createCategory('Cardio', db)
-  const peito = await createCategory('Peito', db)
+  const cardioCat = await createCategory('Aeróbico', db)
+  const peitoral = await createCategory('Peitoral', db)
   const esteira = await createExercise(
     { name: 'Esteira', kind: 'cardio', categoryIds: [cardioCat] },
     db,
   )
   const bike = await createExercise({ name: 'Bicicleta', kind: 'cardio' }, db)
-  const supino = await createExercise({ name: 'Supino', categoryIds: [peito] }, db)
+  const supino = await createExercise({ name: 'Supino', categoryIds: [peitoral] }, db)
   const day = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
   return { gym, esteira, bike, supino, day }
 }
@@ -91,8 +92,8 @@ describe('Cardio tab', () => {
     expect(links.map((l) => l.textContent)).toEqual([
       'Treinos',
       'Cardio',
-      'Consistência',
-      'Configurações',
+      'Histórico',
+      'Config',
     ])
 
     await user.click(within(tabs).getByRole('link', { name: 'Cardio' }))
@@ -360,14 +361,20 @@ describe('Cardio tab', () => {
     expect(await db.sessions.count()).toBe(1)
   })
 
-  it('offers an empty state that leads to creating one', async () => {
+  it('is never empty, because the official catalog carries cardio', async () => {
+    // The empty state this used to assert is unreachable now: the bundled
+    // catalog always ships cardio exercises, so a device with none of its own
+    // still opens on a populated tab. The screen keeps the empty branch as a
+    // guard; what is worth pinning is that the user never meets it.
     const gym = await createGym('Academia A', db)
     useActiveGym.setState({ activeGymId: gym })
     await createExercise({ name: 'Supino' }, db) // strength only
     renderAt('/cardio')
 
-    expect(await screen.findByText('Nenhum cardio ainda')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Novo exercício/ })).toBeInTheDocument()
+    const official = officialExercises().filter((e) => e.kind === 'cardio')
+    expect(official.length).toBeGreaterThan(0)
+    expect(await screen.findByText(official[0].name)).toBeInTheDocument()
+    expect(screen.queryByText('Nenhum cardio ainda')).not.toBeInTheDocument()
   })
 
   it('never shows the "definir" hint for a cardio exercise, anywhere', async () => {

@@ -119,7 +119,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
               answered. Dismissing it — X, backdrop, Escape — always means "do
               nothing", never one of the options. */}
           {choosing && (
-            <Sheet title={choosing.title} centred onClose={() => settleChoice(null)}>
+            <Sheet title={choosing.title} placement="centre" onClose={() => settleChoice(null)}>
               {choosing.message && (
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
                   {choosing.message}

@@ -1,171 +1,24 @@
 import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { MyOneGymDB } from './db'
-import { migrateLegacyPhotos, readPhotoBlob, resolveWeight } from './repos'
+import { USER_ID_BASE } from '../data/officialCatalog'
+import {
+  createCategory,
+  createExercise,
+  getExercise,
+  migrateLegacyPhotos,
+  readPhotoBlob,
+  resolveWeight,
+} from './repos'
 import { GLOBAL_GYM_ID } from './types'
 
 /**
- * v6 migration: an exercise's single `categoryId` becomes a `categoryIds` list,
- * and the reserved "Sem categoria" category is deleted (uncategorized is now an
- * empty list). Seeds a **v5** database with the old shape, then opens the real
- * (v6) schema on the same name so the upgrade runs, and checks the result.
- */
-describe('v6 migration: categoryId → categoryIds, retire reserved', () => {
-  let name: string
-  beforeEach(() => {
-    name = `mig-${Date.now()}-${Math.floor(performance.now())}`
-  })
-  afterEach(async () => {
-    await Dexie.delete(name)
-  })
-
-  /** Open a Dexie declaring only up to v5, with the OLD exercise schema. */
-  async function openV5() {
-    const db = new Dexie(name)
-    db.version(1).stores({
-      gyms: '++id, name, createdAt',
-      categories: '++id, &name',
-      exercises: '++id, name, categoryId',
-      days: '++id, name',
-      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
-      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
-    })
-    db.version(2).stores({
-      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
-      sessionEntries: '++id, sessionId, exerciseId',
-    })
-    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
-    db.version(4).stores({})
-    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
-    await db.open()
-    return db
-  }
-
-  it('converts each exercise and deletes the reserved category', async () => {
-    const v5 = await openV5()
-    const peito = (await v5.table('categories').add({ name: 'Peito' })) as number
-    const reserved = (await v5
-      .table('categories')
-      .add({ name: 'Sem categoria', reserved: true })) as number
-    const categorized = (await v5
-      .table('exercises')
-      .add({ name: 'Supino', categoryId: peito })) as number
-    const onReserved = (await v5
-      .table('exercises')
-      .add({ name: 'Alongamento', categoryId: reserved })) as number
-    const unset = (await v5.table('exercises').add({ name: 'Prancha' })) as number
-    v5.close()
-
-    // Open the real schema (v6) on the same DB → the upgrade runs.
-    const db = new MyOneGymDB(name)
-    await db.open()
-    try {
-      const cat = await db.exercises.get(categorized)
-      const res = await db.exercises.get(onReserved)
-      const un = await db.exercises.get(unset)
-
-      expect(cat?.categoryIds).toEqual([peito]) // real category preserved
-      expect(res?.categoryIds).toEqual([]) // reserved bucket → uncategorized
-      expect(un?.categoryIds).toEqual([]) // never-set → uncategorized
-      // Old field is gone on every exercise.
-      for (const e of [cat, res, un]) expect('categoryId' in (e as object)).toBe(false)
-
-      // The reserved category record is deleted; the real one remains.
-      expect(await db.categories.get(reserved)).toBeUndefined()
-      expect(await db.categories.get(peito)).toBeDefined()
-    } finally {
-      db.close()
-    }
-  })
-
-  it('the multiEntry index answers "exercises in category X"', async () => {
-    const v5 = await openV5()
-    const peito = (await v5.table('categories').add({ name: 'Peito' })) as number
-    await v5.table('exercises').add({ name: 'Supino', categoryId: peito })
-    v5.close()
-
-    const db = new MyOneGymDB(name)
-    await db.open()
-    try {
-      // Add a compound exercise post-migration and query by the indexed path.
-      const triceps = await db.categories.add({ name: 'Tríceps' })
-      await db.exercises.add({
-        name: 'Mergulho',
-        kind: 'strength',
-        categoryIds: [peito, triceps],
-        alternativeIds: [],
-        videos: [],
-        warmupIds: [],
-      })
-      const inPeito = await db.exercises.where('categoryIds').equals(peito).toArray()
-      expect(inPeito.map((e) => e.name).sort()).toEqual(['Mergulho', 'Supino'])
-    } finally {
-      db.close()
-    }
-  })
-})
-
-/**
- * v7 migration: every exercise gains an empty `alternativeIds`. Additive — a
- * database that predates alternatives must come out behaving exactly as before,
- * with the field present so nothing has to guess at read time.
- */
-describe('v7 migration: exercises gain alternativeIds', () => {
-  let name: string
-  beforeEach(() => {
-    name = `mig7-${Date.now()}-${Math.floor(performance.now())}`
-  })
-  afterEach(async () => {
-    await Dexie.delete(name)
-  })
-
-  /** Open a Dexie declaring only up to v6 — exercises with no alternatives. */
-  async function openV6() {
-    const db = new Dexie(name)
-    db.version(1).stores({
-      gyms: '++id, name, createdAt',
-      categories: '++id, &name',
-      exercises: '++id, name, categoryId',
-      days: '++id, name',
-      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
-      weightHistory: '++id, [gymId+exerciseId], gymId, exerciseId, changedAt',
-    })
-    db.version(2).stores({
-      sessions: '++id, gymId, dayId, status, startedAt, completedAt',
-      sessionEntries: '++id, sessionId, exerciseId',
-    })
-    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
-    db.version(4).stores({})
-    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
-    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
-    await db.open()
-    return db
-  }
-
-  it('gives every existing exercise an empty set', async () => {
-    const v6 = await openV6()
-    const supino = (await v6.table('exercises').add({ name: 'Supino', categoryIds: [1] })) as number
-    const rosca = (await v6.table('exercises').add({ name: 'Rosca', categoryIds: [] })) as number
-    v6.close()
-
-    const db = new MyOneGymDB(name)
-    await db.open()
-    try {
-      expect((await db.exercises.get(supino))?.alternativeIds).toEqual([])
-      expect((await db.exercises.get(rosca))?.alternativeIds).toEqual([])
-      // Nothing else about the exercise moved.
-      expect((await db.exercises.get(supino))?.categoryIds).toEqual([1])
-    } finally {
-      db.close()
-    }
-  })
-})
-
-/**
- * v8: a photo's image moves out of its record and into a file. The upgrade
- * itself must do **nothing** to existing photos — OPFS cannot join an IndexedDB
- * transaction — so they have to come through it untouched and still readable,
- * and only then be moved by `migrateLegacyPhotos`.
+ * The **v6, v7, v11 and v12** upgrades reshaped the exercise record
+ * (`categoryIds`, `alternativeIds`, `warmupIds`, `videos`). None of them is
+ * observable any more: v13 empties the catalog tables, so no row seeded before
+ * it survives to be inspected. Their tests were removed rather than rewritten
+ * to assert an empty table four times over — that assertion belongs to the v13
+ * block below, where it is made once, against a full database.
  */
 describe('v8 migration: photos survive the upgrade untouched', () => {
   let name: string
@@ -445,35 +298,40 @@ describe('v10 migration: every exercise and session becomes strength', () => {
     const db = new MyOneGymDB(name)
     await db.open()
     try {
-      const exercises = await db.exercises.toArray()
       const sessions = await db.sessions.toArray()
       // Nothing added, nothing dropped — only a field filled in.
-      expect(exercises).toHaveLength(2)
       expect(sessions).toHaveLength(1)
-      expect(exercises.every((e) => e.kind === 'strength')).toBe(true)
       expect(sessions[0].kind).toBe('strength')
-      // The names survived the modify().
-      expect(exercises.map((e) => e.name).sort()).toEqual(['Rosca', 'Supino'])
+      // The exercises this upgrade also backfilled are gone by v13, which
+      // empties the catalog. The session is what still carries the evidence —
+      // and it is the half that mattered, because a session's kind is a
+      // snapshot nothing can recompute later.
+      expect(await db.exercises.count()).toBe(0)
     } finally {
       db.close()
     }
   })
 
   it('makes `kind` an indexed query path', async () => {
-    const v9 = await openV9()
-    await v9.table('exercises').add({ name: 'Supino', categoryIds: [], alternativeIds: [], warmupIds: [] })
-    v9.close()
-
+    // Seeded on the current schema rather than through the upgrade: v13 empties
+    // the catalog, so a row written before it could not be queried afterwards.
+    // The index is what is under test here, not the backfill.
     const db = new MyOneGymDB(name)
     await db.open()
     try {
+      await db.exercises.add({
+        name: 'Supino',
+        kind: 'strength',
+        categoryIds: [],
+        alternativeIds: [],
+        videos: [],
+      })
       await db.exercises.add({
         name: 'Esteira',
         kind: 'cardio',
         categoryIds: [],
         alternativeIds: [],
         videos: [],
-        warmupIds: [],
       })
       // where('kind') only works if v10 actually added the index.
       const cardio = await db.exercises.where('kind').equals('cardio').toArray()
@@ -493,7 +351,6 @@ describe('v10 migration: every exercise and session becomes strength', () => {
       kind: 'cardio',
       categoryIds: [],
       alternativeIds: [],
-      warmupIds: [],
       videos: [],
     })
     db.close()
@@ -510,17 +367,61 @@ describe('v10 migration: every exercise and session becomes strength', () => {
   })
 })
 
-describe('v11 migration: exercises gain an empty warmup list', () => {
+describe('v12 migration: exercises gain an empty video list', () => {
   let name: string
   beforeEach(() => {
-    name = `mig11-${Date.now()}-${Math.floor(performance.now())}`
+    name = `mig-${Date.now()}-${Math.floor(performance.now())}`
   })
   afterEach(async () => {
     await Dexie.delete(name)
   })
 
-  /** Open a Dexie declaring only up to v10 — no warmups table, no link field. */
-  async function openV10() {
+
+
+  it('leaves videos already stored alone on a re-run', async () => {
+    const db = new MyOneGymDB(name)
+    await db.open()
+    const video = { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', startSec: 130 }
+    await db.exercises.add({
+      name: 'Supino',
+      kind: 'strength',
+      categoryIds: [],
+      alternativeIds: [],
+      videos: [video],
+    })
+    db.close()
+
+    const again = new MyOneGymDB(name)
+    await again.open()
+    try {
+      expect((await again.exercises.toArray())[0].videos).toEqual([video])
+    } finally {
+      again.close()
+    }
+  })
+})
+
+/**
+ * v13: the catalog moves out of the database and into the bundle.
+ *
+ * The upgrade empties `exercises` and `categories` and rewrites **nothing
+ * else**, which is only safe because the bundled file is an export of this very
+ * database: the ids it carries are the ids the device already holds. So the
+ * test that matters is not "were the rows deleted" — it is that every record
+ * pointing at those ids came through **untouched**, and still names the same
+ * movement when read through the official catalog.
+ */
+describe('v13 migration: the catalog moves to the bundle', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig13-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  /** Open a Dexie declaring only up to v12 — the catalog still lives in it. */
+  async function openV12() {
     const db = new Dexie(name)
     db.version(1).stores({
       gyms: '++id, name, createdAt',
@@ -542,175 +443,177 @@ describe('v11 migration: exercises gain an empty warmup list', () => {
     db.version(8).stores({})
     db.version(9).stores({})
     db.version(10).stores({ exercises: '++id, name, kind, *categoryIds' })
+    db.version(11).stores({
+      warmups: '++id, name',
+      exercises: '++id, name, kind, *categoryIds, *warmupIds',
+    })
+    db.version(12).stores({})
     await db.open()
     return db
   }
 
-  it('gives every exercise an empty list, keeping every record', async () => {
-    const v10 = await openV10()
-    await v10
-      .table('exercises')
-      .add({ name: 'Supino', kind: 'strength', categoryIds: [], alternativeIds: [] })
-    await v10
-      .table('exercises')
-      .add({ name: 'Rosca', kind: 'strength', categoryIds: [], alternativeIds: [] })
-    v10.close()
-
-    const db = new MyOneGymDB(name)
-    await db.open()
-    try {
-      const exercises = await db.exercises.toArray()
-      expect(exercises).toHaveLength(2)
-      expect(exercises.every((e) => Array.isArray(e.warmupIds) && e.warmupIds.length === 0)).toBe(
-        true,
-      )
-      expect(exercises.map((e) => e.name).sort()).toEqual(['Rosca', 'Supino'])
-      // The table exists and starts empty — nothing to migrate into it.
-      expect(await db.warmups.count()).toBe(0)
-    } finally {
-      db.close()
-    }
-  })
-
-  it('makes `warmupIds` an indexed query path', async () => {
-    const v10 = await openV10()
-    v10.close()
-
-    const db = new MyOneGymDB(name)
-    await db.open()
-    try {
-      const w = (await db.warmups.add({ name: 'Rotação', url: 'https://x.com/a.png' })) as number
-      await db.exercises.add({
-        name: 'Supino',
-        kind: 'strength',
-        categoryIds: [],
-        alternativeIds: [],
-        videos: [],
-        warmupIds: [w],
-      })
-      await db.exercises.add({
-        name: 'Rosca',
-        kind: 'strength',
-        categoryIds: [],
-        alternativeIds: [],
-        videos: [],
-        warmupIds: [],
-      })
-      // where('warmupIds') only works if v11 actually added the multiEntry index.
-      const users = await db.exercises.where('warmupIds').equals(w).toArray()
-      expect(users.map((e) => e.name)).toEqual(['Supino'])
-    } finally {
-      db.close()
-    }
-  })
-
-  it('does not clear a list that is already there', async () => {
-    const db = new MyOneGymDB(name)
-    await db.open()
-    const w = (await db.warmups.add({ name: 'Rotação', url: 'https://x.com/a.png' })) as number
-    await db.exercises.add({
-      name: 'Supino',
+  /**
+   * A device mid-use, seeded with the ids the official file actually carries:
+   * 1 = "Supino Reto com Barra", 14 = "Rosca Direta com Barra".
+   */
+  async function seedDeviceInUse() {
+    const v12 = await openV12()
+    const gym = (await v12.table('gyms').add({ name: 'Academia A', createdAt: 1 })) as number
+    await v12.table('categories').add({ id: 1, name: 'Peito' })
+    await v12.table('exercises').add({
+      id: 1,
+      name: 'Supino Reto com Barra',
+      kind: 'strength',
+      categoryIds: [1],
+      alternativeIds: [],
+      videos: [],
+    })
+    await v12.table('exercises').add({
+      id: 14,
+      name: 'Rosca Direta com Barra',
       kind: 'strength',
       categoryIds: [],
       alternativeIds: [],
       videos: [],
-        warmupIds: [w],
     })
-    db.close()
-
-    const again = new MyOneGymDB(name)
-    await again.open()
-    try {
-      expect((await again.exercises.toArray())[0].warmupIds).toEqual([w])
-    } finally {
-      again.close()
+    const day = (await v12.table('days').add({ name: 'Dia 1', exerciseIds: [1, 14] })) as number
+    await v12.table('weights').add({ gymId: GLOBAL_GYM_ID, exerciseId: 1, value: 60, unit: 'KG' })
+    await v12.table('weights').add({ gymId: gym, exerciseId: 1, value: 57.5, unit: 'KG' })
+    for (const value of [40, 50, 60]) {
+      await v12.table('weightHistory').add({
+        gymId: GLOBAL_GYM_ID,
+        exerciseId: 1,
+        value,
+        unit: 'KG',
+        changedAt: value,
+        kind: 'value',
+      })
     }
-  })
-})
-
-/**
- * v12 migration: an exercise gains `videos`, an empty list.
- *
- * No `.stores()` change — Dexie declares indexes and a video is deliberately not
- * one (nothing queries by it). The upgrade exists only so reads never have to
- * ask whether the field is there.
- */
-describe('v12 migration: exercises gain an empty video list', () => {
-  let name: string
-  beforeEach(() => {
-    name = `mig-${Date.now()}-${Math.floor(performance.now())}`
-  })
-  afterEach(async () => {
-    await Dexie.delete(name)
-  })
-
-  async function openV11() {
-    const db = new Dexie(name)
-    db.version(1).stores({
-      gyms: '++id, name',
-      categories: '++id, &name',
-      exercises: '++id, name, categoryId',
-      days: '++id, name',
-      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
-      weightHistory: '++id, [gymId+exerciseId], changedAt',
-      sessions: '++id, gymId, status, startedAt, completedAt',
-      sessionEntries: '++id, sessionId, exerciseId',
+    await v12
+      .table('exerciseNotes')
+      .add({ gymId: gym, exerciseId: 1, text: 'banco no 4', updatedAt: 1 })
+    await v12.table('exercisePhotos').add({
+      gymId: gym,
+      exerciseId: 14,
+      bytes: new ArrayBuffer(4),
+      type: 'image/jpeg',
+      width: 2,
+      height: 2,
+      createdAt: 1,
     })
-    db.version(3).stores({ exerciseNotes: '++id, &[gymId+exerciseId], gymId, exerciseId' })
-    db.version(4).stores({})
-    db.version(5).stores({ exercisePhotos: '++id, [gymId+exerciseId], gymId, exerciseId, createdAt' })
-    db.version(6).stores({ exercises: '++id, name, *categoryIds' })
-    db.version(7).stores({})
-    db.version(8).stores({})
-    db.version(9).stores({})
-    db.version(10).stores({ exercises: '++id, name, kind, *categoryIds' })
-    db.version(11).stores({ warmups: '++id, name', exercises: '++id, name, kind, *categoryIds, *warmupIds' })
-    await db.open()
-    return db
+    const session = (await v12.table('sessions').add({
+      gymId: gym,
+      kind: 'strength',
+      dayId: day,
+      dayName: 'Dia 1',
+      startedAt: 1,
+      completedAt: 2,
+      status: 'completed',
+    })) as number
+    await v12
+      .table('sessionEntries')
+      .add({ sessionId: session, exerciseId: 1, exerciseName: 'Supino Reto com Barra', done: true })
+    v12.close()
+    return { gym, day }
   }
 
-  it('gives every exercise an empty list, keeping every record', async () => {
-    const v11 = await openV11()
-    await v11
-      .table('exercises')
-      .add({ name: 'Supino', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [] })
-    await v11
-      .table('exercises')
-      .add({ name: 'Rosca', kind: 'strength', categoryIds: [], alternativeIds: [], warmupIds: [] })
-    v11.close()
-
+  it('empties the catalog tables', async () => {
+    await seedDeviceInUse()
     const db = new MyOneGymDB(name)
     await db.open()
     try {
-      const exercises = await db.exercises.toArray()
-      expect(exercises).toHaveLength(2)
-      expect(exercises.every((e) => Array.isArray(e.videos) && e.videos.length === 0)).toBe(true)
-      expect(exercises.map((e) => e.name).sort()).toEqual(['Rosca', 'Supino'])
+      expect(await db.exercises.count()).toBe(0)
+      expect(await db.categories.count()).toBe(0)
     } finally {
       db.close()
     }
   })
 
-  it('leaves videos already stored alone on a re-run', async () => {
+  it('rewrites no reference at all', async () => {
+    const { gym, day } = await seedDeviceInUse()
     const db = new MyOneGymDB(name)
     await db.open()
-    const video = { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', startSec: 130 }
-    await db.exercises.add({
-      name: 'Supino',
+    try {
+      expect((await db.days.get(day))?.exerciseIds).toEqual([1, 14])
+
+      const weights = await db.weights.toArray()
+      expect(weights.map((w) => [w.gymId, w.exerciseId, w.value])).toEqual(
+        expect.arrayContaining([
+          [GLOBAL_GYM_ID, 1, 60],
+          [gym, 1, 57.5],
+        ]),
+      )
+      expect(await db.weightHistory.where('exerciseId').equals(1).count()).toBe(3)
+      expect((await db.exerciseNotes.toArray())[0]).toMatchObject({ exerciseId: 1, text: 'banco no 4' })
+      expect((await db.exercisePhotos.toArray())[0]).toMatchObject({ exerciseId: 14 })
+      expect((await db.sessionEntries.toArray())[0]).toMatchObject({
+        exerciseId: 1,
+        exerciseName: 'Supino Reto com Barra',
+      })
+      expect(await db.gyms.count()).toBe(1)
+      expect(await db.sessions.count()).toBe(1)
+    } finally {
+      db.close()
+    }
+  })
+
+  it('still resolves every id, now against the bundled catalog', async () => {
+    const { day } = await seedDeviceInUse()
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      const ids = (await db.days.get(day))!.exerciseIds
+      const names = await Promise.all(ids.map(async (id) => (await getExercise(id, db))?.name))
+      // The same movements the device had before the upgrade — read from the
+      // bundle now instead of from a row.
+      expect(names).toEqual(['Supino Reto com Barra', 'Rosca Direta com Barra'])
+      expect((await resolveWeight(GLOBAL_GYM_ID, 1, db)).weight?.value).toBe(60)
+    } finally {
+      db.close()
+    }
+  })
+
+  it('gives a newly created exercise an id above the official range', async () => {
+    await seedDeviceInUse()
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      // The key generator is NOT reset by clearing a store, so without an
+      // explicit assignment this would come back as 15 — inside the range a
+      // future catalog entry could claim.
+      const id = await createExercise({ name: 'Supino Caseiro' }, db)
+      expect(id).toBeGreaterThan(USER_ID_BASE)
+      expect(await createCategory('Antebraço', db)).toBeGreaterThan(USER_ID_BASE)
+    } finally {
+      db.close()
+    }
+  })
+
+  it('leaves an exercise the catalog does not carry unresolvable, without deleting its data', async () => {
+    const v12 = await openV12()
+    const gym = (await v12.table('gyms').add({ name: 'A', createdAt: 1 })) as number
+    // 9998 is inside the official range but is not in the file: an exercise the
+    // user created back when the catalog was theirs.
+    await v12.table('exercises').add({
+      id: 9998,
+      name: 'Invenção minha',
       kind: 'strength',
       categoryIds: [],
       alternativeIds: [],
-      warmupIds: [],
-      videos: [video],
+      videos: [],
     })
-    db.close()
+    await v12.table('weights').add({ gymId: gym, exerciseId: 9998, value: 30, unit: 'KG' })
+    v12.close()
 
-    const again = new MyOneGymDB(name)
-    await again.open()
+    const db = new MyOneGymDB(name)
+    await db.open()
     try {
-      expect((await again.exercises.toArray())[0].videos).toEqual([video])
+      expect(await getExercise(9998, db)).toBeUndefined()
+      // The weight is NOT deleted: dropping a user's records over an id that
+      // did not match is the one outcome here with no way back.
+      expect(await db.weights.where('exerciseId').equals(9998).count()).toBe(1)
     } finally {
-      again.close()
+      db.close()
     }
   })
 })

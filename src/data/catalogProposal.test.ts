@@ -7,7 +7,6 @@ import {
   createExercise,
   createGym,
   getWeight,
-  listCategories,
   listDays,
   listExercises,
   saveNote,
@@ -25,6 +24,7 @@ import {
   type SectionSelection,
 } from './catalogPayload'
 import { reportedProposal, seedReportedCatalog } from './__fixtures__/noisyProposal'
+import { officialCategories, officialExercises } from './officialCatalog'
 import {
   ProposalError,
   applyCatalogProposal,
@@ -89,21 +89,21 @@ const only = (...sections: (keyof SectionSelection)[]): SectionSelection => ({
  * alternatives), two days. Enough to exercise every cross-reference.
  */
 async function seed() {
-  const peito = await createCategory('Peito', d)
-  const costas = await createCategory('Costas', d)
-  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, d)
-  const maquina = await createExercise({ name: 'Supino Máquina', categoryIds: [peito] }, d)
-  const remada = await createExercise({ name: 'Remada', categoryIds: [costas] }, d)
+  const peitoral = await createCategory('Peitoral', d)
+  const dorsais = await createCategory('Dorsais', d)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, d)
+  const maquina = await createExercise({ name: 'Supino Máquina', categoryIds: [peitoral] }, d)
+  const remada = await createExercise({ name: 'Remada', categoryIds: [dorsais] }, d)
   await setAlternatives(supino, [maquina], d)
   const dia1 = await createDay({ name: 'Dia 1', exerciseIds: [supino, maquina] }, d)
   const dia2 = await createDay({ name: 'Dia 2', exerciseIds: [remada] }, d)
-  return { peito, costas, supino, maquina, remada, dia1, dia2 }
+  return { peitoral, dorsais, supino, maquina, remada, dia1, dia2 }
 }
 
 /** The seeded catalog restated as a proposal that changes nothing. */
 function unchanged(s: Awaited<ReturnType<typeof seed>>): CatalogProposal {
   return proposal({
-    categories: [cat('c1', s.peito, 'Peito'), cat('c2', s.costas, 'Costas')],
+    categories: [cat('c1', s.peitoral, 'Peitoral'), cat('c2', s.dorsais, 'Dorsais')],
     exercises: [
       ex('e1', s.supino, 'Supino Reto', { categoryRefs: ['c1'], alternativeRefs: ['e2'] }),
       ex('e2', s.maquina, 'Supino Máquina', { categoryRefs: ['c1'], alternativeRefs: ['e1'] }),
@@ -135,9 +135,23 @@ describe('catalogSnapshot', () => {
   })
 
   it('reports an exercise with no media as null rather than omitting it', async () => {
-    await createExercise({ name: 'Rosca' }, d)
+    const rosca = await createExercise({ name: 'Rosca' }, d)
     const snapshot = await catalogSnapshot(d)
-    expect(snapshot.exercises[0].mediaUrl).toBeNull()
+    expect(snapshot.exercises.find((e) => e.id === rosca)?.mediaUrl).toBeNull()
+  })
+
+  it('carries both sources, marking the official half read-only', async () => {
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+    const snapshot = await catalogSnapshot(d)
+
+    // The official catalog is context, so the model can place an exercise in a
+    // day instead of proposing a second one just like it.
+    const official = snapshot.exercises.find((e) => e.id === officialExercises()[0].id)
+    expect(official?.readOnly).toBe(true)
+    expect(snapshot.categories.find((c) => c.id === officialCategories()[0].id)?.readOnly).toBe(true)
+
+    // The user's own carry no marker at all.
+    expect(snapshot.exercises.find((e) => e.id === mine)?.readOnly).toBeUndefined()
   })
 })
 
@@ -164,7 +178,7 @@ describe('requiredSections', () => {
   it('pulls in categories transitively through a required exercises section', async () => {
     const s = await seed()
     const p = unchanged(s)
-    p.categories.push(cat('nova', null, 'Ombros'))
+    p.categories.push(cat('nova', null, 'Deltoides'))
     p.exercises.push(ex('novo', null, 'Desenvolvimento', { categoryRefs: ['nova'] }))
     p.days = [day('d1', s.dia1, 'Dia 1', ['novo']), day('d2', s.dia2, 'Dia 2', ['e3'])]
 
@@ -249,7 +263,7 @@ describe('validateProposal', () => {
   it('rejects two categories with the same name', async () => {
     const s = await seed()
     const p = unchanged(s)
-    p.categories[1].name = 'peito'
+    p.categories[1].name = 'peitoral'
 
     const snapshot = await catalogSnapshot(d)
     expect(() => validateProposal(snapshot, p, ALL_SECTIONS)).toThrow(/duas categorias/i)
@@ -302,7 +316,7 @@ describe('applyCatalogProposal', () => {
   it('creates new entities and reports the ids they received', async () => {
     const s = await seed()
     const p = unchanged(s)
-    p.categories.push(cat('nova', null, 'Ombros'))
+    p.categories.push(cat('nova', null, 'Deltoides'))
     p.exercises.push(ex('novo', null, 'Desenvolvimento', { categoryRefs: ['nova'] }))
     p.days.push(day('novo-dia', null, 'Dia 3', ['novo']))
 
@@ -310,7 +324,7 @@ describe('applyCatalogProposal', () => {
 
     const created = outcome.catalog.exercises.find((e) => e.name === 'Desenvolvimento')!
     expect(created.id).toBeGreaterThan(0)
-    const ombros = outcome.catalog.categories.find((c) => c.name === 'Ombros')!
+    const ombros = outcome.catalog.categories.find((c) => c.name === 'Deltoides')!
     expect(created.categoryIds).toEqual([ombros.id])
     expect(outcome.catalog.days.at(-1)).toMatchObject({ name: 'Dia 3', exerciseIds: [created.id] })
     expect(outcome.skipped).toEqual([])
@@ -365,9 +379,9 @@ describe('applyCatalogProposal', () => {
     // collides with the name the second has not released yet. The create ahead
     // of it succeeds, so this only passes if the failure takes it back out.
     p.categories = [
-      cat('nova', null, 'Ombros'),
-      cat('c1', s.peito, 'Costas'),
-      cat('c2', s.costas, 'Peito'),
+      cat('nova', null, 'Deltoides'),
+      cat('c1', s.peitoral, 'Dorsais'),
+      cat('c2', s.dorsais, 'Peitoral'),
     ]
 
     await expect(applyCatalogProposal(p, only('categories'), d)).rejects.toThrow()
@@ -387,7 +401,7 @@ describe('applyCatalogProposal — partial accept', () => {
 
     const outcome = await applyCatalogProposal(p, only('categories'), d)
 
-    expect((await listCategories(d)).map((c) => c.name).sort()).toEqual(['Costas', 'Peitoral'])
+    expect((await d.categories.toArray()).map((c) => c.name).sort()).toEqual(['Dorsais', 'Peitoral'])
     expect((await listDays(d)).map((x) => x.exerciseIds)).toEqual(
       before.days.map((x) => x.exerciseIds),
     )
@@ -414,12 +428,12 @@ describe('applyCatalogProposal — partial accept', () => {
   it('leaves an unselected categories section completely alone', async () => {
     const s = await seed()
     const p = unchanged(s)
-    p.categories = [cat('c1', s.peito, 'Renomeada'), cat('c2', s.costas, 'Outra')]
+    p.categories = [cat('c1', s.peitoral, 'Renomeada'), cat('c2', s.dorsais, 'Outra')]
     p.days = [day('d1', s.dia1, 'Dia 1', ['e1']), day('d2', s.dia2, 'Dia 2', ['e3', 'e2'])]
 
     await applyCatalogProposal(p, only('days'), d)
 
-    expect((await listCategories(d)).map((c) => c.name).sort()).toEqual(['Costas', 'Peito'])
+    expect((await d.categories.toArray()).map((c) => c.name).sort()).toEqual(['Dorsais', 'Peitoral'])
   })
 
   it('refuses a selection with no section at all', async () => {
@@ -462,5 +476,68 @@ describe('the proposal from the bug report', () => {
     expect(await d.exercises.count()).toBe(27)
     expect(await d.categories.count()).toBe(8)
     expect(await d.days.count()).toBe(6)
+  })
+})
+
+/**
+ * The official catalog is context for the assistant, never payload: a proposal
+ * may **use** it — place an exercise in a day, classify with an official
+ * category, take one as an alternative — but never writes it, because there is
+ * no row to write.
+ */
+describe('applyCatalogProposal — the official catalog', () => {
+  it('applies a day that places an official exercise', async () => {
+    const official = officialExercises()[0].id!
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+
+    const p = proposal({
+      exercises: [ex('e1', mine, 'Supino Caseiro')],
+      days: [day('d1', null, 'Dia 1', ['e1', String(official)])],
+    })
+    await applyCatalogProposal(p, only('exercises', 'days'), d)
+
+    const days = await listDays(d)
+    expect(days[0].exerciseIds).toEqual([mine, official])
+    // Nothing official was written into the database.
+    expect(await d.exercises.count()).toBe(1)
+  })
+
+  it('gives a user exercise an official alternative, without writing the official one', async () => {
+    const official = officialExercises()[0].id!
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+
+    const p = proposal({
+      exercises: [ex('e1', mine, 'Supino Caseiro', { alternativeRefs: [String(official)] })],
+    })
+    await applyCatalogProposal(p, only('exercises'), d)
+
+    expect((await d.exercises.get(mine))?.alternativeIds).toEqual([official])
+    expect(await d.exercises.count()).toBe(1)
+  })
+
+  it('never deletes an official entity just because the proposal omits it', async () => {
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+    const mineCat = await createCategory('Antebraço', d)
+
+    // A full-catalog proposal that lists only the user's own — which is exactly
+    // what the assistant is told to send.
+    const p = proposal({
+      categories: [cat('c1', mineCat, 'Antebraço')],
+      exercises: [ex('e1', mine, 'Supino Caseiro')],
+    })
+    await applyCatalogProposal(p, only('categories', 'exercises'), d)
+
+    const names = (await listExercises(d)).map((e) => e.name)
+    expect(names).toContain(officialExercises()[0].name)
+    expect(names).toContain('Supino Caseiro')
+  })
+
+  it('does not count the official catalog as removed on the card', async () => {
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+    const p = proposal({ exercises: [ex('e1', mine, 'Supino Caseiro')] })
+
+    const impact = proposalImpact(await catalogSnapshot(d), p)
+    expect(impact.exercises.removed).toBe(0)
+    expect(impact.categories.removed).toBe(0)
   })
 })

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "MyOneGym — offline-first PWA workout tracker (local-only, no login)",
+  "description": "MyOneGym \u2014 offline-first PWA workout tracker (local-only, no login)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -13,7 +13,8 @@
     "splash": "node scripts/gen-splash.mjs",
     "dev-cert": "bash scripts/dev-cert.sh",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "exercise-media": "node scripts/gen-exercise-media.mjs"
   },
   "dependencies": {
     "@fontsource/poppins": "^5.3.0",

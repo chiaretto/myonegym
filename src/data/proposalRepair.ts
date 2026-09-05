@@ -1,5 +1,6 @@
 import { validateMediaUrl } from '../db/repos'
 import type { CatalogProposal, CatalogSnapshot } from './catalogContract'
+import { isOfficialId } from './officialCatalog'
 
 /**
  * Repair the noise in a proposal before anyone is asked to decide on it.
@@ -39,6 +40,7 @@ export type RepairKind =
   | 'category-unlinked'
   | 'alternative-unlinked'
   | 'exercise-unlinked'
+  | 'official-kept'
 
 export interface Repair {
   kind: RepairKind
@@ -66,8 +68,18 @@ export function repairProposal(
 ): RepairedProposal {
   const repairs: Repair[] = []
 
-  const knownCategoryRefs = new Set(proposal.categories.map((c) => c.ref))
-  const knownExerciseRefs = new Set(proposal.exercises.map((e) => e.ref))
+  // A ref naming an **official** entity is usable even though the proposal never
+  // lists it — that is the whole arrangement (see below). Without this, the day
+  // filter would strip every official exercise out of a proposed routine and
+  // report it as "not in the proposal", which is the opposite of true.
+  const knownCategoryRefs = new Set([
+    ...proposal.categories.map((c) => c.ref),
+    ...snapshot.categories.filter((c) => isOfficialId(c.id)).map((c) => String(c.id)),
+  ])
+  const knownExerciseRefs = new Set([
+    ...proposal.exercises.map((e) => e.ref),
+    ...snapshot.exercises.filter((e) => isOfficialId(e.id)).map((e) => String(e.id)),
+  ])
 
   const storedExercises = new Map(snapshot.exercises.map((e) => [e.id, e]))
   // A ref for an entity that already exists **is** its id in text, so a
@@ -78,7 +90,39 @@ export function repairProposal(
 
   const nameFor = (ref: string, names: Map<string, string>) => names.get(ref) ?? quote(ref)
 
-  const exercises = proposal.exercises.map((e) => {
+  /**
+   * An entity from the **official catalog** never travels in the proposal. It
+   * ships with the app, so there is no row to rename, re-categorise or delete —
+   * and the apply skips it regardless. Taking it out here is what stops the card
+   * from *claiming* a change that will not happen.
+   *
+   * Dropping it costs nothing downstream: an official entity is addressable by
+   * its id-as-ref, which validation and apply resolve against the catalog, so a
+   * day may still place one and an exercise may still take one as an
+   * alternative.
+   */
+  const officialDropped = (proposed: { id: number | null; name: string }, stored?: { name: string }) => {
+    if (stored && proposed.name.trim() !== stored.name) {
+      repairs.push({
+        kind: 'official-kept',
+        text: `${stored.name}: é do catálogo do app e não pode ser alterado — fica como está.`,
+      })
+    }
+  }
+
+  const categories = proposal.categories.filter((c) => {
+    if (c.id === null || !isOfficialId(c.id)) return true
+    officialDropped(c, snapshot.categories.find((x) => x.id === c.id))
+    return false
+  })
+
+  const exercises = proposal.exercises
+    .filter((e) => {
+      if (e.id === null || !isOfficialId(e.id)) return true
+      officialDropped(e, storedExercises.get(e.id))
+      return false
+    })
+    .map((e) => {
     const name = e.name.trim()
 
     // Media first, then the links: that is the order they matter to whoever
@@ -122,7 +166,7 @@ export function repairProposal(
     return { ...d, exerciseRefs }
   })
 
-  return { proposal: { ...proposal, exercises, days }, repairs }
+  return { proposal: { ...proposal, categories, exercises, days }, repairs }
 }
 
 /**

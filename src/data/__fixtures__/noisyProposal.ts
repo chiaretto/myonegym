@@ -12,13 +12,13 @@ import type { CatalogProposal } from '../catalogContract'
  * hand-written proposals the suite had until now, and the long real URLs — with
  * their `?fit=…&ssl=1` query strings — are part of what has to keep validating.
  *
- * The ids in the report (`Cardio` is 7, `HIIT` is 10) are positions here, not
+ * The ids in the report (`Aeróbico` is 7, `HIIT` is 10) are positions here, not
  * literals: seeding returns the ids the database actually handed out and the
  * proposal is built from those, so the fixture works in a fresh database and in
  * a shared one whose auto-increment has already moved on.
  */
 
-/** Ids by position — `categories[0]` is Peito, `exercises[9]` is HIIT. */
+/** Ids by position — `categories[0]` is Peitoral, `exercises[9]` is HIIT. */
 export interface SeededCatalog {
   categories: number[]
   exercises: number[]
@@ -30,8 +30,8 @@ const EXERCISES: [string, string | null, number][] = [
   ['Supino Reto com Barra', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-reto.gif', 1],
   ['Supino Inclinado com Barra', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/supino-inclinado-com-barra.gif', 1],
   ['Crucifixo Reto', 'https://static1.minhavida.com.br/articles/5b/21/98/c7/makatserchykshutterstock-orig-1.jpg', 1],
-  ['Tríceps Pulley (Barra Reta)', 'https://i0.wp.com/meutreinador.com/wp-content/uploads/2024/04/Passo-03_Extensao-de-Triceps-na-Polia.png?resize=675%2C811&ssl=1', 4],
-  ['Tríceps Testa com Barra Reta', 'https://www.hipertrofia.org/blog/wp-content/uploads/2024/02/barbell-lying-triceps-extension-skull-crusher.gif', 4],
+  ['Tricípite Pulley (Barra Reta)', 'https://i0.wp.com/meutreinador.com/wp-content/uploads/2024/04/Passo-03_Extensao-de-Triceps-na-Polia.png?resize=675%2C811&ssl=1', 4],
+  ['Tricípite Testa com Barra Reta', 'https://www.hipertrofia.org/blog/wp-content/uploads/2024/02/barbell-lying-triceps-extension-skull-crusher.gif', 4],
   ['Mergulho em Paralelas', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/paralelas.gif', 4],
   ['Prancha Abdominal (Isometria)', 'https://treinomestre.com.br/wp-content/uploads/2017/01/prancha-isometrica-abdominal.jpg', 6],
   ['Elevação de Pernas na Barra Fixa', 'https://www.hipertrofia.org/blog/wp-content/uploads/2019/10/c.jpg', 6],
@@ -49,7 +49,7 @@ const EXERCISES: [string, string | null, number][] = [
   ['Elevação Lateral', 'https://i0.wp.com/meutreinador.com/wp-content/uploads/2023/11/elevacao-lateral-com-halteres.gif?fit=720%2C720&ssl=1', 5],
   ['Elevação Frontal com Anilha', 'https://www.hipertrofia.org/blog/wp-content/uploads/2018/09/elevacao-frontal-com-anilha-v2.gif', 5],
   ['Remada Alta com Barra', 'https://treinototal.com.br/wp-content/uploads/2023/04/trapezio-1.jpg', 5],
-  ['Encolhimento para Trapézio (Halteres)', 'https://www.hipertrofia.org/blog/wp-content/uploads/2024/01/dumbbell-shrug.gif', 8],
+  ['Encolhimento para Pescoço (Halteres)', 'https://www.hipertrofia.org/blog/wp-content/uploads/2024/01/dumbbell-shrug.gif', 8],
   ['Puxada Frontal Aberta na Polia', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/costas-puxada-aberta-com-barra-no-pulley.gif', 2],
   ['Puxada com Triângulo (Pegada Fechada)', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/costas-puxada-para-frente-no-pulley-com-triangulo.gif', 2],
   ['Remada Sentada na Polia (Triangulo Neutro)', 'https://fitcron.com/wp-content/uploads/2021/04/26611301-Cable-Seated-Row-with-V-bar_Back_720.gif', 2],
@@ -57,16 +57,16 @@ const EXERCISES: [string, string | null, number][] = [
   ['Voador Inverso (Peck Deck Reverso)', 'https://www.mundoboaforma.com.br/wp-content/uploads/2020/12/ombros-voador-invertido-na-maquina.gif', 2],
 ]
 
-/** Category names in id order — Peito is 1, Trapézio is 8. */
-const CATEGORIES = ['Peito', 'Costas', 'Bíceps', 'Tríceps', 'Ombros', 'Core', 'Cardio', 'Trapézio']
+/** Category names in id order — Peitoral is 1, Pescoço is 8. */
+const CATEGORIES = ['Peitoral', 'Dorsais', 'Bicípite', 'Tricípite', 'Deltoides', 'Abdômen', 'Aeróbico', 'Pescoço']
 
 const DAYS: [string, number[]][] = [
-  ['Dia 1 - Peito e Tríceps', [1, 2, 3, 4, 5, 6]],
-  ['Dia 2 - Core e HIIT', [7, 8, 9, 10]],
-  ['Dia 3 - Costas e Bíceps', [11, 12, 13, 14, 15, 16]],
+  ['Dia 1 - Peitoral e Tricípite', [1, 2, 3, 4, 5, 6]],
+  ['Dia 2 - Abdômen e HIIT', [7, 8, 9, 10]],
+  ['Dia 3 - Dorsais e Bicípite', [11, 12, 13, 14, 15, 16]],
   ['Dia 4 - Full Upper', [1, 12, 14, 4, 17]],
-  ['Dia 5 - Ombros e Trapézio', [18, 19, 20, 21, 22]],
-  ['Dia 6 - Costas (Máquina)', [23, 24, 25, 26, 27]],
+  ['Dia 5 - Deltoides e Pescoço', [18, 19, 20, 21, 22]],
+  ['Dia 6 - Dorsais (Máquina)', [23, 24, 25, 26, 27]],
 ]
 
 /** Write the catalog from the report into `d`, and report the ids it received. */
@@ -97,7 +97,7 @@ export async function seedReportedCatalog(d: MyOneGymDB): Promise<SeededCatalog>
  *
  * - exercise 10 carries `mediaUrl: "null"` — the four characters, not the JSON
  *   literal, which is what `validateMediaUrl` refuses;
- * - it still points at category ref `"7"` (Cardio), which the proposal itself
+ * - it still points at category ref `"7"` (Aeróbico), which the proposal itself
  *   left out of the category list.
  */
 export function reportedProposal(seeded: SeededCatalog): CatalogProposal {
@@ -122,9 +122,9 @@ export function reportedProposal(seeded: SeededCatalog): CatalogProposal {
 
   return {
     summary:
-      'Reorganizei seus treinos em uma nova rotina de 3 dias, mantendo no máximo 6 exercícios em cada um. Conforme solicitado, removi os dias excedentes (Dias 4, 5 e 6) e os exercícios de Trapézio (id 21, 22) e a Categoria de Trapézio que não entraram nos novos treinos.',
-    // Cardio (7) and Trapézio (8) are absent — but exercise 10 still points at
-    // Cardio, which is the second half of the report.
+      'Reorganizei seus treinos em uma nova rotina de 3 dias, mantendo no máximo 6 exercícios em cada um. Conforme solicitado, removi os dias excedentes (Dias 4, 5 e 6) e os exercícios de Pescoço (id 21, 22) e a Categoria de Pescoço que não entraram nos novos treinos.',
+    // Aeróbico (7) and Pescoço (8) are absent — but exercise 10 still points at
+    // Aeróbico, which is the second half of the report.
     categories: [category(1), category(2), category(3), category(4), category(5), category(6)],
     exercises: [
       kept(1, 1),
@@ -150,19 +150,19 @@ export function reportedProposal(seeded: SeededCatalog): CatalogProposal {
       {
         ref: String(seeded.days[0]),
         id: seeded.days[0],
-        name: 'Dia A - Superior (Peito, Ombros e Tríceps)',
+        name: 'Dia A - Superior (Peitoral, Deltoides e Tricípite)',
         exerciseRefs: [exRef(1), exRef(2), exRef(3), exRef(4), exRef(6), exRef(18)],
       },
       {
         ref: String(seeded.days[2]),
         id: seeded.days[2],
-        name: 'Dia B - Costas e Bíceps',
+        name: 'Dia B - Dorsais e Bicípite',
         exerciseRefs: [exRef(11), exRef(12), exRef(13), exRef(14), exRef(15), exRef(16)],
       },
       {
         ref: String(seeded.days[1]),
         id: seeded.days[1],
-        name: 'Dia C - Core, Cardio e Ombros',
+        name: 'Dia C - Abdômen, Aeróbico e Deltoides',
         exerciseRefs: [exRef(7), exRef(8), exRef(9), exRef(10), exRef(19), exRef(20)],
       },
     ],

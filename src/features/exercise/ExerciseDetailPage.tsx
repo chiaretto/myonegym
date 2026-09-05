@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
-import { useCategoryMap, useDays, usePhotos } from '../../lib/hooks'
+import { getExercise } from '../../db/repos'
+import { useCategoryMap, useDays, useNote, usePhotos } from '../../lib/hooks'
 import { useActiveGym } from '../../state/activeGym'
 import { AlternativesSection } from './AlternativesSection'
 import { CategoryChips } from './CategoryChips'
@@ -14,7 +15,6 @@ import { Tabs } from '../../ui/Tabs'
 import { PhotoTab } from './photo/PhotoTab'
 import { NoteEditor } from './NoteEditor'
 import { VideosTab } from './VideosTab'
-import { WarmupButton } from '../warmup/WarmupButton'
 import { WeightEditor } from './WeightEditor'
 import './exercise.css'
 
@@ -23,7 +23,7 @@ type DetailTab = 'detail' | 'notes' | 'videos' | 'photo'
 export function ExerciseDetailPage() {
   const { id } = useParams()
   const exerciseId = Number(id)
-  const exercise = useLiveQuery(() => db.exercises.get(exerciseId), [exerciseId])
+  const exercise = useLiveQuery(() => getExercise(exerciseId, db), [exerciseId])
   const catMap = useCategoryMap()
   const days = useDays()
   const activeGymId = useActiveGym((s) => s.activeGymId)
@@ -36,6 +36,9 @@ export function ExerciseDetailPage() {
   // before spending one. `usePhotos` is undefined until it answers — the strip
   // shows nothing then, rather than claiming zero.
   const photos = usePhotos(activeGymId ?? null, exerciseId)
+  // Marked, not counted: there is one note per (gym, exercise), so a number
+  // would always be 1. `undefined` while it loads renders nothing, like a count.
+  const note = useNote(activeGymId ?? null, exerciseId)
 
   // The training day this exercise was opened from. An exercise can belong to
   // several days, so it cannot be inferred — it is carried in the URL, which is
@@ -103,7 +106,7 @@ export function ExerciseDetailPage() {
         <Tabs<DetailTab>
           tabs={[
             { id: 'detail', label: 'Detalhe' },
-            { id: 'notes', label: 'Notas' },
+            { id: 'notes', label: 'Notas', mark: !!note?.text.trim() },
             { id: 'videos', label: 'Vídeos', count: exercise.videos?.length },
             { id: 'photo', label: 'Foto', count: photos?.length },
           ]}
@@ -126,7 +129,6 @@ export function ExerciseDetailPage() {
             <div className="hero">
               <Media url={exercise.mediaUrl} alt={exercise.name} className="hero-media" />
             </div>
-            <WarmupButton exercise={exercise} />
             {/* Cardio has no target load — a treadmill has nothing to define,
                 so the card is absent rather than empty. */}
             {exercise.kind !== 'cardio' && (

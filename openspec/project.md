@@ -22,7 +22,8 @@ no server** — all data lives in the browser.
 | Framework | React 18 + Vite | Fast dev, small bundle |
 | PWA | `vite-plugin-pwa` (Workbox) | Manifest + service worker + installable |
 | App icons | `@vite-pwa/assets-generator` | Generated from `public/icon.png` |
-| Launch screens | `sharp` (`scripts/gen-splash.mjs`) | iOS launch images + boot splash, from `new-design/assets/splash-master.png` |
+| Launch screens | `sharp` (`scripts/gen-splash.mjs`) | iOS launch images + one boot splash per selectable artwork, from `new-design/assets/splash_*.png` |
+| Exercise images | `sharp` (`scripts/gen-exercise-media.mjs`) | Masters in `data/assets/exercises/`, served from `public/exercises/` |
 | Local storage | IndexedDB via **Dexie.js** | Structured, indexed, migratable |
 | State | Zustand (or React Context) | Lightweight, no boilerplate |
 | Routing | React Router | Home / Detail / Settings |
@@ -36,12 +37,12 @@ no server** — all data lives in the browser.
 
 - **Gym (Academia)** — a physical gym. It owns the *exceptions* to weights, plus
   notes, photos and sessions.
-- **Category (Categoria)** — muscle group (Peito, Tríceps, Costas, Bíceps…). Editable.
-- **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL, categories
-  and a **kind**: *Força* or *Cardio*.
+- **Category (Categoria)** — muscle group (Peito, Tríceps, Costas, Bíceps…). Comes
+  from the **official catalog** (read-only) or from the user (editable).
+- **Exercise (Exercício)** — e.g. "Rosca Direta"; has an image URL, categories,
+  execution **videos** and a **kind**: *Força* or *Cardio*. Comes from the
+  **official catalog** (read-only) or from the user (editable).
 - **Training Day (Dia de Treino)** — e.g. "Dia 1"; optional category; ordered list of exercises.
-- **Warmup (Aquecimento)** — a name and one piece of media (image, video file or
-  external link), linked to many exercises and shared by them.
 - **Weight (Peso)** — target load for a **strength** exercise; value + unit
   (KG/LB/#). **Global** by default; a gym may hold an **exception** that wins
   inside it. Cardio exercises have none.
@@ -78,31 +79,41 @@ no server** — all data lives in the browser.
    would rewrite itself the moment one of them changes kind or is deleted.
    Cardio counts as a workout in every Consistência aggregate — the calendar's
    star says *which kind* it was, not *whether it counted*.
-5. **A warm-up's media type is read from its URL, never stored.** Video file,
-   embeddable provider or **image** is decided by `lib/warmupMedia.ts`, and the
-   same function backs validation and rendering so the two cannot disagree.
-   Image is the default rather than an "unknown" case: plenty of real image URLs
-   carry no extension, and the viewer's failure state — which keeps the address
-   openable — is what makes guessing optimistically safe. A `kind`
-   column would be a second source of truth about the same string; the
-   durability argument that makes `Session.kind` a snapshot does not apply,
-   because nothing is rewritten retroactively if the classification improves.
+5. **The catalog has two sources, and the official one is code.** Categories and
+   exercises come from a bundled file (`src/data/officialCatalog.json`, read by
+   `src/data/officialCatalog.ts`) **and** from the user's own records. Every
+   listing shows the two concatenated; the official half is badged "Oficial" and
+   cannot be edited, renamed or deleted — the screens hide the actions and the
+   repository refuses them.
 
-   A provider that publishes a **player URL** (YouTube, Vimeo) is embedded, via
-   that URL — the watch page itself refuses to be framed. Nothing else is ever
-   framed: most sites refuse it, so guessing an iframe would render a blank box
-   with nothing to explain it.
+   Nothing official is ever written to IndexedDB. That is what lets a broken
+   media URL be fixed for everyone by a deploy, keeps adding exercises out of
+   migrations, and keeps rows the user never created out of the backup.
 
-   Embedding is a **deliberate trade**, revisited once and decided by the owner:
-   it puts a third party's player inside an otherwise local-only app, and that
-   provider sees the request. The app gives back what it can — the no-cookie
-   host where one exists, no autoplay, lazy loading — and does not pretend that
-   makes it private.
+   **The id says which source it is**: `id ≤ 9999` is official, `id ≥ 10001` is
+   the user's (`USER_ID_BASE`). Nothing stores an `official` flag — it is a
+   property of the id, like a video's media kind is a property of its URL.
 
-   Exercise ↔ warm-up is many-to-many through `Exercise.warmupIds` with a
-   multiEntry index — the shape `categoryIds` already uses, and the array order
-   IS the order the viewer pages through. Unlike `alternativeIds` the relation
-   is **asymmetric**, so there is no symmetry for a repository to maintain.
+   The **low** range is the official one because the bundled file is an *export
+   of the database*: its ids are the ids the devices in the field already carry.
+   So the v13 upgrade **empties** `exercises` and `categories` and rewrites **no
+   reference at all** — days, weights, history, notes, photos and session
+   entries keep the same numbers, and those numbers keep meaning the same
+   movements. Only the source of the record changed.
+
+   Two consequences to respect: the ids in the file are **permanent** (renaming
+   is free, renumbering silently hands one movement's history to another, and
+   `officialCatalog.test.ts` fails if it happens), and a user-created record
+   takes its id from `nextUserId` in `db/repos` rather than from Dexie's `++id`
+   — clearing a store does not reset the key generator, and a fresh install
+   starts it at 1, so both would land inside the reserved range.
+
+   The alternatives relation is the one asymmetry: a user exercise may take an
+   official one as an alternative, and the link is stored on the user's record
+   alone. `lib/alternatives` restores the symmetry when the list is **read**, by
+   unioning the exercises that point back — which costs no query, because every
+   caller already holds the whole map.
+
 6. **All CRUD lives in a Settings menu.** The Home screen is read/track only.
 7. **Local-only, no auth.** Sharing happens through JSON export/import.
 8. **Category deletion reassigns** affected exercises to a reserved "Sem
@@ -159,10 +170,29 @@ no server** — all data lives in the browser.
   icon and the launch screen are different artwork:
   - **Icons** — master `public/icon.png`, run `npm run pwa-assets`
     (`pwa-assets.config.ts`).
-  - **Launch screens** — master `new-design/assets/splash-master.png`, run
-    `npm run splash` (`scripts/gen-splash.mjs`), which writes the iOS launch
-    images plus `public/splash.webp` for the in-app boot splash.
+  - **Launch screens** — masters `new-design/assets/splash_*.png`, one per
+    artwork the user can choose (`src/state/splashes.ts`), run `npm run splash`
+    (`scripts/gen-splash.mjs`), which writes one `public/splash-*.webp` each for
+    the in-app boot splash, plus the iOS launch images **from the default
+    artwork only** — iOS resolves those at install time and cannot follow a
+    setting. The chosen file is read synchronously by the inline script in
+    `index.html`, before the first frame; `src/state/splashes.test.ts` fails if
+    the module, the generator and that script ever disagree on a file name.
 
-  Both masters are versioned, so either command can be re-run from a fresh
+  - **Exercise images** — masters `data/assets/exercises/`, run
+    `npm run exercise-media` (`scripts/gen-exercise-media.mjs`), which writes the
+    served copies to `public/exercises/`. The file is named after the
+    **exercise** (`supino-reto-com-barra.webp`), the catalog carries only
+    `mediaFile` — no remote address — and anything in `public/` the catalog no
+    longer names is swept. Adding a picture means dropping a master next to the
+    others and re-running; the script prints the exercises it found none for.
+    The pictures were downloaded from their original sites **once**, and those
+    addresses are kept in `data/assets/exercises/sources.json` as provenance.
+
+    They are **excluded from the precache** and cached at runtime instead (see
+    `vite.config.ts`): 51 pictures weigh ~5 MB, nobody uses 51 exercises, and
+    one pass through your own routine puts the ones you do use offline.
+
+  All masters are versioned, so any of these commands can be re-run from a fresh
   checkout, and their output is committed so `npm run build` never needs the
   image toolchain. Edit a master and re-run; never edit a generated file.

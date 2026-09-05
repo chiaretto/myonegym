@@ -29,10 +29,10 @@ afterEach(async () => {
  *  stable (Dia 2 provides another day to exercise the resume/second-session path). */
 async function seedDia1() {
   const gym = await createGym('Academia A', db)
-  const peito = await createCategory('Peito', db)
-  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
-  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
-  const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peito] }, db)
+  const peitoral = await createCategory('Peitoral', db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
+  const crucifixo = await createExercise({ name: 'Crucifixo', categoryIds: [peitoral] }, db)
+  const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peitoral] }, db)
   await createDay({ name: 'Dia 1', exerciseIds: [supino, crucifixo, corda] }, db)
   await createDay({ name: 'Dia 2', exerciseIds: [crucifixo, corda] }, db)
   await saveWeight(gym, supino, 40, 'KG', 'global', db)
@@ -74,7 +74,7 @@ describe('Workout session end-to-end', () => {
 
     // The history is one tap away: on a completed session, back goes there.
     await user.click(screen.getByRole('button', { name: 'Voltar' }))
-    expect(await screen.findByRole('heading', { name: 'Consistência' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Histórico' })).toBeInTheDocument()
     expect(await screen.findByText('1/3')).toBeInTheDocument()
 
     // Open the session detail (read-only) then delete it.

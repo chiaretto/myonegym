@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
+import { officialCategories, officialExercises } from '../../data/officialCatalog'
 import { db } from '../../db/db'
 import {
   completeSession,
@@ -96,7 +97,7 @@ describe('Home — o estado vazio não pisca antes dos dados', () => {
     renderApp('/')
     expect(await screen.findByText('Dia 1')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('link', { name: /Configurações/ }))
+    await user.click(screen.getByRole('link', { name: /Config/ }))
     expect(await screen.findByRole('heading', { name: 'Configurações' })).toBeInTheDocument()
 
     await user.click(screen.getByRole('link', { name: /Treinos/ }))
@@ -143,13 +144,15 @@ describe('Seletor de academia e contadores — nada de zero antes da resposta', 
     expect(container.querySelectorAll('.row-meta')).toHaveLength(0)
 
     await screen.findByRole('heading', { name: 'Configurações' })
+    // Os contadores refletem o que a lista mostra, e a lista agora traz as duas
+    // fontes: o catálogo oficial mais o que o usuário cadastrou. Um contador que
+    // discordasse da tela que ele abre seria pior do que não existir.
     await waitFor(() =>
       expect([...container.querySelectorAll('.row-meta')].map((n) => n.textContent)).toEqual([
         '1', // Academias
-        '0', // Categorias — contadas, e realmente zero
-        '1', // Exercícios
+        String(officialCategories().length), // Categorias
+        String(officialExercises().length + 1), // Exercícios — o oficial + o seu
         '1', // Dias de treino
-        '0', // Aquecimentos — contados, e realmente zero
       ]),
     )
   })

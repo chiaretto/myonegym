@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { type AccentId, DEFAULT_ACCENT_ID, isAccentId, resolveAccent } from './accents'
+import { type SplashId, DEFAULT_SPLASH_ID, isSplashId } from './splashes'
 
 /** Global font-size multiplier bounds — see the app-foundation typography spec.
  *  Floor is 1.0 so inputs stay >=16px effective (no iOS zoom-on-focus). */
@@ -36,8 +37,18 @@ export function applyAccent(id: string | null | undefined): void {
 interface SettingsState {
   fontScale: number
   accent: AccentId
+  /**
+   * Which boot-splash artwork to paint. Deliberately has **no `apply*`
+   * function**, unlike the font scale and the accent: this one is not read by
+   * React at all. The splash is gone before the bundle has finished parsing, so
+   * the value is consumed by the inline script in `index.html`, straight out of
+   * this store's persisted JSON — which is why it lives here and not in its own
+   * key. It takes effect on the **next** launch, and the picker says so.
+   */
+  splash: SplashId
   setFontScale: (v: number) => void
   setAccent: (id: AccentId) => void
+  setSplash: (id: SplashId) => void
   reset: () => void
 }
 
@@ -46,10 +57,17 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       fontScale: FONT_SCALE_DEFAULT,
       accent: DEFAULT_ACCENT_ID,
+      splash: DEFAULT_SPLASH_ID,
       setFontScale: (v) => set({ fontScale: clampFontScale(v) }),
       setAccent: (id) => set({ accent: isAccentId(id) ? id : DEFAULT_ACCENT_ID }),
+      setSplash: (id) => set({ splash: isSplashId(id) ? id : DEFAULT_SPLASH_ID }),
       // Aparência's single reset covers everything the screen offers.
-      reset: () => set({ fontScale: FONT_SCALE_DEFAULT, accent: DEFAULT_ACCENT_ID }),
+      reset: () =>
+        set({
+          fontScale: FONT_SCALE_DEFAULT,
+          accent: DEFAULT_ACCENT_ID,
+          splash: DEFAULT_SPLASH_ID,
+        }),
     }),
     {
       name: 'myonegym.settings',
@@ -59,6 +77,7 @@ export const useSettings = create<SettingsState>()(
         if (!state) return
         state.fontScale = clampFontScale(state.fontScale)
         if (!isAccentId(state.accent)) state.accent = DEFAULT_ACCENT_ID
+        if (!isSplashId(state.splash)) state.splash = DEFAULT_SPLASH_ID
       },
     },
   ),

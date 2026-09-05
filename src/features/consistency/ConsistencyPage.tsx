@@ -97,7 +97,7 @@ export function ConsistencyPage() {
   return (
     <>
       <header className="appbar">
-        <h1>Consistência</h1>
+        <h1>Histórico</h1>
       </header>
       <main className="screen">
         {loaded && completed.length === 0 && (

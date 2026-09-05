@@ -1,19 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  USER_ID_BASE,
+  officialCategories,
+  officialExercises,
+} from '../data/officialCatalog'
+import { alternativesOf } from '../lib/alternatives'
 import { storedPhotoFiles, withoutOpfs } from '../test/memoryOpfs'
 import { MyOneGymDB } from './db'
 import type { ExercisePhoto } from './types'
 import {
   ValidationError,
   addPhoto,
+  getExercise,
+  listExercises,
   completeSession,
   createCategory,
   createDay,
   createExercise,
-  updateWarmup,
-  listWarmups,
-  exercisesUsingWarmup,
-  deleteWarmup,
-  createWarmup,
   daysContaining,
   createGym,
   deleteCategory,
@@ -121,12 +124,12 @@ describe('gyms', () => {
 
 describe('categories', () => {
   it('rejects duplicate names (case-insensitive)', async () => {
-    await createCategory('Peito', d)
-    await expect(createCategory('peito', d)).rejects.toBeInstanceOf(ValidationError)
+    await createCategory('Peitoral', d)
+    await expect(createCategory('peitoral', d)).rejects.toBeInstanceOf(ValidationError)
   })
 
   it('rename preserves the reference on exercises', async () => {
-    const cat = await createCategory('Peito', d)
+    const cat = await createCategory('Peitoral', d)
     const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, d)
     await renameCategory(cat, 'Peitoral', d)
     expect((await d.exercises.get(ex))?.categoryIds).toEqual([cat])
@@ -134,7 +137,7 @@ describe('categories', () => {
   })
 
   it('delete removes the category from exercises (no reserved bucket)', async () => {
-    const bic = await createCategory('Bíceps', d)
+    const bic = await createCategory('Bicípite', d)
     const ante = await createCategory('Antebraço', d)
     const compound = await createExercise({ name: 'Rosca Direta', categoryIds: [bic, ante] }, d)
     const only = await createExercise({ name: 'Rosca Scott', categoryIds: [bic] }, d)
@@ -142,17 +145,37 @@ describe('categories', () => {
     await deleteCategory(bic, d)
 
     expect(await d.categories.get(bic)).toBeUndefined()
-    // Bíceps is gone from both; the compound keeps Antebraço, the other is now empty.
+    // Bicípite is gone from both; the compound keeps Antebraço, the other is now empty.
     expect((await d.exercises.get(compound))?.categoryIds).toEqual([ante])
     expect((await d.exercises.get(only))?.categoryIds).toEqual([])
     // No reserved category was created.
     expect((await listCategories(d)).some((c) => c.name === 'Sem categoria')).toBe(false)
   })
 
-  it('any category can be deleted (nothing reserved)', async () => {
+  it('any category of the user can be deleted (nothing reserved)', async () => {
     const c = await createCategory('Qualquer', d)
     await expect(deleteCategory(c, d)).resolves.not.toThrow()
-    expect(await listCategories(d)).toHaveLength(0)
+    // What is left is the official catalog, which is not the user's to delete.
+    expect(await d.categories.count()).toBe(0)
+    expect((await listCategories(d)).map((x) => x.name)).toEqual(
+      officialCategories()
+        .map((x) => x.name)
+        .sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    )
+  })
+
+  it('refuses to rename or delete an official category', async () => {
+    const officialId = officialCategories()[0].id!
+    await expect(renameCategory(officialId, 'Outro', d)).rejects.toThrow(ValidationError)
+    await expect(deleteCategory(officialId, d)).rejects.toThrow(ValidationError)
+  })
+
+  it('refuses a name an official category already has', async () => {
+    await expect(createCategory(officialCategories()[0].name, d)).rejects.toThrow(ValidationError)
+  })
+
+  it('gives a new category an id above the official range', async () => {
+    expect(await createCategory('Antebraço', d)).toBeGreaterThan(USER_ID_BASE)
   })
 })
 
@@ -193,11 +216,47 @@ describe('exercise kind', () => {
     expect((await d.exercises.get(ex))?.kind).toBe('cardio')
   })
 
-  it('listCardioExercises returns only cardio, by name', async () => {
+  it('listCardioExercises returns only cardio, from both sources, by name', async () => {
     await createExercise({ name: 'Supino' }, d)
-    await createExercise({ name: 'Esteira', kind: 'cardio' }, d)
-    await createExercise({ name: 'Bicicleta', kind: 'cardio' }, d)
-    expect((await listCardioExercises(d)).map((e) => e.name)).toEqual(['Bicicleta', 'Esteira'])
+    await createExercise({ name: 'Esteira caseira', kind: 'cardio' }, d)
+    await createExercise({ name: 'Bicicleta caseira', kind: 'cardio' }, d)
+
+    const names = (await listCardioExercises(d)).map((e) => e.name)
+    expect(names).toContain('Esteira caseira')
+    expect(names).toContain('Bicicleta caseira')
+    expect(names).not.toContain('Supino')
+    // The official cardios are in the same list, and it is sorted as one.
+    for (const e of officialExercises().filter((x) => x.kind === 'cardio')) {
+      expect(names).toContain(e.name)
+    }
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, 'pt-BR')))
+  })
+
+  it('lists both sources together, and refuses to touch an official exercise', async () => {
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+    expect(mine).toBeGreaterThan(USER_ID_BASE)
+
+    const names = (await listExercises(d)).map((e) => e.name)
+    expect(names).toContain('Supino Caseiro')
+    expect(names).toContain(officialExercises()[0].name)
+
+    const officialId = officialExercises()[0].id!
+    await expect(updateExercise(officialId, { name: 'Outro' }, d)).rejects.toThrow(ValidationError)
+    await expect(deleteExercise(officialId, d)).rejects.toThrow(ValidationError)
+    await expect(setAlternatives(officialId, [mine], d)).rejects.toThrow(ValidationError)
+  })
+
+  it('lets a user exercise take an official one as an alternative, symmetric on read', async () => {
+    const officialId = officialExercises()[0].id!
+    const mine = await createExercise({ name: 'Supino Caseiro' }, d)
+    await setAlternatives(mine, [officialId], d)
+
+    // Stored on the user's record alone — the official one has no row.
+    expect((await d.exercises.get(mine))?.alternativeIds).toEqual([officialId])
+    const exMap = new Map((await listExercises(d)).map((e) => [e.id!, e]))
+    expect(alternativesOf(await getExercise(officialId, d), exMap).map((e) => e.name)).toContain(
+      'Supino Caseiro',
+    )
   })
 
   it('turning an exercise into cardio takes it out of every day', async () => {
@@ -245,93 +304,6 @@ describe('exercise kind', () => {
   })
 })
 
-describe('warmups', () => {
-  it('creates, lists by name and updates', async () => {
-    await createWarmup({ name: 'Rotação de ombro', url: 'https://x.com/b.gif' }, d)
-    const a = await createWarmup({ name: 'Alongamento', url: 'https://x.com/a.png' }, d)
-    expect((await listWarmups(d)).map((w) => w.name)).toEqual(['Alongamento', 'Rotação de ombro'])
-
-    await updateWarmup(a, { name: 'Alongamento de peito', url: 'https://x.com/a2.png' }, d)
-    expect((await d.warmups.get(a))?.name).toBe('Alongamento de peito')
-    expect((await d.warmups.get(a))?.url).toBe('https://x.com/a2.png')
-  })
-
-  it('requires a name and an http(s) url', async () => {
-    await expect(createWarmup({ name: '', url: 'https://x.com/a.png' }, d)).rejects.toBeInstanceOf(
-      ValidationError,
-    )
-    await expect(createWarmup({ name: 'A', url: '' }, d)).rejects.toBeInstanceOf(ValidationError)
-    await expect(createWarmup({ name: 'A', url: 'x.com/a.png' }, d)).rejects.toBeInstanceOf(
-      ValidationError,
-    )
-  })
-
-  it('accepts a page URL, not just media — the viewer decides how to show it', async () => {
-    const id = await createWarmup({ name: 'Vídeo', url: 'https://youtube.com/watch?v=a' }, d)
-    expect((await d.warmups.get(id))?.url).toBe('https://youtube.com/watch?v=a')
-  })
-
-  it('links the same warmup to several exercises, keeping one record', async () => {
-    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
-    const supino = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
-    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
-
-    expect((await d.exercises.get(supino))?.warmupIds).toEqual([w])
-    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([w])
-    expect(await d.warmups.count()).toBe(1)
-    expect((await exercisesUsingWarmup(w, d)).map((e) => e.name).sort()).toEqual([
-      'Desenvolvimento',
-      'Supino',
-    ])
-  })
-
-  it('preserves the order they were linked in — it is the paging order', async () => {
-    const a = await createWarmup({ name: 'A', url: 'https://x.com/a.png' }, d)
-    const b = await createWarmup({ name: 'B', url: 'https://x.com/b.png' }, d)
-    const c = await createWarmup({ name: 'C', url: 'https://x.com/c.png' }, d)
-    const ex = await createExercise({ name: 'Supino', warmupIds: [c, a, b] }, d)
-    expect((await d.exercises.get(ex))?.warmupIds).toEqual([c, a, b])
-
-    await updateExercise(ex, { name: 'Supino', warmupIds: [b, c] }, d)
-    expect((await d.exercises.get(ex))?.warmupIds).toEqual([b, c])
-  })
-
-  it('defaults to no warmups, and an update that omits them leaves them alone', async () => {
-    const w = await createWarmup({ name: 'A', url: 'https://x.com/a.png' }, d)
-    const plain = await createExercise({ name: 'Rosca' }, d)
-    expect((await d.exercises.get(plain))?.warmupIds).toEqual([])
-
-    const ex = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
-    // No `warmupIds` key: this caller is not editing them.
-    await updateExercise(ex, { name: 'Supino Reto' }, d)
-    expect((await d.exercises.get(ex))?.warmupIds).toEqual([w])
-  })
-
-  it('deleting a warmup unlinks it from every exercise instead of blocking', async () => {
-    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
-    const other = await createWarmup({ name: 'Outro', url: 'https://x.com/b.png' }, d)
-    const supino = await createExercise({ name: 'Supino', warmupIds: [w, other] }, d)
-    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
-
-    await deleteWarmup(w, d)
-
-    expect(await d.warmups.get(w)).toBeUndefined()
-    // The other link survives, and nothing points at the deleted record.
-    expect((await d.exercises.get(supino))?.warmupIds).toEqual([other])
-    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([])
-  })
-
-  it('deleting an exercise leaves the warmup for the others', async () => {
-    const w = await createWarmup({ name: 'Rotação', url: 'https://x.com/a.png' }, d)
-    const supino = await createExercise({ name: 'Supino', warmupIds: [w] }, d)
-    const desenv = await createExercise({ name: 'Desenvolvimento', warmupIds: [w] }, d)
-
-    await deleteExercise(supino, d)
-
-    expect(await d.warmups.get(w)).toBeDefined()
-    expect((await d.exercises.get(desenv))?.warmupIds).toEqual([w])
-  })
-})
 
 describe('exercise alternatives', () => {
   /** What each of `ids` lists as its own alternatives. */
@@ -1180,7 +1152,7 @@ describe('hasAnyRegisteredData', () => {
   })
 
   it('is true from a category alone (no gym yet)', async () => {
-    await createCategory('Peito', d)
+    await createCategory('Peitoral', d)
     expect(await hasAnyRegisteredData(d)).toBe(true)
   })
 })

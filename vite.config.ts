@@ -107,7 +107,29 @@ export default defineConfig(({ command }) => {
           // iOS launch images are read by the OS at launch, not by the running
           // app, so precaching them only inflates the service worker manifest.
           // icon.png is the 1024px generator source, never requested at runtime.
-          globIgnores: ['**/apple-splash-*.png', '**/icon.png'],
+          //
+          // The exercise images are excluded for a different reason: there are
+          // 51 of them and they weigh ~5 MB, most of it animated demos. Nobody
+          // uses 51 exercises, so precaching would charge every install for a
+          // catalog it will never open. They are cached at runtime instead (see
+          // below) — one pass through your own routine and the exercises you
+          // actually do are offline, which is the offline that matters.
+          globIgnores: ['**/apple-splash-*.png', '**/icon.png', '**/exercises/*.webp'],
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.pathname.includes('/exercises/'),
+              // CacheFirst: these never change without their file name changing
+              // with them (the generator writes one file per exercise id, and a
+              // new picture means a new deploy). Going to the network to be told
+              // that would be a round trip for nothing.
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'exercise-media',
+                expiration: { maxEntries: 80, maxAgeSeconds: 60 * 60 * 24 * 365 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+          ],
         },
       }),
     ],

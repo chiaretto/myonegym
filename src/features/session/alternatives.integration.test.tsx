@@ -43,12 +43,12 @@ afterEach(async () => {
  */
 async function seed() {
   const gym = await createGym('Academia A', db)
-  const peito = await createCategory('Peito', db)
-  await createExercise({ name: 'Rosca Direta', categoryIds: [peito] }, db)
-  const reto = await createExercise({ name: 'Supino Reto', categoryIds: [peito] }, db)
-  const maq = await createExercise({ name: 'Supino Máquina', categoryIds: [peito] }, db)
-  const cruc = await createExercise({ name: 'Crucifixo', categoryIds: [peito] }, db)
-  const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peito] }, db)
+  const peitoral = await createCategory('Peitoral', db)
+  await createExercise({ name: 'Rosca Direta', categoryIds: [peitoral] }, db)
+  const reto = await createExercise({ name: 'Supino Reto', categoryIds: [peitoral] }, db)
+  const maq = await createExercise({ name: 'Supino Máquina', categoryIds: [peitoral] }, db)
+  const cruc = await createExercise({ name: 'Crucifixo', categoryIds: [peitoral] }, db)
+  const corda = await createExercise({ name: 'Tríceps Corda', categoryIds: [peitoral] }, db)
   await setAlternatives(reto, [maq, cruc], db)
   await saveWeight(gym, reto, 60, 'KG', 'global', db)
   await saveWeight(gym, maq, 45, 'KG', 'global', db)

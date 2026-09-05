@@ -69,6 +69,41 @@
          The styles are inline for the same reason as the markup: a linked
          stylesheet is a second round trip, and a splash that appears late is
          worse than no splash. -->
+    <!-- The chosen artwork, read BEFORE anything paints.
+
+         It cannot come from React: the splash exists precisely to cover the
+         stretch before the bundle has parsed, so by the time a component could
+         set it the picture it was meant to replace has already been on screen.
+         So the choice is read straight from the persisted settings, here, into
+         a custom property the rule below falls back away from.
+
+         Inline and synchronous, in <head>, so it runs before <body> is parsed —
+         a script placed later would set the image after the first paint and the
+         user would see the default flash past. Wrapped in try/catch because
+         every step can fail on its own (storage blocked in a private window,
+         a hand-edited value, an id from a later release): any failure simply
+         leaves the default, which is the correct picture rather than none.
+
+         The file names are duplicated from src/state/splashes.ts, which this
+         cannot import. src/state/splashes.test.ts fails if they drift. -->
+    <script>
+      try {
+        var saved = JSON.parse(localStorage.getItem('myonegym.settings') || '{}')
+        var file = {
+          vazio: 'splash-vazio.webp',
+          homem: 'splash-homem.webp',
+          mulher: 'splash-mulher.webp',
+        }[saved && saved.state && saved.state.splash]
+        if (file) {
+          document.documentElement.style.setProperty(
+            '--boot-splash',
+            "url('%BASE_URL%" + file + "')",
+          )
+        }
+      } catch (e) {
+        /* default artwork */
+      }
+    </script>
     <style>
       #splash {
         position: fixed;
@@ -76,7 +111,13 @@
         z-index: 2147483647;
         /* Mirrors --surface-0. Shows for the instant before the image decodes,
            and behind it on any browser without WebP (iOS < 14). */
-        background: #050607 center / cover no-repeat url('%BASE_URL%splash.webp');
+        background-color: #050607;
+        /* The fallback is the whole default path: a browser that never ran the
+           script above, or ran it and set nothing, still gets a picture. */
+        background-image: var(--boot-splash, url('%BASE_URL%splash-vazio.webp'));
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
         opacity: 1;
         transition: opacity 320ms ease-out;
       }

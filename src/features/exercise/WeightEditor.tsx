@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../../db/db'
 import { deleteHistoryEntry, resolveWeight, saveWeight } from '../../db/repos'
@@ -52,10 +52,9 @@ export function WeightEditor({
   // that has no exception, and it keeps the card from flashing a gym label.
   const isException = resolved?.scope === 'gym'
   const history = useHistory(gymId, exerciseId)
+
   const toast = useToast()
   const confirm = useConfirm()
-
-  const cardRef = useRef<HTMLElement>(null)
 
   const [editing, setEditing] = useState(false)
   // The history opens in a modal, from a button on the card. Always shut on
@@ -63,6 +62,38 @@ export function WeightEditor({
   // is "how much do I lift", and the answer has to be visible without scrolling
   // past three months of it first.
   const [historyOpen, setHistoryOpen] = useState(false)
+  /**
+   * Which gym's timeline the modal is showing. Starts on the one the user is in
+   * and resets when the modal closes: switching it is a **lookup**, not a change
+   * of the gym the screen behind is about.
+   */
+  const [historyGymId, setHistoryGymId] = useState<number | null>(null)
+  /** Whether the gym list is showing inside the modal. Inline rather than a
+   *  nested Sheet: two stacked dialogs would both answer Escape and both dim
+   *  the screen, for a list of a handful of names. */
+  const [gymPickerOpen, setGymPickerOpen] = useState(false)
+
+  /**
+   * The modal can be pointed at any gym, so its weight and timeline are read
+   * for the **viewed** gym rather than the active one. Everything outside the
+   * modal keeps reading `gymId`: the card, the editor and the save are about
+   * the gym the user is training in, and the selector must not move that.
+   */
+  const viewedGymId = historyGymId ?? gymId
+  const viewedResolved = useLiveQuery(
+    async () =>
+      viewedGymId == null || exerciseId == null
+        ? undefined
+        : resolveWeight(viewedGymId, exerciseId, db),
+    [viewedGymId, exerciseId],
+  )
+  const viewedWeight = viewedResolved?.weight
+  const viewedIsException = viewedResolved?.scope === 'gym'
+  const viewedGym = gyms?.find((g) => g.id === viewedGymId)
+  const viewedRows = useHistory(viewedGymId, exerciseId)
+  // The active gym's list is already loaded, so switching back to it paints in
+  // the same frame instead of blanking the modal for one.
+  const viewedHistory = (viewedGymId === gymId ? history : viewedRows) ?? []
   const [value, setValue] = useState('')
   const [unit, setUnit] = useState<Unit>('KG')
   const [onlyHere, setOnlyHere] = useState(false)
@@ -82,24 +113,6 @@ export function WeightEditor({
     setEditing(false)
   }, [current, isException, gymId])
 
-  // Opening the editor brings the card as near the top as the scroll extent
-  // allows. It sits below the media and the warm-up and it GROWS when it opens
-  // — stepper, units, "Só nessa academia", actions — which used to push Salvar
-  // under the fixed bar: the user typed a weight and could not see where to
-  // save it. `block: 'start'` also covers the card that is already near the
-  // bottom of a short page, where the browser scrolls as far as it can and the
-  // actions come into view that way.
-  //
-  // After a frame, not immediately: the input carries autoFocus, and the scroll
-  // focusing brings with it would land on top of ours and undo it.
-  // `scroll-margin-top` on the card is what keeps it clear of the sticky app bar.
-  useEffect(() => {
-    if (!editing) return
-    const raf = requestAnimationFrame(() =>
-      cardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
-    )
-    return () => cancelAnimationFrame(raf)
-  }, [editing])
 
   if (gymId == null) {
     return (
@@ -146,9 +159,26 @@ export function WeightEditor({
     toast('Registro excluído.')
   }
 
+  /**
+   * The way out to the past. Rendered in two places, which is the point: on the
+   * card's top line in the same quiet register as the "Peso alvo" eyebrow, and
+   * again on the edit popup's title line — checking what you lifted last time is
+   * exactly the thing you want while deciding what to type, and the popup covers
+   * the card it used to sit on.
+   */
+  const historyButton =
+    history && history.length > 0 ? (
+      <button className="wc-history-btn" onClick={() => setHistoryOpen(true)}>
+        <Icon name="history" size={13} /> Histórico
+        {/* The count answers "is there anything in there?" before the modal
+            costs a tap. */}
+        <span className="wc-history-count">{history.length}</span>
+      </button>
+    ) : null
+
   return (
     <>
-      <section className="weight-card" ref={cardRef}>
+      <section className="weight-card">
         <div className="wc-head">
           <span className="wc-label">Peso alvo</span>
           <span className="wc-head-right">
@@ -159,38 +189,36 @@ export function WeightEditor({
                 <Icon name="building" size={12} /> {gym.name}
               </span>
             )}
-            {/* On the card's top line, in the same quiet register as the "Peso
-                alvo" eyebrow beside it: a way out to the past, not a second
-                thing to do with the weight. Loud enough to be a control, never
-                loud enough to compete with the figure below it.
-
-                Present while EDITING too. It was hidden there while the history
-                expanded the card — that pushed Cancelar and Salvar back below
-                the fold, which the scroll-to-top exists to prevent. From the top
-                line, opening a modal, it costs the edit form no height at all,
-                and checking what you lifted last time is exactly the thing you
-                want while deciding what to type. */}
-            {history && history.length > 0 && (
-              <button className="wc-history-btn" onClick={() => setHistoryOpen(true)}>
-                <Icon name="history" size={13} /> Histórico
-                {/* The count answers "is there anything in there?" before the
-                    modal costs a tap. */}
-                <span className="wc-history-count">{history.length}</span>
-              </button>
-            )}
+            {historyButton}
           </span>
         </div>
 
-        {!editing ? (
-          <div className="wc-view">
-            <span className="wc-value">{current ? fmtWeight(current.value, current.unit) : '—'}</span>
-            {canEdit && (
-              <button className="btn subtle" style={{ width: 'auto' }} onClick={() => setEditing(true)}>
-                <Icon name="pencil" /> {current ? 'Editar' : 'Definir'}
-              </button>
-            )}
-          </div>
-        ) : (
+        <div className="wc-view">
+          <span className="wc-value">{current ? fmtWeight(current.value, current.unit) : '—'}</span>
+          {canEdit && (
+            <button className="btn subtle" style={{ width: 'auto' }} onClick={() => setEditing(true)}>
+              <Icon name="pencil" /> {current ? 'Editar' : 'Definir'}
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* The editor is a popup anchored to the TOP, not a card that grows.
+          Inline, it pushed Salvar below the fold the moment it opened — the card
+          sits under the media, and opening it added a stepper, the units, the
+          scope checkbox and two actions. That was patched with a scroll-to-top,
+          which fought the autofocus and still left the layout jumping.
+
+          Top rather than bottom because the field is typed into: the keyboard
+          takes the lower half of the screen, and a bottom sheet would open with
+          its own Salvar underneath it. */}
+      {editing && (
+        <Sheet
+          title="Peso alvo"
+          placement="top"
+          action={historyButton}
+          onClose={() => setEditing(false)}
+        >
           <div className="wc-edit">
             <div className="wc-stepper">
               <button
@@ -257,9 +285,8 @@ export function WeightEditor({
               </button>
             </div>
           </div>
-        )}
-
-      </section>
+        </Sheet>
+      )}
 
       {/* A modal, not a panel on the card: the timeline is as long as the user
           has trained, and the card's job is to answer "how much do I lift" in
@@ -269,16 +296,75 @@ export function WeightEditor({
           left to show, the modal closes itself rather than standing empty. */}
       {historyOpen && history && history.length > 0 && (
         <Sheet
-          // Only an exception is qualified — a global history belongs to no gym
-          // in particular, so there would be nothing to name.
-          title={isException ? 'Histórico · nesta academia' : 'Histórico'}
-          onClose={() => setHistoryOpen(false)}
+          title="Histórico"
+          onClose={() => {
+            setHistoryOpen(false)
+            setHistoryGymId(null)
+            setGymPickerOpen(false)
+          }}
+          // Beside the title, not above the timeline: it says which gym is being
+          // read, and changing it is the same gesture Home uses to change the
+          // active one — the same pill, so it is recognised rather than learned.
+          action={
+            (gyms?.length ?? 0) > 1 ? (
+              <button
+                className="chip accent hist-gym-btn"
+                aria-label="Ver outra academia"
+                aria-expanded={gymPickerOpen}
+                onClick={() => setGymPickerOpen((v) => !v)}
+              >
+                <i className="png-ic pi-building" aria-hidden />
+                {viewedGym?.name ?? 'Academia'}
+                <i className="png-ic pi-chevron-down" aria-hidden />
+              </button>
+            ) : null
+          }
         >
           <div className="history">
-            <Sparkline history={history} />
+            {gymPickerOpen && (
+              <div className="group hist-gym-list" role="group" aria-label="Academias">
+                {gyms?.map((g) => (
+                  <button
+                    key={g.id}
+                    className="row"
+                    onClick={() => {
+                      setHistoryGymId(g.id!)
+                      setGymPickerOpen(false)
+                    }}
+                  >
+                    <span className="row-ic">
+                      <Icon name="building" />
+                    </span>
+                    <span className="row-body">
+                      <span className="row-title">{g.name}</span>
+                    </span>
+                    {g.id === viewedGymId && <Icon name="check" className="chev" />}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Which weight this timeline belongs to. Load-bearing, not a label:
+                a gym with no exception of its own resolves to the GLOBAL weight,
+                so two gyms can show the very same entries — and without this
+                line that repetition reads as a bug rather than as the point. */}
+            <p className="hist-scope">
+              {viewedIsException ? (
+                <>
+                  <Icon name="building" size={12} /> Peso só desta academia
+                </>
+              ) : (
+                <>
+                  <Icon name="world" size={12} /> Peso global, valendo em todas as academias
+                </>
+              )}
+              {viewedWeight && <strong> · {fmtWeight(viewedWeight.value, viewedWeight.unit)}</strong>}
+            </p>
+
+            <Sparkline history={viewedHistory} />
             <ul className="timeline">
-              {history.map((entry, i) => {
-                const prev = history[i + 1]
+              {viewedHistory.map((entry, i) => {
+                const prev = viewedHistory[i + 1]
                 const delta = historyDelta(entry, prev)
                 const isCurrent = i === 0
                 return (
@@ -296,7 +382,10 @@ export function WeightEditor({
                         {delta.direction === 'down' && <Icon name="arrow-down" size={11} />}
                         {delta.text}
                       </span>
-                      {canEdit && (
+                      {/* Only the gym the screen is actually about. Looking at
+                          another one is a lookup, and a delete reachable from a
+                          lookup is a delete nobody meant to make. */}
+                      {canEdit && viewedGymId === gymId && (
                         <button
                           className="tl-delete"
                           aria-label="Excluir registro"

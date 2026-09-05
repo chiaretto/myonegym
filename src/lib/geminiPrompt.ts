@@ -57,6 +57,14 @@ Assim, citar um exercício existente num dia é só escrever o id dele como text
 
 Alternativas podem ser declaradas de um lado só; a simetria é resolvida ao aplicar.
 
+## O catálogo oficial é só leitura
+
+Parte das categorias e dos exercícios vem com o app e chega marcada com \`readOnly: true\`. Eles não são do usuário e não podem ser mudados.
+
+- NÃO liste um item \`readOnly\` nas listas \`categories\` e \`exercises\` da proposta. Omitir um deles NÃO apaga nada — a regra "omitir é apagar" vale só para o que é do usuário.
+- Você PODE usá-los à vontade: colocar um exercício oficial num dia, dar um oficial como alternativa de um exercício do usuário, classificar um exercício do usuário numa categoria oficial. Nesses casos o ref é o id em texto, como qualquer entidade que já existe.
+- NÃO proponha criar um exercício ou uma categoria que já existe no catálogo oficial. Use o que está lá.
+
 No campo summary, escreva para a pessoa, não para uma máquina: o que você fez e por quê. Se algo foi removido, diga explicitamente o que e por quê — remoção apaga junto os pesos, as notas e as fotos daquele exercício.
 
 # Depois de propor

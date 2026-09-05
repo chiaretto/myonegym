@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { ACCENTS, DEFAULT_ACCENT, DEFAULT_ACCENT_ID } from './accents'
+import { DEFAULT_SPLASH_ID } from './splashes'
 import {
   applyAccent,
   applyFontScale,
@@ -107,5 +108,32 @@ describe('applyAccent', () => {
     expect(document.documentElement.style.getPropertyValue('--bg-accent')).toBe('')
     expect(document.documentElement.style.getPropertyValue('--text-accent')).toBe('')
     expect(document.documentElement.style.getPropertyValue('--fill-accent')).toBe('')
+  })
+})
+
+describe('boot splash choice', () => {
+  it('starts on the default and takes only ids it offers', () => {
+    expect(useSettings.getState().splash).toBe(DEFAULT_SPLASH_ID)
+
+    useSettings.getState().setSplash('mulher')
+    expect(useSettings.getState().splash).toBe('mulher')
+
+    useSettings.getState().setSplash('nao-existe' as never)
+    expect(useSettings.getState().splash).toBe(DEFAULT_SPLASH_ID)
+  })
+
+  it('is restored by the same reset as the font size and the accent', () => {
+    useSettings.getState().setSplash('homem')
+    useSettings.getState().reset()
+    expect(useSettings.getState().splash).toBe(DEFAULT_SPLASH_ID)
+  })
+
+  it('paints nothing itself — the inline script in index.html reads it', () => {
+    // Unlike the font scale and the accent, there is no `applySplash`: the
+    // splash is gone before React runs, so a function here could only arrive
+    // too late. The value's only consumer is index.html.
+    expect(Object.keys(useSettings.getState())).not.toContain('applySplash')
+    useSettings.getState().setSplash('homem')
+    expect(document.documentElement.style.getPropertyValue('--boot-splash')).toBe('')
   })
 })

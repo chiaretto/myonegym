@@ -257,12 +257,14 @@ describe('Consistência — long-range blocks', () => {
     expect(bars[11].classList.contains('partial')).toBe(true)
   })
 
-  it('the tab is labelled Consistência and is active here', async () => {
+  it('the tab is labelled Histórico and is active here', async () => {
     await seed()
     renderScreen()
 
-    const tab = await screen.findByRole('link', { name: /Consistência/ })
+    const tab = await screen.findByRole('link', { name: /Histórico/ })
     expect(tab).toHaveClass('active')
+    // The names this tab has been called before, none of which may linger.
     expect(screen.queryByRole('link', { name: /Sessões/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Consistência/ })).not.toBeInTheDocument()
   })
 })

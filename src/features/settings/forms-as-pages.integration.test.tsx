@@ -57,17 +57,17 @@ describe('Create/edit forms are pages', () => {
     expect(url()).toBe('/settings/categories/new')
     await heading('Nova categoria')
 
-    await user.type(screen.getByLabelText('Nome'), 'Peito')
+    await user.type(screen.getByLabelText('Nome'), 'Peitoral')
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
     // Back on the list, with the new category present.
     await waitFor(() => expect(url()).toBe('/settings/categories'))
-    expect(await screen.findByText('Peito')).toBeInTheDocument()
-    expect(await db.categories.where('name').equals('Peito').count()).toBe(1)
+    expect(await screen.findByText('Peitoral')).toBeInTheDocument()
+    expect(await db.categories.where('name').equals('Peitoral').count()).toBe(1)
   })
 
   it('edits an exercise through its page', async () => {
-    const cat = await createCategory('Peito', db)
+    const cat = await createCategory('Peitoral', db)
     const ex = await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
     const user = userEvent.setup()
     renderAt('/settings/exercises')
@@ -126,7 +126,10 @@ describe('Create/edit forms are pages', () => {
     renderAt(`/settings/gyms/${g}/edit`)
 
     await heading('Editar academia')
-    expect((screen.getByLabelText('Nome') as HTMLInputElement).value).toBe('Academia A')
+    // `find`, not `get`: the heading paints before the record's live query has
+    // answered, so the field arrives a tick later. Under a loaded full-suite run
+    // that tick is long enough to fail a synchronous read.
+    expect(((await screen.findByLabelText('Nome')) as HTMLInputElement).value).toBe('Academia A')
   })
 
   it('shows a not-found state for a deleted entity', async () => {
@@ -138,7 +141,7 @@ describe('Create/edit forms are pages', () => {
   })
 
   it('the day form is a page with the exercise picker; preview stays a modal', async () => {
-    const cat = await createCategory('Peito', db)
+    const cat = await createCategory('Peitoral', db)
     await createExercise({ name: 'Supino', categoryIds: [cat] }, db)
     const user = userEvent.setup()
     renderAt('/settings/days/new')

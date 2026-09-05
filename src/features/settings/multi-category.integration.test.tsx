@@ -32,30 +32,30 @@ const renderAt = (path: string) =>
 
 describe('Multiple categories per exercise', () => {
   it('creates an exercise with two categories via toggle chips; the list shows both', async () => {
-    const peito = await createCategory('Peito', db)
-    const triceps = await createCategory('Tríceps', db)
+    const peitoral = await createCategory('Peitoral', db)
+    const triceps = await createCategory('Tricípite', db)
     const user = userEvent.setup()
     renderAt('/settings/exercises/new')
 
     await screen.findByRole('heading', { name: 'Novo exercício', level: 1 })
     await user.type(screen.getByLabelText('Nome'), 'Supino Reto')
     // Toggle both category chips on.
-    await user.click(screen.getByRole('button', { name: /Peito/, pressed: false }))
-    await user.click(screen.getByRole('button', { name: /Tríceps/, pressed: false }))
+    await user.click(screen.getByRole('button', { name: /Peitoral/, pressed: false }))
+    await user.click(screen.getByRole('button', { name: /Tricípite/, pressed: false }))
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
     await waitFor(async () =>
       expect(await db.exercises.where('name').equals('Supino Reto').first()).toBeTruthy(),
     )
     const ex = await db.exercises.where('name').equals('Supino Reto').first()
-    expect(ex?.categoryIds.sort()).toEqual([peito, triceps].sort())
+    expect(ex?.categoryIds.sort()).toEqual([peitoral, triceps].sort())
 
     // The list row shows both category names.
-    expect(await screen.findByText('Peito · Tríceps')).toBeInTheDocument()
+    expect(await screen.findByText('Peitoral · Tricípite')).toBeInTheDocument()
   })
 
   it('an exercise with no chips selected is uncategorized ("Sem categoria")', async () => {
-    await createCategory('Peito', db)
+    await createCategory('Peitoral', db)
     const user = userEvent.setup()
     renderAt('/settings/exercises/new')
 
@@ -71,27 +71,27 @@ describe('Multiple categories per exercise', () => {
   })
 
   it('editing shows the current categories as pressed chips and can drop one', async () => {
-    const peito = await createCategory('Peito', db)
-    const triceps = await createCategory('Tríceps', db)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [peito, triceps] }, db)
+    const peitoral = await createCategory('Peitoral', db)
+    const triceps = await createCategory('Tricípite', db)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peitoral, triceps] }, db)
     const user = userEvent.setup()
     renderAt(`/settings/exercises/${ex}/edit`)
 
     await screen.findByRole('heading', { name: 'Editar exercício', level: 1 })
-    // Both chips start pressed (categories load a tick after mount); turn Tríceps off.
-    expect(await screen.findByRole('button', { name: /Peito/, pressed: true })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Tríceps/, pressed: true }))
+    // Both chips start pressed (categories load a tick after mount); turn Tricípite off.
+    expect(await screen.findByRole('button', { name: /Peitoral/, pressed: true })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Tricípite/, pressed: true }))
     await user.click(screen.getByRole('button', { name: 'Salvar' }))
 
-    await waitFor(async () => expect((await db.exercises.get(ex))?.categoryIds).toEqual([peito]))
+    await waitFor(async () => expect((await db.exercises.get(ex))?.categoryIds).toEqual([peitoral]))
   })
 
   it('deleting a category removes it from the exercise (keeps the others)', async () => {
-    const peito = await createCategory('Peito', db)
-    const triceps = await createCategory('Tríceps', db)
-    const ex = await createExercise({ name: 'Supino', categoryIds: [peito, triceps] }, db)
+    const peitoral = await createCategory('Peitoral', db)
+    const triceps = await createCategory('Tricípite', db)
+    const ex = await createExercise({ name: 'Supino', categoryIds: [peitoral, triceps] }, db)
 
-    await deleteCategory(peito, db)
+    await deleteCategory(peitoral, db)
 
     expect((await db.exercises.get(ex))?.categoryIds).toEqual([triceps])
   })

@@ -1,0 +1,756 @@
+{
+  "app": "myonegym",
+  "kind": "exerciseLibrary",
+  "version": 6,
+  "exportedAt": 1788559785346,
+  "categories": [
+    {
+      "name": "Peito",
+      "id": 1
+    },
+    {
+      "name": "Costas",
+      "id": 2
+    },
+    {
+      "name": "Bíceps",
+      "id": 3
+    },
+    {
+      "name": "Tríceps",
+      "id": 4
+    },
+    {
+      "name": "Ombros",
+      "id": 5
+    },
+    {
+      "name": "Core",
+      "id": 6
+    },
+    {
+      "name": "Cardio",
+      "id": 7
+    },
+    {
+      "name": "Trapézio",
+      "id": 8
+    },
+    {
+      "name": "Quadríceps",
+      "id": 9
+    },
+    {
+      "name": "Posterior de coxa",
+      "id": 10
+    },
+    {
+      "name": "Glúteo",
+      "id": 11
+    },
+    {
+      "name": "Panturrilha",
+      "id": 12
+    }
+  ],
+  "exercises": [
+    {
+      "name": "Supino Reto com Barra",
+      "id": 1,
+      "categoryIds": [
+        1,
+        4,
+        5
+      ],
+      "alternativeIds": [
+        45
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "supino-reto-com-barra.webp"
+    },
+    {
+      "name": "Supino Inclinado com Barra",
+      "id": 2,
+      "categoryIds": [
+        1,
+        5,
+        4
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "supino-inclinado-com-barra.webp"
+    },
+    {
+      "name": "Crucifixo Reto (voador Peck deck)",
+      "id": 3,
+      "categoryIds": [
+        1,
+        5
+      ],
+      "alternativeIds": [
+        40
+      ],
+      "kind": "strength",
+      "videos": [
+        {
+          "url": "https://youtube.com/shorts/N3uGDQow2Ss?is=_Q7qcXcNEnMIX-OO"
+        }
+      ],
+      "mediaFile": "crucifixo-reto-voador-peck-deck.webp"
+    },
+    {
+      "name": "Tríceps Pulley (Barra Reta)",
+      "id": 4,
+      "categoryIds": [
+        4
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "triceps-pulley-barra-reta.webp"
+    },
+    {
+      "name": "Tríceps Testa com Barra Reta",
+      "id": 5,
+      "categoryIds": [
+        4
+      ],
+      "alternativeIds": [
+        52
+      ],
+      "kind": "strength",
+      "videos": [
+        {
+          "url": "https://youtube.com/shorts/etTuALjH3bo?is=o0AOGWR4AVBfNk-3",
+          "title": "Polia"
+        }
+      ],
+      "mediaFile": "triceps-testa-com-barra-reta.webp"
+    },
+    {
+      "name": "Mergulho em Paralelas",
+      "id": 6,
+      "categoryIds": [
+        4,
+        1,
+        5
+      ],
+      "alternativeIds": [
+        50
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "mergulho-em-paralelas.webp"
+    },
+    {
+      "name": "Prancha Abdominal (Isometria)",
+      "id": 7,
+      "categoryIds": [
+        6,
+        5
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "prancha-abdominal-isometria.webp"
+    },
+    {
+      "name": "Elevação de Pernas na Barra Fixa",
+      "id": 8,
+      "categoryIds": [
+        6,
+        9,
+        2
+      ],
+      "alternativeIds": [
+        46,
+        48
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "elevacao-de-pernas-na-barra-fixa.webp"
+    },
+    {
+      "name": "Abdominal Oblíquo solo",
+      "id": 9,
+      "categoryIds": [
+        6
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "abdominal-obliquo-solo.webp"
+    },
+    {
+      "name": "Barra Fixa Braço Fechado (Graviton)",
+      "id": 11,
+      "categoryIds": [
+        2,
+        3,
+        6
+      ],
+      "alternativeIds": [
+        51
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "barra-fixa-braco-fechado-graviton.webp"
+    },
+    {
+      "name": "Remada Curvada com Barra",
+      "id": 12,
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "remada-curvada-com-barra.webp"
+    },
+    {
+      "name": "Pulldown na Polia",
+      "id": 13,
+      "categoryIds": [
+        2,
+        4,
+        6
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "pulldown-na-polia.webp"
+    },
+    {
+      "name": "Rosca Direta com Barra",
+      "id": 14,
+      "categoryIds": [
+        3
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "rosca-direta-com-barra.webp"
+    },
+    {
+      "name": "Rosca Martelo com Halteres",
+      "id": 15,
+      "categoryIds": [
+        3
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "rosca-martelo-com-halteres.webp"
+    },
+    {
+      "name": "Rosca Concentrada (1 Braço)",
+      "id": 16,
+      "categoryIds": [
+        3
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [
+        {
+          "url": "https://youtube.com/shorts/vhsiLQ6nDEo?is=Z_e2trv-s6AT6_AJ"
+        }
+      ],
+      "mediaFile": "rosca-concentrada-1-braco.webp"
+    },
+    {
+      "name": "Barra Fixa Braço Aberto",
+      "id": 17,
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "barra-fixa-braco-aberto.webp"
+    },
+    {
+      "name": "Desenvolvimento com Halteres",
+      "id": 18,
+      "categoryIds": [
+        5,
+        4,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "desenvolvimento-com-halteres.webp"
+    },
+    {
+      "name": "Elevação Lateral",
+      "id": 19,
+      "categoryIds": [
+        5,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "elevacao-lateral.webp"
+    },
+    {
+      "name": "Elevação Frontal com Anilha",
+      "id": 20,
+      "categoryIds": [
+        5,
+        1
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "elevacao-frontal-com-anilha.webp"
+    },
+    {
+      "name": "Remada Alta com Barra",
+      "id": 21,
+      "categoryIds": [
+        5,
+        8,
+        3
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "remada-alta-com-barra.webp"
+    },
+    {
+      "name": "Encolhimento para Trapézio (Halteres)",
+      "id": 22,
+      "categoryIds": [
+        8,
+        5
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "encolhimento-para-trapezio-halteres.webp"
+    },
+    {
+      "name": "Puxada Frontal Aberta na Polia",
+      "id": 23,
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "puxada-frontal-aberta-na-polia.webp"
+    },
+    {
+      "name": "Puxada com Triângulo (Pegada Fechada)",
+      "id": 24,
+      "categoryIds": [
+        2,
+        3
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "puxada-com-triangulo-pegada-fechada.webp"
+    },
+    {
+      "name": "Remada Sentada na Polia (Triangulo Neutro)",
+      "id": 25,
+      "categoryIds": [
+        2,
+        3,
+        8
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "remada-sentada-na-polia-triangulo-neutro.webp"
+    },
+    {
+      "name": "Puxada Articulada Unilateral",
+      "id": 26,
+      "categoryIds": [
+        2,
+        3,
+        6
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "puxada-articulada-unilateral.webp"
+    },
+    {
+      "name": "Voador Inverso (Peck Deck Reverso)",
+      "id": 27,
+      "categoryIds": [
+        5,
+        8,
+        2
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "voador-inverso-peck-deck-reverso.webp"
+    },
+    {
+      "name": "Agachamento Hack",
+      "id": 28,
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        29
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "agachamento-hack.webp"
+    },
+    {
+      "name": "Leg press 45°",
+      "id": 29,
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "alternativeIds": [
+        28
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "leg-press-45.webp"
+    },
+    {
+      "name": "Cadeira Flexora",
+      "id": 30,
+      "categoryIds": [
+        10,
+        12
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "cadeira-flexora.webp"
+    },
+    {
+      "name": "Cadeira Abdutora",
+      "id": 31,
+      "categoryIds": [
+        11,
+        6
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "cadeira-abdutora.webp"
+    },
+    {
+      "name": "Cadeira Adutora",
+      "id": 32,
+      "categoryIds": [
+        10
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "cadeira-adutora.webp"
+    },
+    {
+      "name": "Cadeira Extensora",
+      "id": 33,
+      "categoryIds": [
+        9
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "cadeira-extensora.webp"
+    },
+    {
+      "name": "Panturrilha sentada",
+      "id": 34,
+      "categoryIds": [
+        12
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "panturrilha-sentada.webp"
+    },
+    {
+      "name": "Panturrilha em pé",
+      "id": 35,
+      "categoryIds": [
+        12
+      ],
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "panturrilha-em-pe.webp"
+    },
+    {
+      "name": "Stiff com Barra",
+      "categoryIds": [
+        10,
+        11,
+        2
+      ],
+      "id": 36,
+      "alternativeIds": [
+        44
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "stiff-com-barra.webp"
+    },
+    {
+      "name": "Recuo Reverso com Halteres",
+      "categoryIds": [
+        11,
+        9,
+        10
+      ],
+      "id": 37,
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "recuo-reverso-com-halteres.webp"
+    },
+    {
+      "name": "Agachamento Búlgaro",
+      "categoryIds": [
+        9,
+        11,
+        10
+      ],
+      "id": 38,
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "agachamento-bulgaro.webp"
+    },
+    {
+      "name": "Supino Inclinado com Halteres",
+      "categoryIds": [
+        1,
+        5,
+        4
+      ],
+      "id": 39,
+      "alternativeIds": [],
+      "kind": "strength",
+      "videos": [
+        {
+          "url": "https://youtube.com/shorts/Unn3S3NysHY?is=pyQr94lHYdMH3M-n"
+        },
+        {
+          "url": "https://youtube.com/shorts/Unn3S3NysHY?is=pyQr94lHYdMH3M-n",
+          "startSec": 30,
+          "endSec": 45
+        }
+      ],
+      "mediaFile": "supino-inclinado-com-halteres.webp"
+    },
+    {
+      "name": "Crossover na Polia",
+      "categoryIds": [
+        1,
+        5
+      ],
+      "id": 40,
+      "alternativeIds": [
+        3
+      ],
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "crossover-na-polia.webp"
+    },
+    {
+      "name": "Natação",
+      "categoryIds": [
+        7,
+        5,
+        2
+      ],
+      "id": 41,
+      "alternativeIds": [],
+      "kind": "cardio",
+      "videos": [],
+      "mediaFile": "natacao.webp"
+    },
+    {
+      "name": "Corrida",
+      "categoryIds": [
+        7,
+        12,
+        9
+      ],
+      "id": 42,
+      "alternativeIds": [],
+      "kind": "cardio",
+      "videos": [],
+      "mediaFile": "corrida.webp"
+    },
+    {
+      "name": "Bike",
+      "categoryIds": [
+        7,
+        9,
+        11
+      ],
+      "id": 43,
+      "alternativeIds": [],
+      "kind": "cardio",
+      "videos": [],
+      "mediaFile": "bike.webp"
+    },
+    {
+      "name": "Mesa Flexora",
+      "categoryIds": [
+        10,
+        12
+      ],
+      "alternativeIds": [
+        36
+      ],
+      "id": 44,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "mesa-flexora.webp"
+    },
+    {
+      "name": "Supino Reto Máquina",
+      "categoryIds": [
+        1,
+        4,
+        5
+      ],
+      "alternativeIds": [
+        1
+      ],
+      "id": 45,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "supino-reto-maquina.webp"
+    },
+    {
+      "name": "Elevação de pernas colchonete",
+      "categoryIds": [
+        6,
+        9
+      ],
+      "alternativeIds": [
+        8
+      ],
+      "id": 46,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "elevacao-de-pernas-colchonete.webp"
+    },
+    {
+      "name": "Prancha Lateral",
+      "categoryIds": [
+        6,
+        11,
+        5
+      ],
+      "alternativeIds": [],
+      "id": 47,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "prancha-lateral.webp"
+    },
+    {
+      "name": "Banco Romano",
+      "categoryIds": [
+        2,
+        11,
+        10,
+        6
+      ],
+      "alternativeIds": [
+        8
+      ],
+      "id": 48,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "banco-romano.webp"
+    },
+    {
+      "name": "Elevação quadril",
+      "categoryIds": [
+        11,
+        10,
+        6
+      ],
+      "alternativeIds": [],
+      "id": 49,
+      "kind": "strength",
+      "videos": [],
+      "mediaFile": "elevacao-quadril.webp"
+    },
+    {
+      "name": "Mergulho em paralelas (Graviton)",
+      "kind": "strength",
+      "categoryIds": [
+        4,
+        1,
+        5
+      ],
+      "alternativeIds": [
+        6
+      ],
+      "videos": [],
+      "id": 50,
+      "mediaFile": "mergulho-em-paralelas-graviton.webp"
+    },
+    {
+      "name": "Barra fixa braço fechado",
+      "kind": "strength",
+      "categoryIds": [
+        3,
+        2,
+        5
+      ],
+      "alternativeIds": [
+        11
+      ],
+      "videos": [],
+      "id": 51,
+      "mediaFile": "barra-fixa-braco-fechado.webp"
+    },
+    {
+      "name": "Tríceps testa polia alta",
+      "kind": "strength",
+      "categoryIds": [
+        4
+      ],
+      "alternativeIds": [
+        5
+      ],
+      "videos": [],
+      "id": 52,
+      "mediaFile": "triceps-testa-polia-alta.webp"
+    },
+    {
+      "name": "Hit interno",
+      "kind": "cardio",
+      "categoryIds": [
+        7
+      ],
+      "alternativeIds": [],
+      "videos": [],
+      "id": 53
+    }
+  ]
+}

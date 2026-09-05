@@ -130,6 +130,15 @@
    pushes the buttons off the row. Same family as the tab bar's. */
 .video-row-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
 .video-row-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The row as an opener, on the read-only view: a button that keeps the row's
+   two-line shape instead of looking like one. Left-aligned because the text is
+   the content, not a label on a control. */
+.video-row-open { background: none; border: 0; padding: 0; color: inherit;
+  text-align: left; font: inherit; cursor: pointer; }
+/* The address, truncated: a YouTube link with its query string is longer than
+   any phone is wide, and wrapping it would push the row to three lines to show
+   a string nobody reads in full — they copy it. */
+.video-row-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .video-row-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
 .video-row-actions .icon-btn[disabled] { opacity: 0.3; }
 
@@ -150,3 +159,22 @@
   width: 2.2em; height: 2.2em; border-radius: 50%;
   background: var(--bg-accent); color: var(--text-accent);
 }
+
+/* "· Oficial" inside a picker chip: present but quiet — the chip's job is the
+   name, and the source only settles a tie between two exercises called the
+   same thing. */
+.chip-src {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+/* The gym selector and the scope line inside the history modal. The selector is
+   a lookup — it points the timeline at another gym without moving the screen
+   behind it — and the line under it says which weight the entries belong to. */
+/* The pill on the sheet's title line. `flex: none` so a long gym name shrinks
+   its own label rather than pushing the close button off the row. */
+.hist-gym-btn { flex: none; min-width: 0; max-width: 55%; overflow: hidden; }
+.hist-gym-list { margin-bottom: 12px; }
+.hist-scope { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-size: var(--fs-2xs); color: var(--text-secondary); margin-bottom: 12px; }
+.hist-scope strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }

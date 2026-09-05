@@ -19,18 +19,18 @@ afterEach(async () => {
 
 /**
  * "Dia 1" already contains "Supino Reto"; everything else is a candidate to add:
- * "Rosca Direta" (Bíceps), "Rosca Scott" (Bíceps), "Remada" (Costas + Bíceps),
- * "Elevação Lateral" (Ombros) and "Alongamento" (no category).
+ * "Rosca Direta" (Bicípite), "Rosca Scott" (Bicípite), "Remada" (Dorsais + Bicípite),
+ * "Elevação Lateral" (Deltoides) and "Alongamento" (no category).
  */
 async function setup() {
-  const biceps = await createCategory('Bíceps', db)
-  const costas = await createCategory('Costas', db)
-  const ombros = await createCategory('Ombros', db)
-  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [costas] }, db)
+  const biceps = await createCategory('Bicípite', db)
+  const dorsais = await createCategory('Dorsais', db)
+  const deltoides = await createCategory('Deltoides', db)
+  const supino = await createExercise({ name: 'Supino Reto', categoryIds: [dorsais] }, db)
   await createExercise({ name: 'Rosca Direta', categoryIds: [biceps] }, db)
   await createExercise({ name: 'Rosca Scott', categoryIds: [biceps] }, db)
-  await createExercise({ name: 'Remada', categoryIds: [costas, biceps] }, db)
-  await createExercise({ name: 'Elevação Lateral', categoryIds: [ombros] }, db)
+  await createExercise({ name: 'Remada', categoryIds: [dorsais, biceps] }, db)
+  await createExercise({ name: 'Elevação Lateral', categoryIds: [deltoides] }, db)
   await createExercise({ name: 'Alongamento' }, db)
   const dayId = await createDay({ name: 'Dia 1', exerciseIds: [supino] }, db)
 
@@ -43,6 +43,19 @@ async function setup() {
   await screen.findByLabelText('Adicionar Rosca Direta') // candidates loaded
   await waitFor(() => expect(screen.getByLabelText('Categoria')).toBeInTheDocument()) // categories loaded
   return { user, dayId }
+}
+
+/**
+ * The picker offers **both** sources, so a name search reaches the official
+ * catalog too. These tests are about the filter, not about the catalog's size:
+ * they assert the property the requirement states — every candidate matches the
+ * term — plus what the test itself seeded.
+ */
+function normalize(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 }
 
 /** Names offered under "Adicionar exercício" (the day's own list is separate). */
@@ -58,7 +71,11 @@ describe('Day form — exercise picker filters', () => {
 
     await user.type(screen.getByLabelText('Buscar por nome'), 'rosca')
 
-    expect(candidateNames()).toEqual(['Rosca Direta', 'Rosca Scott'])
+    const shown = candidateNames()
+    expect(shown.every((n) => normalize(n).includes('rosca'))).toBe(true)
+    expect(shown).toEqual(expect.arrayContaining(['Rosca Direta', 'Rosca Scott']))
+    expect(shown).not.toContain('Alongamento')
+    expect(shown).not.toContain('Remada')
   })
 
   it('searches accent-insensitively', async () => {
@@ -66,15 +83,18 @@ describe('Day form — exercise picker filters', () => {
 
     await user.type(screen.getByLabelText('Buscar por nome'), 'elevacao')
 
-    expect(candidateNames()).toEqual(['Elevação Lateral'])
+    const shown = candidateNames()
+    expect(shown.length).toBeGreaterThan(0)
+    expect(shown.every((n) => normalize(n).includes('elevacao'))).toBe(true)
+    expect(shown).toContain('Elevação Lateral')
   })
 
   it('narrows the candidates by category, including compound exercises', async () => {
     const { user } = await setup()
 
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bíceps')
+    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bicípite')
 
-    // "Remada" is Costas + Bíceps — a specific category matches any exercise that includes it.
+    // "Remada" is Dorsais + Bicípite — a specific category matches any exercise that includes it.
     // (The catalog is listed by name, so candidates stay in alphabetical order.)
     expect(candidateNames()).toEqual(['Remada', 'Rosca Direta', 'Rosca Scott'])
   })
@@ -91,7 +111,7 @@ describe('Day form — exercise picker filters', () => {
     const { user } = await setup()
 
     await user.type(screen.getByLabelText('Buscar por nome'), 'rosca')
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bíceps')
+    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bicípite')
 
     expect(candidateNames()).toEqual(['Rosca Direta', 'Rosca Scott'])
   })
@@ -119,7 +139,9 @@ describe('Day form — exercise picker filters', () => {
 
     // The filters survive the addition.
     expect(screen.getByLabelText('Buscar por nome')).toHaveValue('rosca')
-    expect(candidateNames()).toEqual(['Rosca Scott'])
+    const shown = candidateNames()
+    expect(shown.every((n) => normalize(n).includes('rosca'))).toBe(true)
+    expect(shown).toContain('Rosca Scott')
   })
 
   it('shows a distinct "no matches" state and clears the filters', async () => {
@@ -135,21 +157,25 @@ describe('Day form — exercise picker filters', () => {
     await user.click(screen.getByRole('button', { name: 'Limpar filtros' }))
 
     await waitFor(() =>
-      expect(candidateNames()).toEqual([
-        'Alongamento',
-        'Elevação Lateral',
-        'Remada',
-        'Rosca Direta',
-        'Rosca Scott',
-      ]),
+      expect(candidateNames()).toEqual(
+        expect.arrayContaining([
+          'Alongamento',
+          'Elevação Lateral',
+          'Remada',
+          'Rosca Direta',
+          'Rosca Scott',
+        ]),
+      ),
     )
+    // Clearing brings the whole picker back, official catalog included.
+    expect(candidateNames().length).toBeGreaterThan(5)
     expect(screen.queryByText('Nenhum exercício encontrado')).not.toBeInTheDocument()
   })
 
   it('saves exactly the day list, in order, regardless of the active filters', async () => {
     const { user, dayId } = await setup()
 
-    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bíceps')
+    await user.selectOptions(screen.getByLabelText('Categoria'), 'Bicípite')
     await user.click(screen.getByLabelText('Adicionar Rosca Scott'))
     await user.type(screen.getByLabelText('Buscar por nome'), 'remada')
     await user.click(screen.getByRole('button', { name: 'Salvar' }))

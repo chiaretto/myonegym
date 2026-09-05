@@ -109,11 +109,14 @@ describe('Weight scope on the catalog exercise detail', () => {
       scope: 'global',
       weight: { value: 20 },
     })
-    // Now the label means something, and the history says whose it is — in the
-    // modal's title, which is where the scope is now read.
+    // Now the label means something, and the history says whose it is — inside
+    // the modal, not in its title: the title stopped naming a gym when the modal
+    // gained a selector that can point it at any of them.
     expect(await within(weightCard()).findByText('Academia A')).toBeInTheDocument()
     await user.click(within(weightCard()).getByRole('button', { name: /Histórico/ }))
-    expect(screen.getByRole('dialog')).toHaveAccessibleName(/nesta academia/)
+    const modal = screen.getByRole('dialog')
+    expect(modal).toHaveAccessibleName('Histórico')
+    expect(within(modal).getByText(/só desta academia/i)).toBeInTheDocument()
   })
 
   it('reopens with the box already checked where an exception exists', async () => {

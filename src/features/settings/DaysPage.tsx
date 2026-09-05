@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createDay, deleteDay, reorderDays, updateDay, ValidationError } from '../../db/repos'
+import { isOfficialId } from '../../data/officialCatalog'
 import { db } from '../../db/db'
 import type { Day, Exercise } from '../../db/types'
 import { useCategories, useCategoryMap, useExerciseMap, useExercises, useDays } from '../../lib/hooks'
@@ -314,7 +315,10 @@ function DayForm({ day }: { day: Day | null }) {
                         <Icon name="plus" />
                       </span>
                       <span className="row-body">
-                        <span className="row-title">{e.name}</span>
+                        <span className="row-title">
+                          {e.name}
+                          {isOfficialId(e.id!) && <span className="chip sm">Oficial</span>}
+                        </span>
                         {cat && <span className="row-sub">{cat}</span>}
                       </span>
                     </button>

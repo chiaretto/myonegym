@@ -86,7 +86,7 @@ export interface Exercise {
   alternativeIds: number[]
   /**
    * Execution videos of this exercise, in the order the viewer pages through
-   * them — like `warmupIds`, the array order IS the presentation order.
+   * them — like `Day.exerciseIds`, the array order IS the presentation order.
    *
    * The videos are stored **inside** the exercise, as values rather than as
    * records of their own. That is the difference from a warm-up: "Rotação de
@@ -101,38 +101,6 @@ export interface Exercise {
    * would be write cost with no read behind it.
    */
   videos: ExerciseVideo[]
-  /**
-   * Warm-ups linked to this exercise, in the order the viewer pages through
-   * them — like `Day.exerciseIds`, the array order IS the presentation order.
-   *
-   * Unlike `alternativeIds`, this relation is **asymmetric**: "B is an
-   * alternative of A" implies the reverse, but "this warm-up serves the bench
-   * press" implies nothing about anything else. So the list lives only here,
-   * and there is no symmetry for a repository function to maintain.
-   *
-   * Indexed multiEntry (`*warmupIds`) so "which exercises use this warm-up" —
-   * needed when one is deleted — is a query rather than a scan.
-   */
-  warmupIds: number[]
-}
-
-/**
- * A warm-up: a name and one piece of media, reusable across exercises.
- *
- * Deliberately NOT carrying the media's type. How the URL is presented (image,
- * video, external link) is derived from the URL itself — see
- * `lib/embedMedia.ts`. A stored `kind` would be a second source of truth about
- * the same string, free to drift from it, and nothing here needs the durability
- * argument that makes `Session.kind` a snapshot.
- *
- * Not per-gym: like an exercise's alternatives, a warm-up is a property of the
- * movement, not of the building.
- */
-export interface Warmup {
-  id?: number
-  name: string
-  /** http(s) URL of an image, a video file, or a page to open outside the app. */
-  url: string
 }
 
 export interface Day {

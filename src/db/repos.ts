@@ -1,3 +1,12 @@
+import type { Table } from 'dexie'
+import {
+  USER_ID_BASE,
+  isOfficialId,
+  officialCategories,
+  officialCategory,
+  officialExercise,
+  officialExercises,
+} from '../data/officialCatalog'
 import { readImage, removeImage, sweepOrphans, writeImage } from '../data/photoStore'
 import { isValidEmbedUrl } from '../lib/embedMedia'
 import { db, type MyOneGymDB } from './db'
@@ -14,7 +23,6 @@ import {
   type Session,
   type SessionEntry,
   type Unit,
-  type Warmup,
   type Weight,
   type WeightHistory,
   type WeightScope,
@@ -27,6 +35,58 @@ function requireName(name: string, what = 'nome'): string {
   const trimmed = name.trim()
   if (!trimmed) throw new ValidationError(`Informe um ${what}.`)
   return trimmed
+}
+
+/** Refuse to write to the official catalog, which lives in the bundle and has
+ *  no row to write to. Screens hide these actions; this is what makes the rule
+ *  true for whoever calls the function. */
+function refuseOfficial(id: number, what: 'exercício' | 'categoria'): void {
+  if (isOfficialId(id)) {
+    throw new ValidationError(`Este ${what} é oficial e não pode ser alterado.`)
+  }
+}
+
+/**
+ * The id for a record the user is creating — always above `USER_ID_BASE`.
+ *
+ * Assigned here rather than by Dexie's `++id` because neither state the app can
+ * be in gives that counter a safe starting point: emptying an object store does
+ * NOT reset the key generator (an upgraded device would carry on from the
+ * catalog's own numbers), and a fresh install starts it at 1. Both land inside
+ * the official range.
+ *
+ * Callers run it inside their write transaction, so reading the highest key and
+ * inserting are one atomic step and two concurrent creates cannot agree on the
+ * same number.
+ */
+async function nextUserId<T extends { id?: number }>(table: Table<T, number>): Promise<number> {
+  const highest = await table.orderBy(':id').last()
+  return Math.max(USER_ID_BASE, highest?.id ?? 0) + 1
+}
+
+/** Both catalogs sort by name, in Portuguese: the merged list is built in JS, so
+ *  the IndexedDB key order `orderBy('name')` used to give (accent- and
+ *  case-sensitive) is neither available nor wanted. */
+function byName<T extends { name: string }>(a: T, b: T): number {
+  return a.name.localeCompare(b.name, 'pt-BR')
+}
+
+/**
+ * The exercise with this id, from **either** source.
+ *
+ * Every read of a single exercise goes through here: an id below
+ * `USER_ID_BASE` is answered by the bundled catalog, anything else by the
+ * database. `undefined` means the same as it always did — nothing carries that
+ * id — whether because the row was deleted or because the file no longer
+ * carries it.
+ */
+export async function getExercise(id: number, d: MyOneGymDB = db): Promise<Exercise | undefined> {
+  return isOfficialId(id) ? officialExercise(id) : d.exercises.get(id)
+}
+
+/** The category with this id, from either source — see `getExercise`. */
+export async function getCategory(id: number, d: MyOneGymDB = db): Promise<Category | undefined> {
+  return isOfficialId(id) ? officialCategory(id) : d.categories.get(id)
 }
 
 /**
@@ -100,12 +160,18 @@ export async function deleteGym(id: number, d: MyOneGymDB = db): Promise<void> {
 
 /* ------------------------------------------------------------ categories */
 
+/** Both sources in one list — the official catalog plus the user's own. */
 export async function listCategories(d: MyOneGymDB = db): Promise<Category[]> {
-  return d.categories.orderBy('name').toArray()
+  const own = await d.categories.toArray()
+  return [...officialCategories(), ...own].sort(byName)
 }
 
 async function assertUniqueCategory(name: string, d: MyOneGymDB, exceptId?: number) {
-  const clash = await d.categories.where('name').equalsIgnoreCase(name).first()
+  // Across BOTH sources: two categories with the same name would be
+  // indistinguishable in the picker, and the user would have no way to know
+  // which one an exercise ended up in.
+  const official = officialCategories().find((c) => c.name.toLowerCase() === name.toLowerCase())
+  const clash = official ?? (await d.categories.where('name').equalsIgnoreCase(name).first())
   if (clash && clash.id !== exceptId) {
     throw new ValidationError(`Já existe a categoria "${clash.name}".`)
   }
@@ -115,12 +181,13 @@ export async function createCategory(name: string, d: MyOneGymDB = db): Promise<
   const clean = requireName(name, 'nome da categoria')
   return d.transaction('rw', d.categories, async () => {
     await assertUniqueCategory(clean, d)
-    return d.categories.add({ name: clean })
+    return d.categories.add({ id: await nextUserId(d.categories), name: clean })
   })
 }
 
 export async function renameCategory(id: number, name: string, d: MyOneGymDB = db): Promise<void> {
   const clean = requireName(name, 'nome da categoria')
+  refuseOfficial(id, 'categoria')
   await d.transaction('rw', d.categories, async () => {
     await assertUniqueCategory(clean, d, id)
     await d.categories.update(id, { name: clean })
@@ -134,6 +201,7 @@ export async function renameCategory(id: number, name: string, d: MyOneGymDB = d
  * change. Any category may be deleted — there is no reserved bucket.
  */
 export async function deleteCategory(id: number, d: MyOneGymDB = db): Promise<void> {
+  refuseOfficial(id, 'categoria')
   await d.transaction('rw', d.categories, d.exercises, async () => {
     if (!(await d.categories.get(id))) return
     await d.exercises
@@ -148,14 +216,17 @@ export async function deleteCategory(id: number, d: MyOneGymDB = db): Promise<vo
 
 /* ------------------------------------------------------------- exercises */
 
+/** Both sources in one list — the official catalog plus the user's own. */
 export async function listExercises(d: MyOneGymDB = db): Promise<Exercise[]> {
-  return d.exercises.orderBy('name').toArray()
+  const own = await d.exercises.toArray()
+  return [...officialExercises(), ...own].sort(byName)
 }
 
-/** The Cardio tab's list: cardio exercises, by name. Indexed on `kind`. */
+/** The Cardio tab's list: cardio exercises from both sources, by name. */
 export async function listCardioExercises(d: MyOneGymDB = db): Promise<Exercise[]> {
-  const rows = await d.exercises.where('kind').equals('cardio').toArray()
-  return rows.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const own = await d.exercises.where('kind').equals('cardio').toArray()
+  const official = officialExercises().filter((e) => e.kind === 'cardio')
+  return [...official, ...own].sort(byName)
 }
 
 /** The days that currently contain `exerciseId` — what the UI names in the
@@ -178,17 +249,6 @@ export function validateMediaUrl(url: string | undefined): string | undefined {
   return clean
 }
 
-/** Validate a warm-up URL: http(s) is the whole rule. Unlike an exercise's
- *  media, a warm-up may point at a page — the viewer decides how to present it
- *  from the URL (see lib/embedMedia). */
-function requireWarmupUrl(url: string): string {
-  const clean = (url ?? '').trim()
-  if (!clean) throw new ValidationError('Informe a URL do aquecimento.')
-  if (!isValidEmbedUrl(clean)) {
-    throw new ValidationError('URL inválida (use http:// ou https://).')
-  }
-  return clean
-}
 
 /**
  * Validate and normalise one exercise video.
@@ -239,7 +299,6 @@ export async function createExercise(
     mediaUrl?: string
     categoryIds?: number[]
     alternativeIds?: number[]
-    warmupIds?: number[]
     videos?: ExerciseVideo[]
   },
   d: MyOneGymDB = db,
@@ -249,6 +308,7 @@ export async function createExercise(
   const videos = requireVideos(input.videos)
   return d.transaction('rw', d.exercises, async () => {
     const id = await d.exercises.add({
+      id: await nextUserId(d.exercises),
       name,
       // Strength is the default: it is what every exercise was before the kind
       // existed, and what most of them go on being.
@@ -256,8 +316,6 @@ export async function createExercise(
       mediaUrl,
       categoryIds: input.categoryIds ?? [],
       alternativeIds: [],
-      // Order is meaning here: it is the order the warm-up viewer pages through.
-      warmupIds: input.warmupIds ?? [],
       videos,
     })
     // Through setAlternatives, never by writing the field: the set has to stay
@@ -287,11 +345,11 @@ export async function updateExercise(
     mediaUrl?: string
     categoryIds?: number[]
     alternativeIds?: number[]
-    warmupIds?: number[]
     videos?: ExerciseVideo[]
   },
   d: MyOneGymDB = db,
 ): Promise<Day[]> {
+  refuseOfficial(id, 'exercício')
   const name = requireName(input.name, 'nome do exercício')
   const mediaUrl = validateMediaUrl(input.mediaUrl)
   // Validated before the transaction opens, like the name and the media URL:
@@ -305,9 +363,6 @@ export async function updateExercise(
       kind,
       mediaUrl,
       categoryIds: input.categoryIds ?? [],
-      // `undefined` means "this caller isn't editing warm-ups" — the same
-      // contract `alternativeIds` uses just below.
-      ...(input.warmupIds !== undefined ? { warmupIds: input.warmupIds } : {}),
       ...(videos !== undefined ? { videos } : {}),
     })
 
@@ -330,61 +385,6 @@ export async function updateExercise(
   })
 }
 
-/* -------------------------------------------------------------- warm-ups */
-
-export async function listWarmups(d: MyOneGymDB = db): Promise<Warmup[]> {
-  return d.warmups.orderBy('name').toArray()
-}
-
-export async function createWarmup(
-  input: { name: string; url: string },
-  d: MyOneGymDB = db,
-): Promise<number> {
-  return d.warmups.add({
-    name: requireName(input.name, 'nome do aquecimento'),
-    url: requireWarmupUrl(input.url),
-  })
-}
-
-export async function updateWarmup(
-  id: number,
-  input: { name: string; url: string },
-  d: MyOneGymDB = db,
-): Promise<void> {
-  await d.warmups.update(id, {
-    name: requireName(input.name, 'nome do aquecimento'),
-    url: requireWarmupUrl(input.url),
-  })
-}
-
-/**
- * Delete a warm-up and unlink it from every exercise that listed it.
- *
- * Deleting is never blocked by being in use — the app fixes the reference
- * instead of forbidding the action, the same call category deletion and
- * exercise deletion already make. The multiEntry `*warmupIds` index is what
- * makes "who points at me" a query rather than a scan of the catalogue.
- */
-export async function deleteWarmup(id: number, d: MyOneGymDB = db): Promise<void> {
-  await d.transaction('rw', d.warmups, d.exercises, async () => {
-    await d.exercises
-      .where('warmupIds')
-      .equals(id)
-      .modify((ex) => {
-        ex.warmupIds = (ex.warmupIds ?? []).filter((x) => x !== id)
-      })
-    await d.warmups.delete(id)
-  })
-}
-
-/** The exercises currently linked to `warmupId` — what the list counts. */
-export async function exercisesUsingWarmup(
-  warmupId: number,
-  d: MyOneGymDB = db,
-): Promise<Exercise[]> {
-  return d.exercises.where('warmupIds').equals(warmupId).toArray()
-}
-
 /**
  * Declare which exercises `exerciseId` can be swapped for, keeping the relation
  * symmetric (see `Exercise.alternativeIds`).
@@ -396,6 +396,11 @@ export async function exercisesUsingWarmup(
  * (the bench press swaps for the machine *and* for the fly, which never become
  * alternatives of each other).
  *
+ * An **official** exercise may be picked as a peer, but never edited as the
+ * subject: it has no row to write to. That one-sidedness is why the mirroring
+ * below skips official peers — and why the symmetry the user sees is restored
+ * when the list is *read* instead (see `lib/alternatives`).
+ *
  * This is the ONLY writer of the symmetry — every caller goes through here.
  */
 export async function setAlternatives(
@@ -403,23 +408,27 @@ export async function setAlternatives(
   ids: number[],
   d: MyOneGymDB = db,
 ): Promise<void> {
+  refuseOfficial(exerciseId, 'exercício')
   await d.transaction('rw', d.exercises, async () => {
     const self = await d.exercises.get(exerciseId)
     if (!self) throw new ValidationError('Exercício não encontrado.')
 
     // A stale pick can't resurrect a deleted exercise, and nothing is its own
-    // alternative.
+    // alternative. An official peer is resolved against the bundle.
     const next: number[] = []
     for (const id of ids) {
       if (id === exerciseId || next.includes(id)) continue
-      if (await d.exercises.get(id)) next.push(id)
+      if (await getExercise(id, d)) next.push(id)
     }
     await d.exercises.update(exerciseId, { alternativeIds: next })
 
     // Mirror onto the peers: add the back-link where it's new, drop it where
     // the edit removed it. Only this exercise's own id is ever touched on
     // them, so their other alternatives are none of this edit's business.
+    // Official peers are skipped — nothing to write, and nothing that needs
+    // writing, because the read side unions the referrers back in.
     for (const id of next) {
+      if (isOfficialId(id)) continue
       const peer = await d.exercises.get(id)
       const peers = peer?.alternativeIds ?? []
       if (!peers.includes(exerciseId)) {
@@ -427,7 +436,7 @@ export async function setAlternatives(
       }
     }
     for (const gone of self.alternativeIds ?? []) {
-      if (next.includes(gone)) continue
+      if (next.includes(gone) || isOfficialId(gone)) continue
       const peer = await d.exercises.get(gone)
       if (!peer) continue
       await d.exercises.update(gone, {
@@ -442,6 +451,7 @@ export async function setAlternatives(
  * and drop its weights, history, per-gym notes, and per-gym photos.
  */
 export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<void> {
+  refuseOfficial(id, 'exercício')
   const files = await photoFilesWhere('exerciseId', id, d)
   // Array form: Dexie's typed overloads stop at 5 tables.
   await d.transaction(
@@ -952,7 +962,7 @@ export async function startSession(
       status: 'active',
     })
     for (const exId of day.exerciseIds) {
-      const ex = await d.exercises.get(exId)
+      const ex = await getExercise(exId, d)
       if (!ex) continue
       await d.sessionEntries.add({
         sessionId,
@@ -994,7 +1004,7 @@ export async function startCardioSession(
     if (active) {
       throw new ValidationError('Já existe um treino em andamento nesta academia.')
     }
-    const ex = await d.exercises.get(exerciseId)
+    const ex = await getExercise(exerciseId, d)
     if (!ex) throw new ValidationError('Exercício não encontrado.')
     if (ex.kind !== 'cardio') throw new ValidationError('Este exercício não é de cardio.')
 
@@ -1104,11 +1114,18 @@ export async function swapEntryExercise(
     const session = await d.sessions.get(entry.sessionId)
     if (session?.status !== 'active') throw new ValidationError('Este treino já foi concluído.')
 
-    const current = entry.exerciseId != null ? await d.exercises.get(entry.exerciseId) : undefined
-    if (!current?.alternativeIds?.includes(exerciseId)) {
+    const current = entry.exerciseId != null ? await getExercise(entry.exerciseId, d) : undefined
+    const ex = await getExercise(exerciseId, d)
+    // The pair is checked from BOTH sides. A link between a user exercise and
+    // an official one is stored on the user's record alone (see
+    // `setAlternatives`), so reading only the current exercise's list would
+    // refuse a swap the user legitimately declared — from the other side.
+    const linked =
+      current?.alternativeIds?.includes(exerciseId) ||
+      (entry.exerciseId != null && ex?.alternativeIds?.includes(entry.exerciseId))
+    if (!linked) {
       throw new ValidationError('Este exercício não é uma alternativa do atual.')
     }
-    const ex = await d.exercises.get(exerciseId)
     if (!ex) throw new ValidationError('Exercício não encontrado.')
     await d.sessionEntries.update(entryId, { exerciseId, exerciseName: ex.name })
   })

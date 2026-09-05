@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
 import { db } from '../../db/db'
@@ -33,7 +33,10 @@ describe('Exercises list — training days per item', () => {
     // from the same-named options in the new day filter `<select>`.
     expect(await screen.findByText('Dia 1', { selector: '.chip' })).toBeInTheDocument()
     expect(screen.getByText('Dia 2', { selector: '.chip' })).toBeInTheDocument()
-    expect(screen.getByText('Nenhum dia', { selector: '.row-sub' })).toBeInTheDocument() // Alongamento
+    // Scoped to its own row: "Nenhum dia" is now the normal state of every
+    // official exercise too, so the page-wide query would be ambiguous.
+    const alongamento = screen.getByText('Alongamento').closest('.row') as HTMLElement
+    expect(within(alongamento).getByText('Nenhum dia', { selector: '.row-sub' })).toBeInTheDocument()
 
     // Remove Rosca from Dia 1 → its "Dia 1" chip disappears, "Dia 2" stays.
     await updateDay(dia1, { name: 'Dia 1', exerciseIds: [] }, db)

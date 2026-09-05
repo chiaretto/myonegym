@@ -1,24 +1,22 @@
+import { USER_ID_BASE, isOfficialId, officialExercise } from './officialCatalog'
+import { EXAMPLE_DAYS, EXAMPLE_GYM, EXAMPLE_WEIGHTS } from './exampleRoutine'
 import { allTables, db, promoteWeightsToGlobal, type MyOneGymDB } from '../db/db'
 import { GLOBAL_GYM_ID, UNCATEGORIZED } from '../db/types'
 import type {
   Category,
   Day,
   Exercise,
-  ExerciseKind,
   ExerciseNote,
   ExercisePhoto,
   Gym,
   Session,
   SessionEntry,
-  Unit,
-  Warmup,
   Weight,
   WeightHistory,
 } from '../db/types'
 import { mirrorSymmetric } from './alternativesRepair'
 import { base64ToBytes, bytesToBase64 } from './base64'
 import { clearImages, readImage, removeImage, writeImage, type StoredImage } from './photoStore'
-import exampleBackup from './example-data.json'
 
 export const APP_TAG = 'myonegym'
 // v6: a weight is GLOBAL by default — its `gymId` is `GLOBAL_GYM_ID`, which
@@ -34,6 +32,12 @@ export const APP_TAG = 'myonegym'
 // v4: the backup carries the WHOLE database — weight history, sessions and photos
 // included (photos base64-encoded). Older backups (v3 and earlier) omit some of
 // these arrays and still import (missing tables restore empty).
+// The **warm-ups** were removed from the app, so the document no longer carries
+// them. The version is deliberately NOT bumped: neither direction misreads the
+// other. A new file has no `warmups` key, which an older app already treats as
+// "none" (it is how it reads a backup predating warm-ups); an older file has the
+// key, which this version ignores. Bumping would only make old files look
+// unrestorable when they are not.
 export const SCHEMA_VERSION = 6
 
 /**
@@ -43,14 +47,6 @@ export const SCHEMA_VERSION = 6
  */
 export const GLOBAL_WEIGHTS_VERSION = 6
 
-/** Bundled sample routine (issue #4) used by "Gerar exemplo". */
-const EXAMPLE_DATA = exampleBackup as unknown as {
-  gyms: { id?: number; name: string }[]
-  categories: { id?: number; name: string }[]
-  exercises: { id?: number; name: string; mediaUrl?: string; categoryId?: number; kind?: ExerciseKind }[]
-  days: { id?: number; name: string; exerciseIds?: number[] }[]
-  weights: { gymId: number; exerciseId: number; value: number; unit: Unit }[]
-}
 
 export class PortabilityError extends Error {}
 
@@ -95,7 +91,6 @@ export interface BackupDoc {
   weights: Weight[]
   weightHistory: WeightHistory[]
   sessions: Session[]
-  warmups: Warmup[]
   sessionEntries: SessionEntry[]
   exerciseNotes: ExerciseNote[]
   exercisePhotos: SerializedPhoto[]
@@ -115,7 +110,6 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos,
-    warmups,
   ] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
@@ -127,7 +121,6 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     d.sessionEntries.toArray(),
     d.exerciseNotes.toArray(),
     d.exercisePhotos.toArray(),
-    d.warmups.toArray(),
   ])
   return {
     app: APP_TAG,
@@ -144,7 +137,6 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos: await serializePhotos(exercisePhotos),
-    warmups,
   }
 }
 
@@ -213,12 +205,63 @@ export function parseBackup(json: string): BackupDoc {
       throw new PortabilityError(`Documento inválido: "${k}" deve ser uma lista.`)
     }
   }
+  dropRemovedFields(obj)
+  dropOfficialRecords(obj)
   normalizeCategories(obj)
   normalizeKinds(obj)
-  normalizeWarmups(obj)
   normalizeVideos(obj)
   normalizeAlternatives(obj)
   return obj as unknown as BackupDoc
+}
+
+/**
+ * Strip fields the app no longer has, so a restored record matches the shape
+ * this version writes.
+ *
+ * Only `warmupIds` so far: warm-ups were removed, and every backup taken before
+ * that carries the field. Nothing reads it, so leaving it would be harmless —
+ * and permanent, since the v13 upgrade that cleaned the field out of the
+ * database ran before this document arrived. A restore should not be the way
+ * dead fields come back.
+ */
+function dropRemovedFields(obj: Record<string, unknown>): void {
+  for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) delete ex.warmupIds
+  delete obj.warmups
+}
+
+/**
+ * Drop the catalog rows a document carries inside the **official id range**.
+ *
+ * This is not an edge case — it is what **every backup made before the catalog
+ * moved into the bundle** looks like. Those files were exported while the
+ * catalog was still database rows, so they carry the official exercises and
+ * categories with the very ids the app now serves from the file. Restoring them
+ * as they are would recreate exactly the rows the v13 upgrade removed, and a
+ * stale catalog would shadow the app's for good.
+ *
+ * Dropping them is the same swap of source the upgrade performs, applied to a
+ * document, and it is safe for the same reason: the identity does not change.
+ * The days, weights, history, notes, photos and sessions in the file keep
+ * pointing at the same numbers, and those numbers keep meaning the same
+ * movements — so the references are restored untouched (see
+ * `normalizeAlternatives`, which had to learn the same thing).
+ *
+ * A record with **no** id is renumbered into the user range instead of dropped:
+ * nothing can be referencing it (it had no id to reference), but letting Dexie's
+ * key generator name it could land it in the reserved range.
+ */
+function dropOfficialRecords(obj: Record<string, unknown>): void {
+  let next = USER_ID_BASE
+  const clean = (rows: Record<string, unknown>[]) =>
+    rows.filter((r) => {
+      if (typeof r.id !== 'number') {
+        r.id = ++next
+        return true
+      }
+      return !isOfficialId(r.id)
+    })
+  obj.categories = clean(obj.categories as Record<string, unknown>[])
+  obj.exercises = clean(obj.exercises as Record<string, unknown>[])
 }
 
 /**
@@ -241,20 +284,30 @@ export function parseBackup(json: string): BackupDoc {
 function normalizeAlternatives(obj: Record<string, unknown>): void {
   const exercises = obj.exercises as Record<string, unknown>[]
 
-  const repaired = mirrorSymmetric(
-    exercises
-      // No id, so nothing can point at it — and it cannot point at anything.
-      .filter((ex) => typeof ex.id === 'number')
-      .map((ex) => ({
-        key: ex.id as number,
-        peers: Array.isArray(ex.alternativeIds) ? (ex.alternativeIds as number[]) : [],
-      })),
-    (a, b) => a - b,
-  )
+  // A link to the OFFICIAL catalog is set aside first. It is not dangling — it
+  // resolves against the bundle, which is where that id has always lived — and
+  // it must not be mirrored, because the official record has no row to write a
+  // back-link to. The read side unions the referrers back in instead (see
+  // `lib/alternatives`). Dropping these here would quietly delete the
+  // user→official links out of every restore.
+  const officialPeers = new Map<number, number[]>()
+  const entries = exercises
+    // No id, so nothing can point at it — and it cannot point at anything.
+    .filter((ex) => typeof ex.id === 'number')
+    .map((ex) => {
+      const all = Array.isArray(ex.alternativeIds) ? (ex.alternativeIds as number[]) : []
+      officialPeers.set(ex.id as number, all.filter(isOfficialId))
+      return { key: ex.id as number, peers: all.filter((p) => !isOfficialId(p)) }
+    })
+
+  const repaired = mirrorSymmetric(entries, (a, b) => a - b)
 
   for (const ex of exercises) {
-    const peers = typeof ex.id === 'number' ? repaired.get(ex.id) : undefined
-    ex.alternativeIds = peers ?? []
+    if (typeof ex.id !== 'number') {
+      ex.alternativeIds = []
+      continue
+    }
+    ex.alternativeIds = [...(officialPeers.get(ex.id) ?? []), ...(repaired.get(ex.id) ?? [])]
   }
 }
 
@@ -292,23 +345,6 @@ function normalizeCategories(obj: Record<string, unknown>): void {
  * unrestorable — the whole point of a safety-net backup is that old files still
  * open.
  */
-/**
- * Back-compat for backups made before warm-ups existed: no `warmups` list and
- * no `warmupIds` on an exercise. Both mean "none" — an older app simply had
- * none — so they default to empty instead of being rejected.
- *
- * A link pointing at a warm-up the document does not carry is dropped rather
- * than restored: a reference to a record that will not exist is worse than no
- * reference at all.
- */
-function normalizeWarmups(obj: Record<string, unknown>): void {
-  const warmups = (obj.warmups ?? []) as Record<string, unknown>[]
-  const known = new Set(warmups.map((w) => w.id))
-  for (const ex of (obj.exercises ?? []) as Record<string, unknown>[]) {
-    const ids = Array.isArray(ex.warmupIds) ? (ex.warmupIds as number[]) : []
-    ex.warmupIds = ids.filter((id) => known.has(id))
-  }
-}
 
 /**
  * Back-compat for backups made before an exercise carried videos: no `videos`
@@ -318,7 +354,7 @@ function normalizeWarmups(obj: Record<string, unknown>): void {
  * video lives INSIDE its exercise, so it arrives and leaves with it. That is a
  * direct consequence of it not being a record of its own.
  *
- * No document version bump, for the same reason `warmups` needed none: an
+ * No document version bump, for the same reason the videos needed none: an
  * absent optional field that defaults to empty leaves every older file
  * restorable.
  */
@@ -385,7 +421,6 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     await Promise.all(allTables(d).map((t) => t.clear()))
     await d.gyms.bulkAdd(doc.gyms)
     await d.categories.bulkAdd(doc.categories)
-    if (doc.warmups?.length) await d.warmups.bulkAdd(doc.warmups)
     await d.exercises.bulkAdd(doc.exercises)
     await d.days.bulkAdd(doc.days)
     await d.weights.bulkAdd(doc.weights)
@@ -420,65 +455,46 @@ export async function resetAll(d: MyOneGymDB = db): Promise<void> {
 
 /* --------------------------------------------------------------- example */
 
-async function getOrCreateCategory(name: string, d: MyOneGymDB): Promise<number> {
-  const existing = await d.categories.where('name').equalsIgnoreCase(name).first()
-  if (existing?.id != null) return existing.id
-  return d.categories.add({ name })
-}
-
 /**
- * Populate a realistic sample routine from the bundled dataset (issue #4).
- * Inserted additively with remapped ids so existing data is never overwritten
- * and references stay intact. The example gym + weights are seeded only when no
- * gym exists yet; the day's own category (from the dataset) is ignored — day
- * categories are derived from the day's exercises.
+ * Write the sample routine (see `data/exampleRoutine`).
+ *
+ * CHANGED: it used to bring its own 8 categories and 29 exercises and insert
+ * them with remapped ids. Now that the app **ships** a catalog, creating a
+ * second "Supino Reto" beside the one already on screen made the starting point
+ * start by duplicating the app — so the sample references the official ids
+ * instead, and creates only what is genuinely the user's: four days, a gym and
+ * a few weights.
+ *
+ * Additive and safe: nothing existing is overwritten, and the gym is seeded only
+ * when there is none.
  */
 export async function generateExample(d: MyOneGymDB = db): Promise<void> {
-  const catRemap = new Map<number, number>() // dataset categoryId -> local id
-  for (const c of EXAMPLE_DATA.categories) {
-    const id = await getOrCreateCategory(c.name, d)
-    if (c.id != null) catRemap.set(c.id, id)
-  }
-
-  const exRemap = new Map<number, number>() // dataset exerciseId -> local id
-  for (const e of EXAMPLE_DATA.exercises) {
-    const mapped = e.categoryId != null ? catRemap.get(e.categoryId) : undefined
-    const categoryIds = mapped != null ? [mapped] : []
-    // The sample routine declares no alternatives, warm-ups or videos — it is a
-    // starting point, not a showcase of every feature.
-    const id = await d.exercises.add({
-      name: e.name,
-      kind: e.kind ?? 'strength',
-      mediaUrl: e.mediaUrl,
-      categoryIds,
-      alternativeIds: [],
-      warmupIds: [],
-      videos: [],
-    })
-    if (e.id != null) exRemap.set(e.id, id)
-  }
-
-  for (const day of EXAMPLE_DATA.days) {
-    const exerciseIds = (day.exerciseIds ?? [])
-      .map((exId) => exRemap.get(exId))
-      .filter((x): x is number => x != null)
+  // The days reference the OFFICIAL catalog — nothing is created for them. An id
+  // the catalog no longer carries is dropped rather than written as a dangling
+  // reference; `exampleRoutine.test.ts` is what makes that a build failure
+  // instead of a day that quietly comes up short.
+  for (const day of EXAMPLE_DAYS) {
+    const exerciseIds = day.exerciseIds.filter((id) => officialExercise(id) != null)
     await d.days.add({ name: day.name, exerciseIds })
   }
 
-  // Seed the example gym + the sample weights (with a history entry) only when
-  // no gym exists yet — don't add a second gym over the user's own. The weights
-  // are **global**: they belong to the exercises, not to the example gym, and a
-  // second gym created later shows them without copying anything.
-  const gymCount = await d.gyms.count()
-  if (gymCount === 0 && EXAMPLE_DATA.gyms.length) {
-    await d.gyms.add({ name: EXAMPLE_DATA.gyms[0].name, createdAt: Date.now() })
-    for (const w of EXAMPLE_DATA.weights) {
-      const exerciseId = exRemap.get(w.exerciseId)
-      if (exerciseId == null) continue
-      await d.weights.add({ gymId: GLOBAL_GYM_ID, exerciseId, value: w.value, unit: w.unit })
+  // The gym and the sample weights only when no gym exists yet — don't add a
+  // second gym over the user's own. The weights are **global**: they belong to
+  // the exercises, not to the example gym, and a second gym created later shows
+  // them without copying anything.
+  if ((await d.gyms.count()) === 0) {
+    await d.gyms.add({ name: EXAMPLE_GYM, createdAt: Date.now() })
+    for (const w of EXAMPLE_WEIGHTS) {
+      if (!officialExercise(w.exerciseId)) continue
+      await d.weights.add({
+        gymId: GLOBAL_GYM_ID,
+        exerciseId: w.exerciseId,
+        value: w.value,
+        unit: w.unit,
+      })
       await d.weightHistory.add({
         gymId: GLOBAL_GYM_ID,
-        exerciseId,
+        exerciseId: w.exerciseId,
         value: w.value,
         unit: w.unit,
         changedAt: Date.now(),

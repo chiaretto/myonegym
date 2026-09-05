@@ -27,11 +27,14 @@ export function TabBar({ active }: { active: 'home' | 'cardio' | 'sessions' | 's
       </Link>
       <Link to="/sessions" className={active === 'sessions' ? 'active' : ''}>
         <i className="png-ic pi-history" aria-hidden />
-        Consistência
+        Histórico
       </Link>
+      {/* Abbreviated, and only here: four labels share one row on a phone, and
+          "Configurações" is the one that forces the others to shrink. The screen
+          it opens keeps the whole word — that heading has the room. */}
       <Link to="/settings" className={active === 'settings' ? 'active' : ''}>
         <i className="png-ic pi-settings" aria-hidden />
-        Configurações
+        Config
       </Link>
     </nav>
   )
