@@ -171,6 +171,67 @@ Dizer isso é o que separa excluir do catálogo de excluir um rascunho.
 - WHEN o usuário desiste
 - THEN nada é removido do catálogo nem do disco
 
+### Requirement: The Screen Shows the Picture That Is on Disk Now
+
+Depois de gravar, a tela MUST exibir a imagem **como ela ficou**, não a de
+antes.
+
+Não é automático, e a razão é que trocar a imagem **mantém o nome do arquivo**:
+o nome vem do exercício, então substituir a imagem de "Remada Curvada" reescreve
+`remada-curvada-com-barra.webp`. E o service worker guarda `/exercises/` como
+*CacheFirst* por um ano — na premissa, declarada em `vite.config.ts`, de que
+essas imagens nunca mudam sem o nome mudar junto. Esta ferramenta quebra essa
+premissa de propósito.
+
+Então o endereço MUST carregar uma **versão**, e essa versão MUST vir do
+**arquivo** — não de um contador na tela. Um contador zera no próximo reload, e
+o endereço limpo volta a ser respondido pelo cache com a imagem de antes da
+gravação, enquanto aquele cache viver.
+
+Versionar MUST NOT atingir as imagens que não mudaram: trocar o endereço de
+todas faz o navegador rebaixar a lista inteira a cada gravação.
+
+#### Scenario: A imagem nova aparece
+- GIVEN um exercício cuja imagem foi substituída por outra URL
+- WHEN a gravação termina
+- THEN a tela exibe a imagem nova, e não a que estava em cache
+
+#### Scenario: E continua aparecendo depois de recarregar
+- GIVEN a página é recarregada depois dessa gravação
+- WHEN a tela abre de novo
+- THEN ela ainda pede a imagem nova
+
+#### Scenario: As outras imagens não são rebaixadas
+- GIVEN uma gravação que trocou a imagem de um exercício
+- WHEN a lista volta a ser exibida
+- THEN o endereço das imagens dos outros exercícios continua o mesmo
+
+### Requirement: Saving Does Not Reload the App
+
+Gravar MUST NOT recarregar a aplicação.
+
+`officialCatalog.json` é importado pelo app, então está no grafo de módulos do
+dev server — e um import de JSON não aceita atualização a quente, o que faz o
+Vite cair para um **reload da página inteira**. Sem tratamento, cada gravação
+recarregava o app por baixo da própria tela que estava gravando: o formulário
+fechava, o scroll voltava, o filtro esvaziava.
+
+Só as gravações **da própria ferramenta** MUST ser silenciadas, e o
+silenciamento MUST durar o que a gravação durar — baixar e converter uma imagem
+grande leva o tempo que levar, e um prazo fixo expiraria no meio. Editar o
+arquivo **à mão** MUST continuar recarregando: é o que se quer quando o que se
+está olhando é o app, e não a ferramenta.
+
+#### Scenario: Gravar não recarrega
+- GIVEN a tela de admin aberta
+- WHEN o usuário grava um exercício, com ou sem imagem nova
+- THEN a página não recarrega, e o formulário continua onde estava
+
+#### Scenario: Editar o arquivo à mão recarrega
+- GIVEN o arquivo do catálogo editado fora da ferramenta
+- WHEN o dev server percebe a mudança
+- THEN a página recarrega, como para qualquer outro arquivo do app
+
 ---
 
 ## REMOVED

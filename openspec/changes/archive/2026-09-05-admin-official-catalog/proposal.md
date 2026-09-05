@@ -180,3 +180,37 @@ brigam pelo mesmo arquivo a cada commit.
 | Um id reaproveitado dá a um exercício novo o histórico de um antigo | Baixa | **Alto** | O próximo id vem do maior já usado, e a exclusão não o devolve; teste do contrato. |
 | A tela entra no bundle sem ninguém notar | Baixa | Médio | Teste que falha se o `dist` mencionar a rota. |
 | O download trava a gravação (site lento, fora do ar) | Média | Baixo | Tempo limite; a falha é relatada e o resto da gravação acontece — o exercício fica sem `mediaFile`, que é um estado que o app já exibe. |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-09-05
+**Duration:** mesmo dia
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `scripts/exerciseMedia.mjs`, `scripts/exerciseMedia.d.mts` — slug, largura,
+  conversão, download, renomeação, cópia e procedência num módulo só,
+  compartilhado pelo gerador e pelo admin
+- `scripts/adminApi.ts` — o plugin do Vite: recusa fora de localhost, as rotas,
+  os invariantes do catálogo, e o silenciamento do HMR nas gravações próprias
+- `src/features/admin/` — a tela, atrás de `import.meta.env.DEV`
+- `src/data/officialCatalog.json` — `retiredCategoryIds`/`retiredExerciseIds`
+- `vite.config.ts`, `src/App.tsx`, `openspec/project.md`
+
+### Specs Updated
+- `openspec/specs/admin/spec.md` (capability nova)
+
+### Learned in Implementation
+Duas exigências que a proposta não previa, e que a implementação obrigou a
+descobrir — ambas agora no spec:
+
+- **a imagem precisa ser versionada pelo arquivo.** Trocar a imagem mantém o
+  nome, e o service worker guarda `/exercises/` como CacheFirst por um ano, na
+  premissa de que essas imagens nunca mudam sem o nome mudar junto. Um contador
+  na tela não resolve: zera no reload;
+- **gravar não pode recarregar o app.** O catálogo está no grafo de módulos do
+  dev server, e um import de JSON não aceita hot update — o Vite cai para um
+  reload da página, por baixo da própria tela que está gravando.
+
