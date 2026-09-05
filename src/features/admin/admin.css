@@ -10,10 +10,24 @@
  * second palette would just be another thing to keep in step.
  */
 
+/**
+ * The app shell is a 480px phone column (`.app` in global.css) wrapped around
+ * every route, this one included — so widening `.admin` alone does nothing.
+ *
+ * `:has()` lets the tool lift that cap **for itself**, from its own stylesheet,
+ * without a mobile-first shell learning that a desktop screen exists. The rule
+ * leaves with this file when the build folds the admin away, and it can only
+ * ever match while the tool is on screen.
+ */
+.app:has(.admin) {
+  max-width: none;
+}
+
 .admin {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 20px 24px 80px;
+  /* No cap: it is a maintenance tool on the monitor that holds the repository,
+     and the whole point of it is seeing the catalog at once. */
+  width: 100%;
+  padding: 20px 28px 80px;
 }
 
 .admin-head {
@@ -39,9 +53,11 @@
 
 .admin-cols {
   display: grid;
-  /* Categories are a short list of short names; exercises are the work. */
-  grid-template-columns: minmax(240px, 1fr) minmax(0, 3fr);
-  gap: 24px;
+  /* Categories are a short list of short names; exercises are the work, and
+     their form spreads into several fields per row — so the space goes there
+     rather than stretching two-word category names across a monitor. */
+  grid-template-columns: minmax(260px, 0.8fr) minmax(0, 4fr);
+  gap: 28px;
   align-items: start;
 }
 
