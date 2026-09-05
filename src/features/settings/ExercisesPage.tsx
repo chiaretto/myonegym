@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { isOfficialId } from '../../data/officialCatalog'
 import {
   createExercise,
@@ -23,12 +23,15 @@ import { alternativesOf } from '../../lib/alternatives'
 import { dayNamesForExercise, exerciseCategoryLabel, exerciseCategoryNames } from '../../lib/days'
 import {
   filterExercises,
+  filtersFromParams,
+  filtersToParams,
   type CategoryFilter,
   type DayFilter,
   type KindFilter,
 } from '../../lib/exerciseFilters'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
+import { StepperBar } from '../../ui/StepperBar'
 import { embedLinkLabel, supportsTimeRange } from '../../lib/embedMedia'
 import { formatRange, parseClock } from '../../lib/videoTime'
 // The videos section renders the same rows the Vídeos tab does.
@@ -68,11 +71,19 @@ export function ExercisesPage() {
   // `?? []` only feeds the filter — every branch that *claims* emptiness below
   // waits for `exs` itself, so a catalog that has not loaded yet is never
   // reported as "Nenhum exercício".
-  const filtered = filterExercises(
-    exs ?? [],
-    { search, category: categoryFilter, dayId: dayFilter, kind: kindSel },
-    days ?? [],
-  )
+  const activeFilters = { search, category: categoryFilter, dayId: dayFilter, kind: kindSel }
+  const filtered = filterExercises(exs ?? [], activeFilters, days ?? [])
+  /**
+   * The filters, carried into the view so it can walk the same list.
+   *
+   * In the address rather than in navigation state, for the reason the exercise
+   * detail already carries its day there: a walk has to survive a reload and a
+   * shared link, and the history stack survives neither.
+   */
+  const viewHref = (id: number) => {
+    const params = filtersToParams(activeFilters).toString()
+    return `/settings/exercises/${id}/view${params ? `?${params}` : ''}`
+  }
 
   const clearFilters = () => {
     setSearch('')
@@ -243,7 +254,7 @@ export function ExercisesPage() {
                 <button
                   className="icon-btn ghost"
                   aria-label={`Ver ${e.name}`}
-                  onClick={() => nav(`/settings/exercises/${e.id}/view`)}
+                  onClick={() => nav(viewHref(e.id!))}
                 >
                   <Icon name="eye" />
                 </button>
@@ -321,10 +332,16 @@ export function ExerciseFormPage() {
  * It accepts any id, official or not. A user's own exercise reaches the form
  * instead, which already shows everything this does — but a route that refuses
  * half the ids would be a trap for a shared link.
+ *
+ * It also **walks** the list it was opened from: the filters that were active
+ * ride in the query string, so Voltar/Avançar move through the same exercises,
+ * in the same order, that were on screen. See `filtersFromParams`.
  */
 export function ExerciseViewPage() {
   const { id } = useParams()
   const exerciseId = Number(id)
+  const nav = useNavigate()
+  const [params] = useSearchParams()
   const exercise = useLiveQuery(
     async () => (await getExercise(exerciseId, db)) ?? null,
     [exerciseId],
@@ -332,7 +349,21 @@ export function ExerciseViewPage() {
   )
   const catMap = useCategoryMap()
   const exMap = useExerciseMap()
+  const exs = useExercises()
+  const days = useDays()
   const toast = useToast()
+
+  // The very same filter the list applies, on the very same arguments. Two
+  // implementations of "which exercises are these" would diverge on the first
+  // filter anyone adds — and one was added to this list two days ago.
+  const walk = filterExercises(exs ?? [], filtersFromParams(params), days ?? [])
+  const at = walk.findIndex((e) => e.id === exerciseId)
+  // The query travels with every move, so a walk survives one.
+  const query = params.toString()
+  const hrefFor = (target: number) =>
+    `/settings/exercises/${target}/view${query ? `?${query}` : ''}`
+  /** Whether this exercise has a place in the walk — see the bar below. */
+  const walking = at >= 0 && walk.length > 1
   // Which video the modal is open on; null while it is closed. State rather than
   // a route: closing must return to this screen exactly as it was, and there is
   // nothing here to restore from a URL.
@@ -374,7 +405,7 @@ export function ExerciseViewPage() {
   return (
     <>
       <BackBar title={exercise.name} to="/settings/exercises" />
-      <main className="screen">
+      <main className={`screen${walking ? ' has-action-bar' : ''}`}>
         <div className="hero">
           <Media className="hero-media" url={exercise.mediaUrl} alt={exercise.name} />
         </div>
@@ -404,7 +435,7 @@ export function ExerciseViewPage() {
           {alts.length > 0 ? (
             <div className="group">
               {alts.map((a) => (
-                <Link key={a.id} className="row" to={`/settings/exercises/${a.id}/view`}>
+                <Link key={a.id} className="row" to={hrefFor(a.id!)}>
                   <Media className="thumb" url={a.mediaUrl} alt={a.name} />
                   <span className="row-body">
                     <span className="row-title">{a.name}</span>
@@ -488,6 +519,20 @@ export function ExerciseViewPage() {
           />
         )}
       </main>
+
+      {/* Only when this exercise HAS a place in the walk. A shared link carrying
+          other filters, an alternative reached from inside here, a search it
+          stopped matching — all land here with no defined "next", and a bar with
+          both sides dead is worse than no bar. The same call the exercise detail
+          makes when the exercise is not in the day. */}
+      {walking && (
+        <StepperBar
+          onPrev={() => at > 0 && nav(hrefFor(walk[at - 1].id!))}
+          onNext={() => at < walk.length - 1 && nav(hrefFor(walk[at + 1].id!))}
+          prevDisabled={at === 0}
+          nextDisabled={at === walk.length - 1}
+        />
+      )}
     </>
   )
 }

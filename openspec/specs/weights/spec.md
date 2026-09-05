@@ -605,6 +605,17 @@ dentro do próprio modal. Ela MUST NOT ser um segundo diálogo sobre o primeiro:
 duas camadas modais responderiam ambas ao Esc e escureceriam a tela duas vezes,
 por uma lista de poucos nomes.
 
+Cada academia da lista MUST exibir, ao lado do nome, **o peso que vale nela**
+para aquele exercício. A lista existe para ser **comparada**, e uma comparação
+que custa um toque por academia — perdendo o número anterior no caminho — não é
+uma comparação. Com o peso na linha, a pergunta "onde eu levanto quanto" se
+responde de uma olhada, e trocar de academia passa a ser o gesto de quem quer o
+**histórico**, não o número.
+
+O peso exibido MUST ser o que **vale** naquela academia: a exceção dela quando
+existe, e o peso global quando não. Uma academia sem peso algum MUST exibir uma
+marca de ausência, e MUST NOT exibir zero — zero é um peso, e nenhum peso não é.
+
 O modal MUST dizer **de qual peso** aquela linha do tempo é: o **global**, que
 vale em todas as academias, ou a **exceção daquela academia**. Isso não é
 rótulo: uma academia sem exceção resolve para o peso global, então duas
@@ -624,6 +635,17 @@ fazer.
 Como o título do modal passa a valer para qualquer academia, ele MUST NOT mais
 qualificar uma delas — a informação de escopo mora na linha descrita acima, onde
 também cabe o valor.
+
+#### Scenario: Cada academia mostra o próprio peso na lista
+- GIVEN o exercício tem peso global 22,5 KG e uma exceção de 60 KG na "B"
+- WHEN o usuário abre a lista de academias no modal
+- THEN a "B" aparece com 60 KG
+- AND as demais aparecem com 22,5 KG, que é o peso que vale nelas
+
+#### Scenario: Sem peso algum, nenhum zero
+- GIVEN um exercício sem peso global e sem exceção
+- WHEN o usuário abre a lista de academias
+- THEN as academias aparecem com uma marca de ausência, e não com zero
 
 #### Scenario: Ver o peso de outra academia
 - GIVEN o usuário está na academia "A" e o exercício tem uma exceção na "B"
@@ -657,3 +679,5 @@ também cabe o valor.
 - GIVEN o aparelho tem uma única academia
 - WHEN o usuário abre o histórico
 - THEN não há controle de troca de academia
+
+---

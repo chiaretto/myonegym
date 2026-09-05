@@ -67,3 +67,52 @@ export function filterExercises(
     return true
   })
 }
+
+/* ------------------------------------------------------- filters in the URL */
+
+/**
+ * The filters as query parameters, and back.
+ *
+ * They live in the address so a **walk** through the list survives what
+ * component state does not: a reload, and a shared link. It is the decision the
+ * exercise detail already took with the day it was opened from — same reason,
+ * same shape.
+ *
+ * A filter that narrows **nothing** is not written. An address only carries what
+ * was actually asked for, so the bare route stays the normal case rather than a
+ * special one, and `?q=&cat=all&day=all&kind=all` never appears in anybody's
+ * history.
+ *
+ * Reading is deliberately **forgiving**: anything absent or unreadable is "no
+ * filter". These addresses get shared, truncated and hand-edited, and a screen
+ * that refuses to open over a bad query parameter would be trading the whole
+ * page for one narrowing nobody would miss.
+ */
+const PARAM = { search: 'q', category: 'cat', dayId: 'day', kind: 'kind' } as const
+
+export function filtersToParams(filters: ExerciseFilters): URLSearchParams {
+  const params = new URLSearchParams()
+  const { search = '', category = 'all', dayId = 'all', kind = 'all' } = filters
+  if (search.trim()) params.set(PARAM.search, search)
+  if (category !== 'all') params.set(PARAM.category, String(category))
+  if (dayId !== 'all') params.set(PARAM.dayId, String(dayId))
+  if (kind !== 'all') params.set(PARAM.kind, kind)
+  return params
+}
+
+/** `'none'`, a positive id, or `'all'` for everything else. */
+function readScopedFilter(raw: string | null): number | 'none' | 'all' {
+  if (raw === 'none') return 'none'
+  const id = Number(raw)
+  return raw !== null && raw !== '' && Number.isInteger(id) && id > 0 ? id : 'all'
+}
+
+export function filtersFromParams(params: URLSearchParams): ExerciseFilters {
+  const kind = params.get(PARAM.kind)
+  return {
+    search: params.get(PARAM.search) ?? '',
+    category: readScopedFilter(params.get(PARAM.category)),
+    dayId: readScopedFilter(params.get(PARAM.dayId)),
+    kind: kind === 'strength' || kind === 'cardio' ? kind : 'all',
+  }
+}

@@ -14,6 +14,7 @@ import {
   listPhotos,
   listSessionEntries,
   listSessionSummaries,
+  weightByGym,
   weightsForGym,
 } from '../db/repos'
 import type { Category, Exercise, Weight } from '../db/types'
@@ -138,6 +139,16 @@ export function useNote(gymId: number | null, exerciseId: number | null) {
     async () =>
       gymId == null || exerciseId == null ? null : ((await getNote(gymId, exerciseId, db)) ?? null),
     [gymId, exerciseId],
+  )
+}
+
+/** What each gym lifts for this exercise — the history modal's gym picker shows
+ *  it beside the name, so comparing does not require switching. */
+export function useWeightByGym(exerciseId: number | null) {
+  return useCachedLiveQuery(
+    'weightByGym',
+    async () => (exerciseId == null ? new Map() : weightByGym(exerciseId, db)),
+    [exerciseId],
   )
 }
 
