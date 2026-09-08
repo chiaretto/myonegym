@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, setEntryDone, swapEntryExercise, ValidationError } from '../../db/repos'
 import { useElapsed } from '../../lib/elapsed'
-import { useWakeLock } from '../../lib/wakeLock'
+import { useRestTimer } from '../../state/restTimer'
 import { fmtClock } from '../../lib/format'
 import {
   useCategoryMap,
@@ -49,24 +49,30 @@ export function SessionEntryPage() {
 
   const [tab, setTab] = useState<EntryTab>('exec')
 
-  // The rest-between-sets stopwatch. Only the START INSTANT is state; the
-  // elapsed time is derived from the clock by `useElapsed`, which is what makes
-  // the count survive the phone going in a pocket mid-rest — the exact case
-  // this exists for. `null` is "stopped", so toggling is one assignment.
+  // The rest stopwatch, only while it is STOPPED — running, it floats over the
+  // whole app and is mounted in the shell (see `FloatingRestTimer`). One of the
+  // two is on screen, never both.
   //
-  // It lives on the page, not in the tab panel: checking the machine's note or
-  // photo mid-rest must not kill the count. Leaving "Execução" only takes the
-  // media away, and with it the button that rides on top of it.
-  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null)
-  const timerElapsed = useElapsed(timerStartedAt)
-  // The phone is on the bench while this counts, and a screen that sleeps takes
-  // the stopwatch with it. Only while the REST timer runs — see `useWakeLock`.
-  useWakeLock(timerStartedAt != null)
-  // Stepping to another exercise resets it, and this has to be said out loud:
-  // the route keeps the same component and only swaps a param, so React
-  // reconciles rather than remounts and every useState above would otherwise
-  // carry over. The rest belongs to the set that was just done.
-  useEffect(() => setTimerStartedAt(null), [eId])
+  // CHANGED: none of it is this page's state any more, and stepping to another
+  // exercise no longer zeroes it. A rest is not spent standing still in front of
+  // one machine — it is spent walking to the next, which is exactly when this
+  // page used to throw the count away.
+  const restStartedAt = useRestTimer((s) => s.startedAt)
+  const restOrigin = useRestTimer((s) => s.origin)
+  const startRest = useRestTimer((s) => s.start)
+  const adoptDock = useRestTimer((s) => s.adoptDock)
+  const dockRef = useRef<HTMLDivElement>(null)
+
+  // Offer this screen's slot as the stopwatch's resting place when it has none
+  // — which happens after a reload, where the count survives but the coordinate
+  // it was started from does not. In a LAYOUT effect, so the position is settled
+  // before the browser paints: from a plain effect it would show up at the app's
+  // corner for one frame and then jump here.
+  useLayoutEffect(() => {
+    if (restStartedAt == null || restOrigin != null) return
+    const box = dockRef.current?.getBoundingClientRect()
+    if (box && box.width) adoptDock({ x: box.left, y: box.top })
+  })
 
   // CHANGED: the session, whichever kind it is. A cardio used to go back to
   // /cardio instead, because Iniciar jumped straight here and the overview was
@@ -304,11 +310,19 @@ export function SessionEntryPage() {
                   while looking at the exercise, not part of it. Below, it would
                   push the target weight off the fold on the app's most-scrolled
                   screen; on top, it costs no height at all. */}
-              <RestTimer
-                elapsed={timerElapsed}
-                running={timerStartedAt != null}
-                onToggle={() => setTimerStartedAt((at) => (at == null ? Date.now() : null))}
-              />
+              <div className="rest-dock" ref={dockRef}>
+                {restStartedAt == null && (
+                  <RestTimer
+                    elapsed={0}
+                    running={false}
+                    // Where it is right now, so starting it does not move it:
+                    // the running stopwatch is a floating element, and without
+                    // this it would appear somewhere else entirely, out from
+                    // under the finger that just tapped it.
+                    onToggle={(at) => startRest({ x: at.left, y: at.top })}
+                  />
+                )}
+              </div>
             </div>
             {/* Warm-ups of the exercise being SHOWN — while previewing an
                 alternative, it is that movement's warm-up that matters. */}

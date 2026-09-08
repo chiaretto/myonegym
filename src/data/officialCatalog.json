@@ -672,7 +672,9 @@
       "mediaFile": "bike-interna.webp"
     },
     {
+      "id": 44,
       "name": "Mesa Flexora",
+      "kind": "strength",
       "categoryIds": [
         10,
         12
@@ -680,8 +682,6 @@
       "alternativeIds": [
         36
       ],
-      "id": 44,
-      "kind": "strength",
       "videos": [],
       "mediaFile": "mesa-flexora.webp"
     },
