@@ -53,6 +53,17 @@ interface RestTimerState {
    */
   origin: Point | null
   start: (origin?: Point | null) => void
+  /**
+   * Take the exercise screen's slot as the resting place, if nothing else has
+   * claimed one.
+   *
+   * The case this exists for is a reload: the count survives it, but the
+   * coordinate where the button was tapped does not, so the stopwatch would come
+   * back at the app's corner rather than at the media's. The screen that owns
+   * the slot offers it here, and it is taken **only** when there is nothing
+   * better — a drag or an actual tap always wins.
+   */
+  adoptDock: (at: Point) => void
   stop: () => void
   toggle: () => void
   /**
@@ -73,6 +84,10 @@ export const useRestTimer = create<RestTimerState>()(
       startedAt: null,
       origin: null,
       start: (origin = null) => set({ startedAt: Date.now(), origin }),
+      adoptDock: (at) => {
+        const { startedAt, origin } = get()
+        if (startedAt != null && origin == null) set({ origin: at })
+      },
       // Stopping is zeroing: there is no pause that keeps the value. A rest
       // stopwatch is either counting this rest or counting nothing.
       stop: () => set({ startedAt: null, origin: null }),

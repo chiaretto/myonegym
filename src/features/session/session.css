@@ -105,12 +105,28 @@
    make it jump under the finger that just tapped it. Sized in em off the number
    it holds, with a px floor: at the smallest font scale the em alone would land
    under a comfortable touch target. */
+/* The stopwatch's SLOT on the exercise screen — a real element, present even
+   while the stopwatch itself is away floating. It is what says where "home" is
+   on this screen: after a reload there is no memory of where the button was
+   tapped, and the running one measures this to come back to the right corner
+   instead of to the app's. Empty, it must not eat taps meant for the media. */
+.rest-dock { position: absolute; top: 8px; right: 8px; z-index: 1; pointer-events: none; }
+.rest-dock .rest-timer { pointer-events: auto; }
+
+/* One rule for both, so the slot and the circle cannot drift apart in size —
+   the slot is measured to place the circle, and a mismatch would land it a few
+   pixels off. Sized in em off the number it holds, with a px floor: at the
+   smallest font scale the em alone would land under a comfortable touch
+   target. */
+.rest-dock, .rest-timer {
+  font-size: var(--fs-xs);
+  width: 4.4em; height: 4.4em; min-width: 58px; min-height: 58px;
+}
+
 .rest-timer {
-  position: absolute; top: 8px; right: 8px; z-index: 1;
-  width: 4.4em; height: 4.4em; min-width: 58px; min-height: 58px; padding: 0.5em;
+  padding: 0.5em;
   border-radius: 50%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px;
-  font-size: var(--fs-xs);
   /* STOPPED: grey with black text — the grey of something waiting to be asked.
      It still sits on a photograph, so the fill is SOLID and never a tint: a
      see-through circle on a bright photo loses the number, which is the one
@@ -166,7 +182,6 @@
   left: min(100vw, calc(50vw + 240px)); transform: translateX(-100%);
   margin-left: -12px; top: 68px;
 }
-.rest-float .rest-timer { position: static; top: auto; right: auto; }
 /* No transition while dragging — the circle must sit under the finger, not
    chase it. */
 .rest-float.dragging .rest-timer { cursor: grabbing; }

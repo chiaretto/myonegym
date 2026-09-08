@@ -387,9 +387,35 @@ describe('A running rest timer follows the user through the app', () => {
     expect(moves).toEqual([])
   })
 
-  it('goes back to the app corner when the count is restored after a reload', async () => {
-    // The origin died with the page that measured it, so home is the only
-    // sensible place left — and it is written in CSS, not inline.
+  it('takes the media corner after a reload on the exercise screen', async () => {
+    // F5 keeps the count but not the coordinate it was started from. Landing at
+    // the app's corner instead of the media's is the stopwatch turning up
+    // somewhere the user never put it.
+    const { sessionId, entries } = await seedSession()
+    useRestTimer.setState({ startedAt: Date.now(), origin: null })
+    renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
+    await screen.findByRole('button', { name: /^Cronômetro/ })
+
+    // The slot is a real element even while the stopwatch is away floating, and
+    // jsdom measures everything as zero, so its corner has to be stated.
+    const dock = document.querySelector('.rest-dock') as HTMLElement
+    dock.getBoundingClientRect = () =>
+      ({ left: 318, top: 196, right: 376, bottom: 254, width: 58, height: 58 }) as DOMRect
+
+    // A re-render is what makes the layout effect measure again.
+    await act(async () => {
+      useRestTimer.setState({ startedAt: Date.now() - 1000 })
+    })
+
+    const float = document.querySelector('.rest-float') as HTMLElement
+    expect(float.style.left).toBe('318px')
+    expect(float.style.top).toBe('196px')
+    expect(float.classList.contains('home')).toBe(false)
+  })
+
+  it('falls back to the app corner after a reload anywhere else', async () => {
+    // No exercise screen, so no slot to take: the app's own corner is the only
+    // sensible place left, and it is written in CSS rather than inline.
     useRestTimer.setState({ startedAt: Date.now(), origin: null })
     await seedSession()
     renderAt('/settings')
@@ -398,7 +424,6 @@ describe('A running rest timer follows the user through the app', () => {
     const float = document.querySelector('.rest-float') as HTMLElement
     expect(float.style.left).toBe('')
     expect(float.style.top).toBe('')
-    // Home is a class, and this is the case that wears it.
     expect(float.classList.contains('home')).toBe(true)
   })
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { db } from '../../db/db'
 import { completeSession, setEntryDone, swapEntryExercise, ValidationError } from '../../db/repos'
@@ -58,7 +58,21 @@ export function SessionEntryPage() {
   // one machine — it is spent walking to the next, which is exactly when this
   // page used to throw the count away.
   const restStartedAt = useRestTimer((s) => s.startedAt)
+  const restOrigin = useRestTimer((s) => s.origin)
   const startRest = useRestTimer((s) => s.start)
+  const adoptDock = useRestTimer((s) => s.adoptDock)
+  const dockRef = useRef<HTMLDivElement>(null)
+
+  // Offer this screen's slot as the stopwatch's resting place when it has none
+  // — which happens after a reload, where the count survives but the coordinate
+  // it was started from does not. In a LAYOUT effect, so the position is settled
+  // before the browser paints: from a plain effect it would show up at the app's
+  // corner for one frame and then jump here.
+  useLayoutEffect(() => {
+    if (restStartedAt == null || restOrigin != null) return
+    const box = dockRef.current?.getBoundingClientRect()
+    if (box && box.width) adoptDock({ x: box.left, y: box.top })
+  })
 
   // CHANGED: the session, whichever kind it is. A cardio used to go back to
   // /cardio instead, because Iniciar jumped straight here and the overview was
@@ -296,17 +310,19 @@ export function SessionEntryPage() {
                   while looking at the exercise, not part of it. Below, it would
                   push the target weight off the fold on the app's most-scrolled
                   screen; on top, it costs no height at all. */}
-              {restStartedAt == null && (
-                <RestTimer
-                  elapsed={0}
-                  running={false}
-                  // Where it is right now, so starting it does not move it: the
-                  // running stopwatch is a floating element, and without this it
-                  // would appear somewhere else entirely, out from under the
-                  // finger that just tapped it.
-                  onToggle={(at) => startRest({ x: at.left, y: at.top })}
-                />
-              )}
+              <div className="rest-dock" ref={dockRef}>
+                {restStartedAt == null && (
+                  <RestTimer
+                    elapsed={0}
+                    running={false}
+                    // Where it is right now, so starting it does not move it:
+                    // the running stopwatch is a floating element, and without
+                    // this it would appear somewhere else entirely, out from
+                    // under the finger that just tapped it.
+                    onToggle={(at) => startRest({ x: at.left, y: at.top })}
+                  />
+                )}
+              </div>
             </div>
             {/* Warm-ups of the exercise being SHOWN — while previewing an
                 alternative, it is that movement's warm-up that matters. */}
