@@ -347,6 +347,10 @@ describe('A running rest timer follows the user through the app', () => {
     const float = document.querySelector('.rest-float') as HTMLElement
     expect(float.style.left).toBe('318px')
     expect(float.style.top).toBe('196px')
+    // And none of the resting position applies any more. It used to, one
+    // property at a time, and the one the inline style forgot — `margin-left` —
+    // slid the stopwatch 12px sideways the moment it was started.
+    expect(float.classList.contains('home')).toBe(false)
   })
 
   it('is never repositioned after it appears — it does not jump and snap back', async () => {
@@ -394,6 +398,8 @@ describe('A running rest timer follows the user through the app', () => {
     const float = document.querySelector('.rest-float') as HTMLElement
     expect(float.style.left).toBe('')
     expect(float.style.top).toBe('')
+    // Home is a class, and this is the case that wears it.
+    expect(float.classList.contains('home')).toBe(true)
   })
 
   it('shows exactly one stopwatch, never two', async () => {

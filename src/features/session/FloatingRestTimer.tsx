@@ -152,11 +152,13 @@ export function FloatingRestTimer() {
   return (
     <div
       ref={ref}
-      className={`rest-float${dragging ? ' dragging' : ''}`}
+      // `home` carries the whole resting position, so a positioned one inherits
+      // none of it — see the rule in session.css.
+      className={`rest-float${pos ? '' : ' home'}${dragging ? ' dragging' : ''}`}
       // Home is written in CSS, against the app column rather than the viewport
       // — on a wide screen the app is a phone-width strip in the middle. A drag
       // replaces it with plain coordinates.
-      style={pos ? { left: pos.x, top: pos.y, right: 'auto', transform: 'none' } : undefined}
+      style={pos ? { left: pos.x, top: pos.y } : undefined}
     >
       <RestTimer
         elapsed={elapsed}

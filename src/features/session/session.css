@@ -150,11 +150,19 @@
 .rest-float {
   position: fixed; z-index: 999;
   touch-action: none; /* the drag owns the gesture; the page must not scroll */
-  /* Home: the top right of the APP COLUMN, not of the viewport. The app is a
-     480px strip centred on a wide screen, and a stopwatch parked out in the
-     desktop margin would be floating over nothing. `min()` makes the same
-     expression right on a phone, where the column is the whole width.
-     Below the app bar; the action bar and the toast own the bottom. */
+}
+/* Home: the top right of the APP COLUMN, not of the viewport. The app is a
+   480px strip centred on a wide screen, and a stopwatch parked out in the
+   desktop margin would be floating over nothing. `min()` makes the same
+   expression right on a phone, where the column is the whole width. Below the
+   app bar; the action bar and the toast own the bottom.
+
+   A class of its own, rather than properties for an inline style to override
+   one by one: positioned, the element must inherit NONE of this. Written the
+   other way round, the inline style overrode `left`, `top` and `transform` and
+   quietly left `margin-left` in place — a stopwatch that slid 12px sideways the
+   moment it was started. */
+.rest-float.home {
   left: min(100vw, calc(50vw + 240px)); transform: translateX(-100%);
   margin-left: -12px; top: 68px;
 }
