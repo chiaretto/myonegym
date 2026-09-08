@@ -111,23 +111,57 @@
   border-radius: 50%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 2px;
   font-size: var(--fs-xs);
-  /* The app's accent, IDENTICAL in both states — it is the one control laid over
-     a photo, and the brand colour is what makes it read as a control rather than
-     as part of the picture. The glyph is the whole difference between stopped
-     and running: a colour that changed too would be a second thing to decode on
-     a circle the size of a thumbprint.
-
-     Solid, never a tint: --bg-accent is an rgba, and a see-through fill on a
-     bright photo loses the number, which is the one thing this draws. */
-  background: var(--accent-grad); color: var(--on-accent);
+  /* STOPPED: grey with black text — the grey of something waiting to be asked.
+     It still sits on a photograph, so the fill is SOLID and never a tint: a
+     see-through circle on a bright photo loses the number, which is the one
+     thing this draws. Black on this grey, rather than the app's white-on-dark,
+     because the grey has to stay light enough to read as inactive against a
+     dark photo too. */
+  background: #c9ccd1; color: #000;
   border: 0; box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.9);
 }
+/* RUNNING: the app's red with white text.
+
+   CHANGED — colour used to be identical in both states, with the glyph as the
+   only difference, so a circle the size of a thumbprint would not ask to be
+   decoded twice. That held while this lived in one place. A running timer now
+   floats over the whole app, and the question it answers from across the room
+   is not "is this a button?" but "is it counting?" — which colour answers
+   faster than anything else can. */
+.rest-timer.running { background: var(--accent-grad); color: var(--on-accent); }
 .rest-timer:active { filter: brightness(0.92); }
 .rest-timer .rt-icon { font-size: 1.35em; line-height: 1; opacity: 0.9; }
 /* Tabular figures: it repaints every second, and proportional digits would make
    the number twitch sideways inside the circle as 1s and 0s trade places. */
 .rest-timer .rt-time { font-size: 1.1em; font-weight: 700; line-height: 1;
   font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* The running timer, floating over whatever screen is open.
+
+   Fixed rather than absolute: it has to outlive the screen that started it, and
+   it belongs to the app rather than to any route. `left`/`top` are written by
+   the drag; until then it sits at the top right of the app column, below the
+   app bar and clear of the action bar and the toast.
+
+   z-index 999 is the tab bar's, and this is rendered after it in App.tsx, so it
+   paints above — while staying below a sheet (1000). A sheet is a question
+   waiting for an answer, and a stopwatch over it would be an ornament in front
+   of a decision. */
+.rest-float {
+  position: fixed; z-index: 999;
+  touch-action: none; /* the drag owns the gesture; the page must not scroll */
+  /* Home: the top right of the APP COLUMN, not of the viewport. The app is a
+     480px strip centred on a wide screen, and a stopwatch parked out in the
+     desktop margin would be floating over nothing. `min()` makes the same
+     expression right on a phone, where the column is the whole width.
+     Below the app bar; the action bar and the toast own the bottom. */
+  left: min(100vw, calc(50vw + 240px)); transform: translateX(-100%);
+  margin-left: -12px; top: 68px;
+}
+.rest-float .rest-timer { position: static; top: auto; right: auto; }
+/* No transition while dragging — the circle must sit under the finger, not
+   chase it. */
+.rest-float.dragging .rest-timer { cursor: grabbing; }
 
 /* Guided stepper on the exercise detail.
    CHANGED: one line — `< action >`. It stacked because "Voltar", "Concluído"

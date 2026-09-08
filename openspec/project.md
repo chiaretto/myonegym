@@ -163,6 +163,14 @@ no server** — all data lives in the browser.
   exists because an installed PWA is resumed rather than navigated to and so
   never asks the browser for a newer build on its own. Turning `injectRegister`
   back on would register the same worker twice.
+- O **cronômetro de descanso** é do app, não de uma tela. O instante de início
+  vive em `src/state/restTimer.ts` (zustand + `persist`, como `activeGym`), e é
+  a **única** coisa guardada — o decorrido continua derivado do relógio por
+  `useElapsed`, porque um "decorrido" gravado envelheceria sozinho enquanto o
+  app estivesse fechado. Correndo, ele é montado na casca (`App.tsx`) e flutua
+  sobre qualquer rota; parado, é o botão na mídia do exercício em sessão. Um dos
+  dois, nunca os dois. `localStorage` e não o banco: descanso é preferência de
+  momento, não histórico — nada disso entra no backup.
 - The version and build stamp the app shows come from `scripts/buildInfo.ts`,
   shared by `vite.config.ts` and `vitest.config.ts`. Never write a version
   literal into a component.

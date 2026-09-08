@@ -2,7 +2,8 @@
 
 **Change ID:** `float-the-rest-timer`
 **Created:** 2026-09-07
-**Status:** Draft
+**Status:** Implementation Complete
+**Completed:** 2026-09-07
 
 ---
 

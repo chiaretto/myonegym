@@ -9,6 +9,7 @@ import { applyAccent, applyFontScale, useSettings } from './state/settings'
 import { useKeyboardInset } from './lib/keyboardInset'
 import { FeedbackProvider } from './ui/Feedback'
 import { Sheet } from './ui/Sheet'
+import { FloatingRestTimer } from './features/session/FloatingRestTimer'
 import { HomePage } from './features/home/HomePage'
 import { ExerciseDetailPage } from './features/exercise/ExerciseDetailPage'
 import { SessionPage } from './features/session/SessionPage'
@@ -138,6 +139,13 @@ export function App() {
           )}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+
+        {/* The rest stopwatch while it runs, over whatever screen is open — it
+            belongs to the workout, not to the screen that started it. After the
+            routes so it paints above the tab bar at the same z-index, and below
+            a sheet, which is a question waiting for an answer. Renders nothing
+            while stopped, which is what keeps there from ever being two. */}
+        <FloatingRestTimer />
 
         {showExamplePrompt && (
           <Sheet title="Bem-vindo ao MyOneGym" onClose={onDeclineExample}>
