@@ -57,11 +57,7 @@ export function FloatingRestTimer() {
     if (running && elapsed >= MAX_REST_MS) expire()
   }, [running, elapsed, expire])
 
-  /**
-   * Where it sits. `null` means home — the top right of the app column, written
-   * in CSS — which is where it lands when nothing said otherwise: a count
-   * restored after a reload, whose origin died with the page that measured it.
-   */
+  /** Where the **drag** left it; `null` until one happens. */
   const [at, setAt] = useState<Point | null>(null)
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{ dx: number; dy: number; from: Point; moved: boolean } | null>(null)
@@ -69,12 +65,13 @@ export function FloatingRestTimer() {
   /** True for the click that ends a drag, so that click does not stop the timer. */
   const moved = useRef(false)
 
-  // Where the button was when it was tapped, so starting the stopwatch does not
-  // move it. And home again on every stop: the next rest starts where the
-  // stopwatch lives, not where the last one happened to be left.
+  // Only ever CLEARS, never sets — and that matters. Setting the position from
+  // an effect would paint one frame at the CSS home first and only then move it
+  // where it belongs, which is visible: the stopwatch jumps to the corner and
+  // snaps back. The position is derived during render instead, below.
   useEffect(() => {
-    setAt(running ? origin : null)
-  }, [running, origin])
+    if (!running) setAt(null)
+  }, [running])
 
   const onPointerDown = (e: ReactPointerEvent) => {
     const box = ref.current?.getBoundingClientRect()
@@ -143,6 +140,15 @@ export function FloatingRestTimer() {
 
   if (!running) return null
 
+  /**
+   * Where it sits, decided **during render** so the first frame is already
+   * right: where the drag left it, else where the button was when it was
+   * tapped, else home — the top right of the app column, written in CSS. Home
+   * is what a count restored after a reload gets, its origin having died with
+   * the page that measured it.
+   */
+  const pos = at ?? origin
+
   return (
     <div
       ref={ref}
@@ -150,7 +156,7 @@ export function FloatingRestTimer() {
       // Home is written in CSS, against the app column rather than the viewport
       // — on a wide screen the app is a phone-width strip in the middle. A drag
       // replaces it with plain coordinates.
-      style={at ? { left: at.x, top: at.y, right: 'auto', transform: 'none' } : undefined}
+      style={pos ? { left: pos.x, top: pos.y, right: 'auto', transform: 'none' } : undefined}
     >
       <RestTimer
         elapsed={elapsed}

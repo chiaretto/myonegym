@@ -349,6 +349,40 @@ describe('A running rest timer follows the user through the app', () => {
     expect(float.style.top).toBe('196px')
   })
 
+  it('is never repositioned after it appears — it does not jump and snap back', async () => {
+    const { sessionId, entries } = await seedSession()
+    const user = userEvent.setup()
+    renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
+
+    const docked = await findTimer()
+    docked.getBoundingClientRect = () =>
+      ({ left: 318, top: 196, right: 376, bottom: 254, width: 58, height: 58 }) as DOMRect
+
+    // Deciding the position in an effect instead of during render costs one
+    // painted frame at the CSS home before it moves — which is visible as the
+    // stopwatch jumping to the corner and snapping back. What that looks like
+    // in the DOM is a `style` written *after* the element is already there.
+    const moves: string[] = []
+    const observer = new MutationObserver((records) => {
+      for (const r of records) {
+        const el = r.target as HTMLElement
+        if (el.classList.contains('rest-float')) moves.push(el.style.left)
+      }
+    })
+    observer.observe(document.body, {
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style'],
+    })
+
+    await user.click(docked)
+    observer.disconnect()
+
+    // It arrived carrying its position; nothing repositioned it afterwards.
+    expect((document.querySelector('.rest-float') as HTMLElement).style.left).toBe('318px')
+    expect(moves).toEqual([])
+  })
+
   it('goes back to the app corner when the count is restored after a reload', async () => {
     // The origin died with the page that measured it, so home is the only
     // sensible place left — and it is written in CSS, not inline.
