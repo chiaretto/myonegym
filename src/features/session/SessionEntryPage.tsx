@@ -297,7 +297,15 @@ export function SessionEntryPage() {
                   push the target weight off the fold on the app's most-scrolled
                   screen; on top, it costs no height at all. */}
               {restStartedAt == null && (
-                <RestTimer elapsed={0} running={false} onToggle={startRest} />
+                <RestTimer
+                  elapsed={0}
+                  running={false}
+                  // Where it is right now, so starting it does not move it: the
+                  // running stopwatch is a floating element, and without this it
+                  // would appear somewhere else entirely, out from under the
+                  // finger that just tapped it.
+                  onToggle={(at) => startRest({ x: at.left, y: at.top })}
+                />
               )}
             </div>
             {/* Warm-ups of the exercise being SHOWN — while previewing an

@@ -46,8 +46,11 @@ pode aparecer sobre qualquer tela do app responde a outra pergunta — não "ist
 um botão?", mas **"ele está contando?"** —, e a cor é a resposta mais rápida que
 existe: legível de relance, do outro lado do aparelho, sem ler número nenhum.
 
-Trocar de estado MUST NOT mudar o **tamanho** nem a posição de repouso do botão:
-ele saltaria sob o dedo que acabou de tocá-lo.
+Trocar de estado MUST NOT mudar o **tamanho** nem **onde o botão está**: ao
+iniciar, o cronômetro passa a ser um elemento flutuante, e ele MUST aparecer
+exatamente **no ponto da tela onde estava** ao ser tocado. Só o arraste o move
+depois disso. Aparecer noutro canto seria ele saltar de sob o dedo que acabou de
+tocá-lo — que é o mesmo motivo pelo qual o tamanho também não muda.
 
 O tempo MUST mostrar **apenas o campo que carrega informação**: **só os
 segundos, com a unidade** enquanto não passa um minuto (`00s`, `07s`, `59s`) e
@@ -107,10 +110,11 @@ Running Rest Timer Outlives the Screen That Started It*.
 - AND o botão passa a ser vermelho com fonte branca
 - AND o tempo passa a subir a cada segundo: "01s", "02s", "03s"
 
-#### Scenario: O tamanho não muda entre parado e correndo
-- GIVEN o cronômetro parado
+#### Scenario: Nem o tamanho nem o lugar mudam entre parado e correndo
+- GIVEN o cronômetro parado, no canto da mídia
 - WHEN o usuário o inicia
 - THEN o tamanho do botão permanece o mesmo
+- AND ele continua exatamente no mesmo ponto da tela
 - AND só a cor e o ícone mudam
 
 #### Scenario: Um segundo toque para e zera

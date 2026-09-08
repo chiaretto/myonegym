@@ -32,10 +32,27 @@ import { persist } from 'zustand/middleware'
  */
 export const MAX_REST_MS = 99 * 60 * 1000
 
+export interface Point {
+  x: number
+  y: number
+}
+
 interface RestTimerState {
   /** When the current rest began; `null` when nothing is running. */
   startedAt: number | null
-  start: () => void
+  /**
+   * Where the button was on screen when it was tapped.
+   *
+   * Starting the stopwatch moves it from the exercise media into a floating
+   * layer, and without this it would appear somewhere else entirely — jumping
+   * out from under the finger that just tapped it. It starts life exactly where
+   * it was, and only a drag moves it after that.
+   *
+   * Deliberately **not** persisted: a screen coordinate means nothing after a
+   * reload, where the page it was measured against is gone.
+   */
+  origin: Point | null
+  start: (origin?: Point | null) => void
   stop: () => void
   toggle: () => void
   /**
@@ -54,18 +71,24 @@ export const useRestTimer = create<RestTimerState>()(
   persist(
     (set, get) => ({
       startedAt: null,
-      start: () => set({ startedAt: Date.now() }),
+      origin: null,
+      start: (origin = null) => set({ startedAt: Date.now(), origin }),
       // Stopping is zeroing: there is no pause that keeps the value. A rest
       // stopwatch is either counting this rest or counting nothing.
-      stop: () => set({ startedAt: null }),
+      stop: () => set({ startedAt: null, origin: null }),
       toggle: () => (get().startedAt == null ? get().start() : get().stop()),
       expire: (now = Date.now()) => {
         const { startedAt } = get()
-        if (startedAt != null && now - startedAt >= MAX_REST_MS) set({ startedAt: null })
+        if (startedAt != null && now - startedAt >= MAX_REST_MS) {
+          set({ startedAt: null, origin: null })
+        }
       },
     }),
     {
       name: 'myonegym.restTimer',
+      // Only the start instant survives a restart. `origin` is a coordinate on a
+      // page that no longer exists by then.
+      partialize: ({ startedAt }) => ({ startedAt }) as never,
       // A count that expired while the app was closed must arrive stopped, and
       // this is the first moment anything can say so.
       onRehydrateStorage: () => (state) => state?.expire(),

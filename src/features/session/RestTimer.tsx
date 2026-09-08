@@ -6,7 +6,8 @@ interface RestTimerProps {
   /** Milliseconds since it was started; 0 while stopped. */
   elapsed: number
   running: boolean
-  onToggle: () => void
+  /** Given where the button is, so the floating one can start life right here. */
+  onToggle: (at: DOMRect) => void
   /** Set only by the floating presentation, which drives the drag. */
   onPointerDown?: (e: ReactPointerEvent<HTMLButtonElement>) => void
 }
@@ -49,7 +50,7 @@ export function RestTimer({ elapsed, running, onToggle, onPointerDown }: RestTim
       // way every other toggle in the app does.
       aria-label={`Cronômetro, ${time}`}
       aria-pressed={running}
-      onClick={onToggle}
+      onClick={(e) => onToggle(e.currentTarget.getBoundingClientRect())}
       onPointerDown={onPointerDown}
     >
       {!running && <Icon name="clock" className="rt-icon" />}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useElapsed } from '../../lib/elapsed'
 import { useWakeLock } from '../../lib/wakeLock'
-import { MAX_REST_MS, useRestTimer } from '../../state/restTimer'
+import { MAX_REST_MS, useRestTimer, type Point } from '../../state/restTimer'
 import { RestTimer } from './RestTimer'
 import './session.css'
 
@@ -36,13 +36,9 @@ const DRAG_THRESHOLD = 8
 /** Kept clear of the app bar at the top and the action bar at the bottom. */
 const EDGE = 12
 
-interface Point {
-  x: number
-  y: number
-}
-
 export function FloatingRestTimer() {
   const startedAt = useRestTimer((s) => s.startedAt)
+  const origin = useRestTimer((s) => s.origin)
   const stop = useRestTimer((s) => s.stop)
   const expire = useRestTimer((s) => s.expire)
   const running = startedAt != null
@@ -61,7 +57,11 @@ export function FloatingRestTimer() {
     if (running && elapsed >= MAX_REST_MS) expire()
   }, [running, elapsed, expire])
 
-  /** Where the drag left it. `null` is home — the top right of the app column. */
+  /**
+   * Where it sits. `null` means home — the top right of the app column, written
+   * in CSS — which is where it lands when nothing said otherwise: a count
+   * restored after a reload, whose origin died with the page that measured it.
+   */
   const [at, setAt] = useState<Point | null>(null)
   const [dragging, setDragging] = useState(false)
   const drag = useRef<{ dx: number; dy: number; from: Point; moved: boolean } | null>(null)
@@ -69,11 +69,12 @@ export function FloatingRestTimer() {
   /** True for the click that ends a drag, so that click does not stop the timer. */
   const moved = useRef(false)
 
-  // Home again on every stop: each rest starts where the stopwatch lives, not
-  // where the last one happened to be left.
+  // Where the button was when it was tapped, so starting the stopwatch does not
+  // move it. And home again on every stop: the next rest starts where the
+  // stopwatch lives, not where the last one happened to be left.
   useEffect(() => {
-    if (!running) setAt(null)
-  }, [running])
+    setAt(running ? origin : null)
+  }, [running, origin])
 
   const onPointerDown = (e: ReactPointerEvent) => {
     const box = ref.current?.getBoundingClientRect()

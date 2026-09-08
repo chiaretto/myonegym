@@ -329,6 +329,39 @@ describe('A running rest timer follows the user through the app', () => {
     expect(floating()).not.toBeNull()
   })
 
+  it('starts exactly where it was standing, and does not jump', async () => {
+    const { sessionId, entries } = await seedSession()
+    const user = userEvent.setup()
+    renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
+
+    // Where the button sits on the media. jsdom measures everything as zero, so
+    // the corner has to be stated.
+    const docked = await findTimer()
+    docked.getBoundingClientRect = () =>
+      ({ left: 318, top: 196, right: 376, bottom: 254, width: 58, height: 58 }) as DOMRect
+
+    await user.click(docked)
+
+    // Starting it hands the stopwatch to a floating layer. Landing anywhere but
+    // here would be it jumping out from under the finger that just tapped it.
+    const float = document.querySelector('.rest-float') as HTMLElement
+    expect(float.style.left).toBe('318px')
+    expect(float.style.top).toBe('196px')
+  })
+
+  it('goes back to the app corner when the count is restored after a reload', async () => {
+    // The origin died with the page that measured it, so home is the only
+    // sensible place left — and it is written in CSS, not inline.
+    useRestTimer.setState({ startedAt: Date.now(), origin: null })
+    await seedSession()
+    renderAt('/settings')
+    await screen.findByRole('button', { name: /^Cronômetro/ })
+
+    const float = document.querySelector('.rest-float') as HTMLElement
+    expect(float.style.left).toBe('')
+    expect(float.style.top).toBe('')
+  })
+
   it('shows exactly one stopwatch, never two', async () => {
     const { sessionId, entries } = await seedSession()
     const user = userEvent.setup()
