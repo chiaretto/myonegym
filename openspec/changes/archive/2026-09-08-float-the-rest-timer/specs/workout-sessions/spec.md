@@ -118,6 +118,72 @@ Running Rest Timer Outlives the Screen That Started It*.
 - WHEN o usuário toca nele de novo
 - THEN ele volta a cinza com fonte preta, com o ícone, marcando "00:00"
 
+### Requirement: The Rest Timer Keeps the Screen Awake
+
+Enquanto o **cronômetro de descanso está correndo**, o app MUST pedir ao sistema
+que **mantenha a tela ligada**, e MUST liberar esse pedido assim que ele for
+parado ou a tela sair.
+
+**CHANGED — sair da entrada não libera mais.** Não podia continuar valendo: o
+cronômetro agora corre em qualquer tela, e soltar a tela ao sair da entrada
+apagaria o celular no meio do descanso que ele está medindo. O que libera é
+parar, e nada mais.
+
+O motivo é a situação real: o celular fica no banco, contando, e o usuário olha
+para ele de dois metros — exatamente o que o sistema lê como "ocioso" e responde
+apagando a tela. Um cronômetro que exige acordar o telefone para ser lido não é
+um cronômetro.
+
+O pedido MUST valer **apenas para o cronômetro de descanso**, e MUST NOT ser
+feito pelo relógio do treino. Aquele corre a sessão inteira sem teto nenhum.
+
+**CHANGED — o teto do descanso agora é o limite de 99 minutos, e não "alguns
+minutos".** A justificativa anterior — que o descanso dura poucos minutos e por
+isso o custo é pequeno — deixou de ser verdade no momento em que a contagem
+passou a atravessar telas. O limite é o que a substitui: é ele que impede a tela
+de ficar acesa indefinidamente. Se o custo de bateria se mostrar alto na
+prática, o recuo é segurar a tela apenas enquanto o cronômetro estiver **visível
+na tela do exercício**, que é a situação para a qual esta regra foi escrita.
+
+O pedido MUST ser **refeito ao voltar para o app**: o navegador retoma a
+permissão quando a página é escondida e não a devolve sozinho.
+
+A falta do recurso MUST ser **silenciosa**. Um navegador que nunca o implementou,
+um contexto inseguro, o modo de economia de bateria — em todos, o cronômetro
+MUST continuar contando normalmente e a tela MUST apenas se comportar como se
+comportaria de qualquer forma. Nada MUST ser exibido ao usuário a respeito.
+
+#### Scenario: A tela fica acesa durante o descanso
+- GIVEN o detalhe de uma entrada de sessão
+- WHEN o usuário inicia o cronômetro
+- THEN o app pede ao sistema para manter a tela ligada
+
+#### Scenario: Parar devolve a tela ao sistema
+- GIVEN o cronômetro correndo
+- WHEN o usuário o para
+- THEN o pedido é liberado
+
+#### Scenario: Sair da entrada não devolve
+- GIVEN o cronômetro correndo
+- WHEN o usuário vai para outra tela do app
+- THEN o pedido continua valendo, porque a contagem continua
+
+#### Scenario: O relógio do treino não segura a tela
+- GIVEN uma sessão em andamento com o cronômetro parado
+- WHEN o usuário apenas observa a tela
+- THEN nenhum pedido para manter a tela ligada é feito
+
+#### Scenario: Voltar ao app pede de novo
+- GIVEN o cronômetro correndo e o app foi para segundo plano
+- WHEN o usuário volta para o app
+- THEN o pedido é refeito
+
+#### Scenario: Sem o recurso, nada quebra
+- GIVEN um navegador sem a API de manter a tela ligada
+- WHEN o usuário inicia o cronômetro
+- THEN ele conta normalmente
+- AND nada é exibido sobre a tela poder apagar
+
 ---
 
 ## ADDED Requirements

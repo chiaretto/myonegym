@@ -172,3 +172,46 @@ escrito.
 | 99 min de wake lock custarem bateria | Média | Médio | O limite é o teto; o recuo está descrito acima e é uma linha |
 | Um cronômetro esquecido do treino de ontem aparecer flutuando hoje | Baixa | Médio | O limite de 99 minutos vale sobre o relógio, não sobre o tempo de app aberto: ao voltar, uma contagem já vencida chega parada |
 | A contagem persistida virar histórico por acidente | Baixa | Alto | Ela mora em `localStorage`, fora do IndexedDB e fora do backup — a mesma fronteira que já separa preferência de dado |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-09-08
+**Duration:** 1 dia
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/state/restTimer.ts`, `src/state/restTimer.test.ts` — o instante de
+  início, zustand + `persist`, e o limite medido sobre o relógio
+- `src/features/session/FloatingRestTimer.tsx` — o flutuante: arraste, wake
+  lock, e o limite que chega sozinho
+- `src/features/session/RestTimer.tsx`, `session.css` — a cor por estado
+- `src/features/session/SessionEntryPage.tsx` — perdeu o `useState` do início e
+  o `useEffect` que zerava na troca de exercício
+- `src/App.tsx` — o flutuante montado na casca
+- `src/features/session/rest-timer.integration.test.tsx` — 13 testes viraram 28
+- `openspec/project.md`
+
+### Specs Updated
+- `openspec/specs/workout-sessions/spec.md` — 2 requisitos MODIFIED, 3 ADDED
+- `openspec/specs/app-foundation/spec.md` — 1 MODIFIED
+
+### Learned in Implementation
+
+**Um quinto requisito que a proposta não previu.** *The Rest Timer Keeps the
+Screen Awake* dizia que o pedido de manter a tela ligada é liberado "assim que o
+cronômetro for parado, a tela sair ou **o usuário deixar a entrada**". A última
+cláusula virou falsa no instante em que a contagem passou a atravessar telas —
+soltar a tela ao sair da entrada apagaria o celular no meio do descanso que ele
+está medindo. E a justificativa de que "o descanso dura alguns minutos" foi
+substituída pelo limite de 99 minutos, que é o que agora impede a tela de ficar
+acesa indefinidamente.
+
+**Um jeito errado de escrever a comparação do limiar de arraste.** `far <
+THRESHOLD` parece igual a `!(far >= THRESHOLD)` e não é: com uma coordenada que
+não é número, a primeira forma é sempre falsa, **todo toque vira arraste**, e o
+círculo acaba posicionado em `NaN` — invisível, ainda contando, e sem nada para
+tocar. Apareceu porque o jsdom não tem `PointerEvent` e descarta as coordenadas,
+o que é um acidente de teste; o modo de falhar, não.
+
