@@ -8,7 +8,7 @@
 
 - [x] 1.1 `.entry-seg.current` passa a usar a **cor cheia** do accent, a mesma
       dos concluídos, no lugar do tom diluído.
-- [x] 1.2 Listras verticais num **pseudo-elemento**, por
+- [x] 1.2 Listras diagonais num **pseudo-elemento**, por
       `repeating-linear-gradient`. Sem elemento novo no DOM: os segmentos são
       `aria-hidden` e a barra inteira é o desenho de uma frase. Branco ficou
       lavado contra o accent; as listras são `--surface-3`, a cor do segmento
@@ -17,9 +17,12 @@
 - [x] 1.3 Animação por **`transform`**, não por `background-position` — a barra
       fica na tela o treino inteiro, e uma que repinta a cada quadro é o pior
       caso possível aqui.
-- [x] 1.4 O deslocamento por ciclo é **um período exato** do padrão. Qualquer
-      outro valor faz as listras pularem a cada volta, e isso não aparece numa
-      captura de tela.
+- [x] 1.4 O deslocamento por ciclo é o **passo horizontal** do padrão — o
+      período dividido pelo seno do ângulo, porque o período é medido
+      perpendicular às faixas. O período cru (o que serviria para faixas
+      verticais) as deixaria a um terço do fim, pulando a cada volta, e isso não
+      aparece numa captura de tela. Geometria e animação leem a **mesma**
+      custom property, então não podem divergir.
 - [x] 1.5 **Atual e concluído**: sólido, sem listras, e ainda mais alto. As
       listras dizem "em andamento", que não é o caso de algo já feito.
 

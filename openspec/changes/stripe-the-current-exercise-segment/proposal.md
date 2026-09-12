@@ -29,7 +29,7 @@ sólidos e saltam. "Onde eu estou?" ela responde mal.
 ## Proposed Solution
 
 Dar ao segmento atual a **mesma cor dos concluídos** — o vermelho cheio do app —
-e distingui-lo deles pelo **movimento**: faixas verticais correndo na
+e distingui-lo deles pelo **movimento**: faixas diagonais correndo na
 horizontal, como uma barra de carregamento — na cor do segmento *pendente*, de
 modo que leiam como o trilho vazio aparecendo através do preenchimento.
 
@@ -50,7 +50,7 @@ você está fazendo agora.
 | Estado | Hoje | Proposto |
 |---|---|---|
 | Pendente | 6px, cinza | igual |
-| **Atual, não concluído** | 10px, vermelho a 16% | **10px, vermelho cheio com listras cinza andando** |
+| **Atual, não concluído** | 10px, vermelho a 16% | **10px, vermelho cheio com listras cinza diagonais andando** |
 | Concluído, não atual | 6px, vermelho cheio | igual |
 | **Atual e concluído** | 10px, vermelho cheio | **10px, vermelho cheio — sólido, sem listras** |
 
@@ -97,10 +97,13 @@ num pseudo-elemento é trabalho do compositor. Esta barra fica **na tela o trein
 inteiro**, numa faixa fixa, com a tela segurada acesa pelo cronômetro de
 descanso — é o pior caso possível para uma animação que repinta.
 
-**O laço tem de fechar sem costura.** As listras são um `repeating-linear-gradient`
-e o deslocamento por ciclo MUST ser exatamente **um período** do padrão; qualquer
-outro valor faz o padrão "pular" a cada volta. É a única aritmética deste
-change, e é a única forma de errar que não aparece numa captura de tela.
+**O laço tem de fechar sem costura, e a diagonal complica a conta.** O período
+de um gradiente é medido **perpendicular às faixas**, então um padrão inclinado
+se repete numa distância horizontal *maior* do que a que ele se repete através de
+si mesmo: o passo horizontal é o período dividido pelo seno do ângulo. Deslizar o
+período cru — o que serviria para faixas verticais — deixa as listras a um terço
+de período do fim e as faz pular a cada volta. É a única aritmética deste change,
+e é a única forma de errar que não aparece numa captura de tela.
 
 **`prefers-reduced-motion` não é opcional aqui.** Isto é um movimento perpétuo
 no campo de visão, numa tela que o usuário encara entre séries por uma hora.
@@ -112,7 +115,7 @@ o efeito sai, a informação fica.
 ## Success Criteria
 
 - [ ] O segmento atual usa a mesma cor cheia dos concluídos
-- [ ] Ele carrega listras verticais correndo na horizontal
+- [ ] Ele carrega listras diagonais correndo na horizontal
 - [ ] Atual-e-concluído é sólido, sem listras, e continua mais alto
 - [ ] Com `prefers-reduced-motion: reduce`, as listras ficam paradas
 - [ ] A animação não repinta a cada quadro

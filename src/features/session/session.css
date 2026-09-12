@@ -126,11 +126,23 @@
 .entry-seg.current:not(.done) { position: relative; overflow: hidden; }
 .entry-seg.current:not(.done)::after {
   content: ''; position: absolute; top: 0; bottom: 0;
-  /* One period wider than the segment, and offset by one period, so the travel
-     below lands flush at both ends of every cycle and the strip is covered
-     throughout. */
-  left: -12px; width: calc(100% + 12px);
-  background: repeating-linear-gradient(90deg,
+  /* How far sideways the pattern repeats — the one number this effect rests on,
+     written once and used three times below.
+
+     A gradient's period is measured PERPENDICULAR to its bands, so a diagonal
+     pattern repeats over a longer distance horizontally than the 12px it
+     repeats over across itself: the horizontal repeat is the period divided by
+     sin(angle), and at 135deg that is 12 / (√2/2) = 12·√2. Sliding by a plain
+     12px would leave the stripes a third of a period short and make them jump
+     at the end of every loop. */
+  --stripe-shift: calc(12px * 1.41421356);
+
+  /* Offset and overgrown by exactly that, so the travel lands flush at both
+     ends of every cycle and no bare accent slides in from either side. */
+  left: calc(-1 * var(--stripe-shift)); width: calc(100% + var(--stripe-shift));
+  /* 135deg leans the bands "/" — the barber-pole slant, which reads as movement
+     even in a still frame. */
+  background: repeating-linear-gradient(135deg,
     var(--surface-3) 0 6px,
     transparent 6px 12px);
   /* `transform`, never `background-position`: the two draw the same movement,
@@ -139,12 +151,13 @@
      the screen held awake by the rest timer. */
   animation: entry-seg-stripes 800ms linear infinite;
 }
-/* The travel is ONE PERIOD of the pattern — 6px of bar plus 6px of gap. Any
-   other distance makes the stripes jump at the end of each loop, which is the
-   kind of wrong that never shows up in a screenshot. `entry-progress.test.ts`
-   is what keeps the two numbers agreeing. */
+/* The travel is the horizontal repeat, and it reads the same custom property the
+   geometry above does — so the three cannot drift apart. Any other distance
+   makes the stripes jump at the end of each loop, which is the kind of wrong
+   that never shows up in a screenshot; `entry-progress.test.ts` is what checks
+   the arithmetic against the angle. */
 @keyframes entry-seg-stripes {
-  to { transform: translateX(12px); }
+  to { transform: translateX(var(--stripe-shift)); }
 }
 /* Asked for less motion: the stripes stay, the marching stops. The distinction
    is texture before it is animation, so it survives intact — and a perpetual

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
@@ -394,11 +394,18 @@ describe('A running rest timer follows the user through the app', () => {
     const { sessionId, entries } = await seedSession()
     useRestTimer.setState({ startedAt: Date.now(), origin: null })
     renderAt(`/session/${sessionId}/entry/${entries[0].id}`)
-    await screen.findByRole('button', { name: /^Cronômetro/ })
 
-    // The slot is a real element even while the stopwatch is away floating, and
-    // jsdom measures everything as zero, so its corner has to be stated.
-    const dock = document.querySelector('.rest-dock') as HTMLElement
+    // Waiting for the SLOT, not for the stopwatch. The floating one is mounted in
+    // the app shell and turns up straight away, while the slot arrives with the
+    // exercise screen's own content, out of Dexie — waiting on the wrong one of
+    // the two made this flaky one run in three.
+    const dock = await waitFor(() => {
+      const el = document.querySelector('.rest-dock')
+      if (!el) throw new Error('o slot ainda não existe')
+      return el as HTMLElement
+    })
+
+    // jsdom measures everything as zero, so the corner has to be stated.
     dock.getBoundingClientRect = () =>
       ({ left: 318, top: 196, right: 376, bottom: 254, width: 58, height: 58 }) as DOMRect
 

@@ -31,8 +31,9 @@ opacidade da mesma cor:
 
 - **pendente** — a cor neutra de trilho, baixo;
 - **atual, ainda não concluído** — a **cor de destaque cheia**, a mesma dos
-  concluídos, carregando **faixas verticais que correm na horizontal**, como
-  uma barra de carregamento, e mais alto que os demais. As faixas MUST usar a
+  concluídos, carregando **faixas diagonais que correm na horizontal**, como
+  uma barra de carregamento, e mais alto que os demais. A inclinação faz o
+  desenho ler como movimento mesmo num quadro parado. As faixas MUST usar a
   cor do segmento **pendente**, de modo que leiam como o trilho vazio
   aparecendo através do preenchimento e não como um padrão impresso por cima;
 - **concluído** — a cor de destaque cheia, **sólida**, baixo;
@@ -49,9 +50,10 @@ respondia bem a uma das duas perguntas que existe para responder. O que
 distingue os estados passa a ser **textura e movimento**, que se enxergam de
 relance, em vez de intensidade de tinta, que não.
 
-O movimento das faixas MUST fechar o laço **sem costura**: o deslocamento por
-ciclo é um período exato do padrão, e qualquer outro valor faz o desenho pular a
-cada volta.
+O movimento das faixas MUST fechar o laço **sem costura**. O período de um
+padrão inclinado é medido perpendicular às faixas, então o deslocamento por
+ciclo MUST ser o **passo horizontal** — o período dividido pelo seno do ângulo —
+e não o período cru; qualquer outro valor faz o desenho pular a cada volta.
 
 Quem tiver pedido ao sistema para **reduzir movimento** MUST receber as faixas
 **paradas**, e não a ausência delas. A distinção é de textura antes de ser de
@@ -90,7 +92,7 @@ de uma entrada, sem recarregar a tela.
 - GIVEN o detalhe de uma entrada ainda não concluída
 - WHEN o usuário olha a barra
 - THEN o segmento atual está na cor de destaque cheia, a mesma dos concluídos
-- AND ele carrega faixas verticais correndo na horizontal, na cor de um
+- AND ele carrega faixas diagonais correndo na horizontal, na cor de um
   segmento pendente
 - AND é mais alto que os demais
 
