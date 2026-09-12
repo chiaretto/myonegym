@@ -928,6 +928,20 @@
         }
       ],
       "mediaFile": "agachamento-afundo-halteres-barra.webp"
+    },
+    {
+      "id": 61,
+      "name": "Escada (Simulador)",
+      "kind": "cardio",
+      "categoryIds": [
+        12,
+        11,
+        10,
+        9
+      ],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "escada-simulador.webp"
     }
   ]
 }
