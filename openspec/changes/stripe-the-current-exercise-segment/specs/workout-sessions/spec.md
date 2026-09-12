@@ -31,8 +31,10 @@ opacidade da mesma cor:
 
 - **pendente** — a cor neutra de trilho, baixo;
 - **atual, ainda não concluído** — a **cor de destaque cheia**, a mesma dos
-  concluídos, carregando **faixas verticais brancas que correm na horizontal**,
-  como uma barra de carregamento, e mais alto que os demais;
+  concluídos, carregando **faixas verticais que correm na horizontal**, como
+  uma barra de carregamento, e mais alto que os demais. As faixas MUST usar a
+  cor do segmento **pendente**, de modo que leiam como o trilho vazio
+  aparecendo através do preenchimento e não como um padrão impresso por cima;
 - **concluído** — a cor de destaque cheia, **sólida**, baixo;
 - **atual e concluído** — a cor de destaque cheia, **sólida e mais alta**. As
   faixas MUST NOT aparecer aqui: elas dizem "em andamento", que não é o caso de
@@ -88,7 +90,8 @@ de uma entrada, sem recarregar a tela.
 - GIVEN o detalhe de uma entrada ainda não concluída
 - WHEN o usuário olha a barra
 - THEN o segmento atual está na cor de destaque cheia, a mesma dos concluídos
-- AND ele carrega faixas verticais brancas correndo na horizontal
+- AND ele carrega faixas verticais correndo na horizontal, na cor de um
+  segmento pendente
 - AND é mais alto que os demais
 
 #### Scenario: Atual e concluído dizem as duas coisas

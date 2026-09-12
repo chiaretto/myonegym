@@ -2,7 +2,8 @@
 
 **Change ID:** `stripe-the-current-exercise-segment`
 **Created:** 2026-09-12
-**Status:** Draft
+**Status:** Implementation Complete
+**Completed:** 2026-09-12
 
 ---
 
@@ -28,8 +29,9 @@ sólidos e saltam. "Onde eu estou?" ela responde mal.
 ## Proposed Solution
 
 Dar ao segmento atual a **mesma cor dos concluídos** — o vermelho cheio do app —
-e distingui-lo deles pelo **movimento**: faixas verticais brancas correndo na
-horizontal, como uma barra de carregamento.
+e distingui-lo deles pelo **movimento**: faixas verticais correndo na
+horizontal, como uma barra de carregamento — na cor do segmento *pendente*, de
+modo que leiam como o trilho vazio aparecendo através do preenchimento.
 
 - **cor cheia, não diluída.** Os dois estados que interessam de longe passam a
   usar a mesma tinta forte, e nenhum depende de enxergar uma diferença de
@@ -48,7 +50,7 @@ você está fazendo agora.
 | Estado | Hoje | Proposto |
 |---|---|---|
 | Pendente | 6px, cinza | igual |
-| **Atual, não concluído** | 10px, vermelho a 16% | **10px, vermelho cheio com listras brancas andando** |
+| **Atual, não concluído** | 10px, vermelho a 16% | **10px, vermelho cheio com listras cinza andando** |
 | Concluído, não atual | 6px, vermelho cheio | igual |
 | **Atual e concluído** | 10px, vermelho cheio | **10px, vermelho cheio — sólido, sem listras** |
 
@@ -110,7 +112,7 @@ o efeito sai, a informação fica.
 ## Success Criteria
 
 - [ ] O segmento atual usa a mesma cor cheia dos concluídos
-- [ ] Ele carrega listras verticais brancas correndo na horizontal
+- [ ] Ele carrega listras verticais correndo na horizontal
 - [ ] Atual-e-concluído é sólido, sem listras, e continua mais alto
 - [ ] Com `prefers-reduced-motion: reduce`, as listras ficam paradas
 - [ ] A animação não repinta a cada quadro
@@ -121,7 +123,7 @@ o efeito sai, a informação fica.
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
 | As listras "pularem" a cada volta do laço | Média | Baixo | O deslocamento é um período exato do padrão; dito no spec e conferido na revisão |
-| Branco puro sobre vermelho vibrar numa faixa de 10px | Média | Baixo | Começar com branco a alta opacidade e não puro; é um valor, ajustável ao olho |
+| ~~Branco puro sobre vermelho vibrar numa faixa de 10px~~ | — | — | **Aconteceu.** Branco ficou lavado contra o accent; as listras passaram a ser `--surface-3`, a cor do segmento pendente, e assim leem como o trilho aparecendo através do preenchimento |
 | Animação perpétua custar bateria | Baixa | Baixo | `transform` num pseudo-elemento fica no compositor; e `prefers-reduced-motion` desliga |
 | Listras lerem como "carregando, espere" | Baixa | Baixo | É a leitura pretendida — o exercício atual **está** em andamento — e o rótulo acessível continua dizendo a frase inteira |
 | Atual-e-concluído ficar indistinguível do atual | Baixa | Médio | São sólido e listrado, lado a lado na mesma altura; cenário próprio no spec |

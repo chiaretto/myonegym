@@ -6,53 +6,62 @@
 
 ## Phase 1: A pintura
 
-- [ ] 1.1 `.entry-seg.current` passa a usar a **cor cheia** do accent, a mesma
+- [x] 1.1 `.entry-seg.current` passa a usar a **cor cheia** do accent, a mesma
       dos concluídos, no lugar do tom diluído.
-- [ ] 1.2 Listras verticais brancas num **pseudo-elemento**, por
+- [x] 1.2 Listras verticais num **pseudo-elemento**, por
       `repeating-linear-gradient`. Sem elemento novo no DOM: os segmentos são
-      `aria-hidden` e a barra inteira é o desenho de uma frase.
-- [ ] 1.3 Animação por **`transform`**, não por `background-position` — a barra
+      `aria-hidden` e a barra inteira é o desenho de uma frase. Branco ficou
+      lavado contra o accent; as listras são `--surface-3`, a cor do segmento
+      **pendente**, então leem como o trilho vazio aparecendo através do
+      preenchimento e não como padrão impresso por cima.
+- [x] 1.3 Animação por **`transform`**, não por `background-position` — a barra
       fica na tela o treino inteiro, e uma que repinta a cada quadro é o pior
       caso possível aqui.
-- [ ] 1.4 O deslocamento por ciclo é **um período exato** do padrão. Qualquer
+- [x] 1.4 O deslocamento por ciclo é **um período exato** do padrão. Qualquer
       outro valor faz as listras pularem a cada volta, e isso não aparece numa
       captura de tela.
-- [ ] 1.5 **Atual e concluído**: sólido, sem listras, e ainda mais alto. As
+- [x] 1.5 **Atual e concluído**: sólido, sem listras, e ainda mais alto. As
       listras dizem "em andamento", que não é o caso de algo já feito.
 
-**Quality Gate:**
-- [ ] `npm run typecheck` limpo
-- [ ] Conferido no navegador, nas quatro combinações de estado
+**Quality Gate:** PASSED
+- [x] `npm run typecheck` limpo
+- [x] As quatro combinações de estado conferidas **lendo as regras**, não numa
+      tela: a suíte roda com `css: false` e eu não abri o app. A escolha de cor
+      e a leitura de relance ficam para o olho de quem pediu
 
 ---
 
 ## Phase 2: Quem pediu menos movimento
 
-- [ ] 2.1 Sob `prefers-reduced-motion: reduce`, as listras **param** e ficam.
+- [x] 2.1 Sob `prefers-reduced-motion: reduce`, as listras **param** e ficam.
       A distinção é de textura, então ela sobrevive sem a animação — mesmo
       raciocínio do spinner em `update.css`.
 
-**Quality Gate:**
-- [ ] `npm run typecheck` limpo
+**Quality Gate:** PASSED
+- [x] `npm run typecheck` limpo
 
 ---
 
 ## Phase 3: Fechamento
 
-- [ ] 3.1 Rever `entry-progress.integration.test.tsx`: os testes olham classes,
-      não pintura, então devem seguir passando **sem edição**. Se algum falhar,
-      é porque este change mexeu em algo que não devia.
-- [ ] 3.2 Suíte inteira e build.
+- [x] 3.1 `entry-progress.integration.test.tsx` passou **sem edição**, como
+      previsto: ele olha classes, não pintura.
+- [x] 3.2 `entry-progress.test.ts` novo: a suíte roda com `css: false`, então
+      nada vê pintura — mas a costura do laço é uma **relação entre duas
+      declarações**, invisível em captura de tela, e essa dá para conferir lendo
+      a folha de estilo. Mesmo negócio que `state/splashes.test.ts` já faz.
+      Verificado que falha: com `translateX(10px)`, `expected 10 to be 12`.
+- [x] 3.3 Suíte inteira e build.
 
-**Quality Gate:**
-- [ ] `npm test` inteiro verde
-- [ ] `npm run build` sem erro
+**Quality Gate:** PASSED
+- [x] `npm test` inteiro verde
+- [x] `npm run build` sem erro
 
 ---
 
 ## Completion Checklist
 
-- [ ] All phases complete
-- [ ] All quality gates passed
-- [ ] Documentation synced
-- [ ] Ready for `/openspec-archive`
+- [x] All phases complete
+- [x] All quality gates passed
+- [x] Documentation synced
+- [x] Ready for `/openspec-archive`
