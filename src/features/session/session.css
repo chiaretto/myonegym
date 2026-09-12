@@ -89,12 +89,84 @@
 .entry-progress { display: flex; align-items: center; gap: 4px; padding-top: 2px; }
 .entry-seg { flex: 1; min-width: 0; height: 6px; border-radius: var(--r-pill);
   background: var(--surface-3); transition: height 0.15s ease-out, background 0.15s ease-out; }
-/* Pending, but where you are: the accent tint says "here" without claiming the
-   solid fill that means "done". */
-.entry-seg.current { height: 10px; background: var(--bg-accent); }
+/* Where you are: the SAME full accent as a done one, taller, and told apart from
+   it by texture rather than by tint.
+
+   CHANGED: it used to be the accent at 16% opacity. On a 6-to-10px strip read at
+   a glance mid-set, often from two metres away, the gap between "pending" and
+   "this is where I am" came down to how much ink was in the same colour — which
+   is the one difference that distance and haste take away first. Texture and
+   motion survive both. */
+.entry-seg.current { height: 10px; background: var(--accent-grad); }
 /* Done wins the fill in both states; .current still supplies the height, so a
-   done exercise you have stepped back to reads as both at once. */
+   done exercise you have stepped back to reads as both at once — and reads as
+   done rather than as in progress, because the stripes below skip it. */
 .entry-seg.done, .entry-seg.done.current { background: var(--accent-grad); }
+
+/* Current and NOT done: dark bars marching sideways, the way a loading bar says
+   "this one is under way". Which is exactly what the current exercise is — the
+   metaphor is the message, not decoration.
+
+   The stripes are `--surface-3`, the very colour of a PENDING segment, so they
+   read as the empty track showing through the fill rather than as a pattern
+   printed on top. White was the first try and looked washed out against the
+   accent; this ties the strip together instead, out of a token the bar already
+   uses.
+
+   Deliberately `:not(.done)`. Once an exercise is finished the segment goes back
+   to solid, and that absence is what keeps "here, and done" distinguishable from
+   "here, still going" now that both wear the same colour.
+
+   A pseudo-element, not a child node: the segments are aria-hidden and the whole
+   strip is a drawing of a sentence the label already says, so there is nothing
+   here worth a node in the document.
+
+   `overflow: hidden` is what makes the pill shape clip the stripes — a radius
+   alone does not clip an absolutely positioned child. */
+.entry-seg.current:not(.done) { position: relative; overflow: hidden; }
+.entry-seg.current:not(.done)::after {
+  content: ''; position: absolute; top: 0; bottom: 0;
+  /* How far sideways the pattern repeats — the one number this effect rests on,
+     written once and used three times below.
+
+     A gradient's period is measured PERPENDICULAR to its bands, so a diagonal
+     pattern repeats over a longer distance horizontally than the 12px it
+     repeats over across itself: the horizontal repeat is the period divided by
+     sin(angle), and at 135deg that is 12 / (√2/2) = 12·√2. Sliding by a plain
+     12px would leave the stripes a third of a period short and make them jump
+     at the end of every loop. */
+  --stripe-shift: calc(12px * 1.41421356);
+
+  /* Offset and overgrown by exactly that, so the travel lands flush at both
+     ends of every cycle and no bare accent slides in from either side. */
+  left: calc(-1 * var(--stripe-shift)); width: calc(100% + var(--stripe-shift));
+  /* 135deg leans the bands "/" — the barber-pole slant, which reads as movement
+     even in a still frame. */
+  background: repeating-linear-gradient(135deg,
+    var(--surface-3) 0 6px,
+    transparent 6px 12px);
+  /* `transform`, never `background-position`: the two draw the same movement,
+     but this one is the compositor's work while the other repaints every frame
+     — and this strip is on screen for the whole workout, on a fixed bar, with
+     the screen held awake by the rest timer. */
+  animation: entry-seg-stripes 800ms linear infinite;
+}
+/* The travel is the horizontal repeat, and it reads the same custom property the
+   geometry above does — so the three cannot drift apart. Any other distance
+   makes the stripes jump at the end of each loop, which is the kind of wrong
+   that never shows up in a screenshot; `entry-progress.test.ts` is what checks
+   the arithmetic against the angle. */
+@keyframes entry-seg-stripes {
+  to { transform: translateX(var(--stripe-shift)); }
+}
+/* Asked for less motion: the stripes stay, the marching stops. The distinction
+   is texture before it is animation, so it survives intact — and a perpetual
+   movement in the corner of the eye, on a screen stared at between sets for an
+   hour, is precisely what this preference is for. Same trade as the spinner in
+   settings/update.css: the effect goes, the news stays. */
+@media (prefers-reduced-motion: reduce) {
+  .entry-seg.current:not(.done)::after { animation: none; }
+}
 
 /* Rest-between-sets stopwatch, laid over the exercise media (features/session/
    RestTimer). Tucked into the top-right corner — .hero clips, so the inset is
