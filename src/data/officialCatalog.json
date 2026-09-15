@@ -677,7 +677,8 @@
       "kind": "strength",
       "categoryIds": [
         10,
-        12
+        12,
+        11
       ],
       "alternativeIds": [
         36

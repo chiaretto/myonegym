@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(59)
+    expect(officialExercises()).toHaveLength(60)
   })
 
   it('keeps every id inside the official range', () => {
@@ -140,6 +140,7 @@ describe('officialCatalog', () => {
       [58, 'Rosca Direta com Barra Reta (Polia)'],
       [59, 'Tríceps Pulley (Corda)'],
       [60, 'Agachamento Afundo (halteres / Barra)'],
+      [61, 'Escada (Simulador)'],
     ]
 
     it('still numbers every category the way it always did', () => {
