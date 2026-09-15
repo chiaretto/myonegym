@@ -103,3 +103,112 @@ describe('buildShareCard', () => {
     expect(build('full', { gym: undefined }).gymName).toBeUndefined()
   })
 })
+
+/**
+ * A cardio session is one activity, not a list of one.
+ *
+ * `startCardioSession` sets `dayName` to the exercise's own name, so the list
+ * drawing writes those words twice — as the title and as its only row — and
+ * gives 48px to the single thing the card has to show.
+ */
+describe('buildShareCard, for a cardio session', () => {
+  const cardioSession: Session = {
+    id: 20,
+    gymId: 1,
+    kind: 'cardio',
+    // A cardio's day name IS the exercise's name — that is the repetition.
+    dayName: 'Corrida Externa',
+    startedAt: STARTED,
+    completedAt: COMPLETED,
+    status: 'completed',
+  }
+  const cardioEx = new Map<number, Exercise>([
+    [
+      9,
+      {
+        id: 9,
+        name: 'Corrida Externa',
+        kind: 'cardio',
+        categoryIds: [1],
+        alternativeIds: [],
+        videos: [],
+        mediaUrl: 'https://x.com/corrida.webp',
+      },
+    ],
+  ])
+  const cardioEntries: SessionEntry[] = [
+    { id: 9, sessionId: 20, exerciseId: 9, exerciseName: 'Corrida Externa', done: true },
+  ]
+  const cardio = (over: Partial<Parameters<typeof buildShareCard>[0]> = {}) =>
+    buildShareCard({
+      session: cardioSession,
+      entries: cardioEntries,
+      gym,
+      weights: new Map(),
+      exMap: cardioEx,
+      catMap,
+      variant: 'full',
+      ...over,
+    })
+
+  it('becomes a portrait', () => {
+    expect(cardio().layout).toBe('portrait')
+  })
+
+  it('says the name once, under the photo, instead of twice', () => {
+    const card = cardio()
+    // No title: the caption carries the name, and a title would be the same
+    // words again, one line above.
+    expect(card.title).toBeUndefined()
+    expect(card.rows[0].name).toBe('Corrida Externa')
+  })
+
+  it('keeps the photo and the categories, which are what the portrait is for', () => {
+    const card = cardio()
+    expect(card.rows[0].mediaUrl).toBe('https://x.com/corrida.webp')
+    expect(card.rows[0].category).toBe('Bíceps')
+  })
+
+  it('stays a list when the exercise has no picture', () => {
+    // The drawing exists because of the photo. Without one, an empty rectangle
+    // across half the card would be worse than the compact row.
+    const noMedia = new Map<number, Exercise>([
+      [9, { id: 9, name: 'Corrida Externa', kind: 'cardio', categoryIds: [1], alternativeIds: [], videos: [] }],
+    ])
+    const card = cardio({ exMap: noMedia })
+    expect(card.layout).toBe('list')
+    expect(card.title).toBe('Corrida Externa')
+  })
+
+  it('keeps the header and the footer either way', () => {
+    const card = cardio()
+    expect(card.gymName).toBe('Academia A')
+    expect(card.dateLabel).toBe('16 jul 2026')
+    expect(card.durationLabel).toBe('48 min')
+    expect(card.doneLabel).toBe('1 de 1 concluídos')
+  })
+})
+
+describe('buildShareCard, for a training day', () => {
+  it('stays a list even with a single exercise', () => {
+    // A training day with one exercise is still a list — short today, maybe
+    // three next time. The distinction follows the session's KIND.
+    const card = buildShareCard({
+      session,
+      entries: [entries[0]],
+      gym,
+      weights,
+      exMap,
+      catMap,
+      variant: 'full',
+    })
+    expect(card.layout).toBe('list')
+    expect(card.title).toBe('Dia 1')
+  })
+
+  it('stays a list with several', () => {
+    expect(build('full').layout).toBe('list')
+    expect(build('full').title).toBe('Dia 1')
+  })
+})
+
