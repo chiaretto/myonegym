@@ -128,6 +128,29 @@ Share actions MUST NOT be offered for an **in-progress** session.
 - THEN the image shows the "Agachamento" row with **no** weight badge
 - AND the word "definir" does **not** appear on the image
 
+#### Scenario: Done exercises are emphasised over skipped ones
+- GIVEN a completed session where "Supino" is done and "Agachamento" was skipped
+- WHEN the user shares it
+- THEN "Supino" is rendered at full strength (not dimmed, not struck through)
+- AND "Agachamento" recedes visually
+
+#### Scenario: The image uses an absolute date
+- GIVEN a session completed on 16 July 2026
+- WHEN the user shares it on that same day
+- THEN the image shows an absolute date ("16 jul 2026")
+- AND it does **not** show the relative label "Hoje"
+
+#### Scenario: The image ignores the font-scale setting
+- GIVEN the user set the Aparência font scale to its maximum
+- WHEN the user shares a completed session
+- THEN the generated image is identical to the one produced at the default scale
+
+#### Scenario: Image survives source exercise deletion
+- GIVEN a completed session referencing "Rosca Direta"
+- WHEN "Rosca Direta" is later deleted and the user shares the session
+- THEN the image still shows the "Rosca Direta" name (from the entry snapshot)
+- AND its thumbnail falls back to a placeholder and no weight badge is drawn
+
 ---
 
 ## ADDED

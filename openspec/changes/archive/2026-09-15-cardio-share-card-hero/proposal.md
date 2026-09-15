@@ -136,12 +136,19 @@ cartão numa torre — é o número a olhar na tela antes de arquivar.
 
 ## Success Criteria
 
-- [ ] Numa sessão de cardio, a foto ocupa a largura inteira do cartão
-- [ ] O nome do exercício e as categorias aparecem abaixo da foto
-- [ ] O nome não aparece duas vezes
-- [ ] Um cardio sem imagem continua com o formato de hoje
-- [ ] O cartão de um dia de treino não muda em nada
-- [ ] A altura calculada bate com o que é desenhado
+- [x] Numa sessão de cardio, a foto ocupa a largura inteira do cartão
+- [x] O nome do exercício e as categorias aparecem abaixo da foto
+- [x] O nome não aparece duas vezes
+- [x] Um cardio sem imagem continua com o formato de hoje
+- [x] O cartão de um dia de treino não muda em nada
+- [~] A altura calculada bate com o que é desenhado
+
+**Em que base.** Os quatro primeiros e o quinto por teste: `share.test.ts` cobre
+a escolha de formato, a ausência do título repetido, o caso sem foto e o dia de
+treino — inclusive o de um exercício só. O último **só em parte**: `cardHeight`
+e o desenho leem as mesmas constantes e `cardHeight.test.ts` cobre o *ramo*, mas
+o acordo em pixels não foi visto numa tela. jsdom não tem canvas, e eu não gerei
+o cartão.
 
 ## Risks & Mitigations
 
@@ -151,3 +158,39 @@ cartão numa torre — é o número a olhar na tela antes de arquivar.
 | A foto ficar muito alta e o cartão virar uma torre | Média | Baixo | 3:2, e é um número — ajustável ao olho antes de arquivar |
 | Categorias longas (o catálogo tem cardio com quatro) estourarem a linha | Média | Baixo | `ellipsize` já existe e a largura agora é a do cartão inteiro, bem maior que a da linha |
 | Um cardio sem foto cair num buraco de layout | Baixa | Médio | Sem foto, o formato de hoje; dito no spec com cenário próprio |
+
+---
+
+## Archive Information
+
+**Archived:** 2026-09-15
+**Duration:** mesmo dia
+**Outcome:** Successfully implemented
+
+### Files Modified
+- `src/features/session/share/shareModel.ts` — o modelo passa a dizer qual
+  formato o cartão tem
+- `src/features/session/share/renderCard.ts` — `drawPortrait`, o `drawCover`
+  retangular, e `cardHeight` ciente do formato
+- `src/features/session/share/share.test.ts` — o cardio e o dia de treino
+- `src/features/session/share/cardHeight.test.ts` (novo) — o ramo da altura
+
+### Specs Updated
+- `openspec/specs/workout-sessions/spec.md` — 1 requisito MODIFIED
+
+### Learned in Implementation
+
+**`drawCover` era só-quadrado, e generalizá-la foi o que tornou a proporção uma
+decisão.** Ela recebia um `size`; passou a receber largura e altura. Com recorte
+por preenchimento é a **caixa** que decide a forma, e é isso que permite escolher
+uma proporção única para fotos que vão de GIF quase quadrado a paisagem sem
+distorcer nenhuma.
+
+**Um MODIFIED que reescreve o corpo inteiro perde o que não foi copiado.** Ao
+mesclar, quatro cenários do requisito original desapareceram — ênfase em
+concluídos, data absoluta, independência do font-scale e sobrevivência à exclusão
+do exercício — porque o delta não os trazia. Vistos no diff (que deveria ser
+puramente aditivo e não era) e restaurados no spec **e** no delta, para que o
+próximo merge não os perca de novo. É o risco estrutural de reescrever um
+requisito inteiro em vez de emendá-lo, e o diff é o único lugar onde ele aparece.
+

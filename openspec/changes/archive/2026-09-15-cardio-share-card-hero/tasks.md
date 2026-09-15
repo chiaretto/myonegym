@@ -52,8 +52,10 @@
       em pixels é coisa para o olho — jsdom não tem canvas —, mas o
       **ramo** é testável, e esquecê-lo é o erro realista. Verificado que morde:
       sem a ramificação, "expected 196 to be greater than 242".
-- [ ] 3.2b **Por olhar:** a proporção 3:2 e o corte da foto no cartão de verdade.
-      Nenhum teste aqui vê pintura.
+- [~] 3.2b A proporção 3:2 e o corte da foto **não foram conferidos numa tela**
+      — nenhum teste aqui vê pintura, e eu não gerei o cartão. Arquivado assim
+      por decisão de quem pediu. Se a foto ficar alta ou o corte cair mal, é um
+      número (`HERO_H`) num lugar só.
 - [x] 3.3 Suíte inteira e build.
 
 **Quality Gate:** PASSED
@@ -67,4 +69,4 @@
 - [x] All phases complete
 - [x] All quality gates passed
 - [x] Documentation synced
-- [ ] Ready for `/openspec-archive` — falta olhar o cartão na tela (3.2b)
+- [x] Ready for `/openspec-archive`
