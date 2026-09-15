@@ -21,8 +21,23 @@ export interface ShareRow {
   mediaUrl?: string
 }
 
+/**
+ * Which of the two drawings the card is.
+ *
+ * - `list` — a header over one row per exercise. What a training day is.
+ * - `portrait` — the exercise's picture across the full width, its name and
+ *   categories beneath. What a **cardio** is: one activity, and the image of it.
+ *
+ * The choice lives here rather than in the renderer because this is where the
+ * "what goes on the image" decisions are testable — jsdom has no canvas.
+ */
+export type ShareLayout = 'list' | 'portrait'
+
 export interface ShareCard {
-  title: string
+  layout: ShareLayout
+  /** Absent on `portrait`, where the single row's name is the caption and a
+   *  title would be the same words a second time. */
+  title?: string
   gymName?: string
   /** Absolute ("16 jul 2026"), never relative — the image outlives the day. */
   dateLabel: string
@@ -73,8 +88,29 @@ export function buildShareCard({
     }
   })
 
+  /**
+   * A cardio becomes a portrait — but only if there is a picture to be the
+   * portrait.
+   *
+   * On a cardio session `dayName` **is** the exercise's name (see
+   * `startCardioSession`), so the list drawing writes the same words twice: once
+   * as the title and once in its only row. And it hands 48px to the one thing
+   * that card has to show. On a training day the thumbnail is a marker beside
+   * what matters, which is the list; on a cardio there is no list.
+   *
+   * Keyed on the session's **kind**, not on how many entries it has: a training
+   * day with one exercise is still a list — short today, maybe three next time —
+   * while a cardio is a single activity the app treats apart everywhere.
+   *
+   * With no picture it stays a list. The drawing exists because of the photo;
+   * without one, an empty rectangle across half the card would be worse than the
+   * compact row it replaced.
+   */
+  const portrait = session.kind === 'cardio' && rows.length === 1 && !!rows[0].mediaUrl
+
   return {
-    title: session.dayName,
+    layout: portrait ? 'portrait' : 'list',
+    ...(portrait ? {} : { title: session.dayName }),
     gymName: gym?.name,
     dateLabel: fmtFullDate(session.completedAt ?? session.startedAt),
     durationLabel:

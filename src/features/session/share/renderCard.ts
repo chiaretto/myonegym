@@ -54,6 +54,24 @@ const ROW_H = 64
 const ROW_GAP = 6
 const THUMB = 48
 const CHECK = 24
+
+/* ── The portrait, for a cardio ───────────────────────────────────────────────
+   Full bleed: the photo runs edge to edge, so there is no corner radius to
+   round against — the PNG itself has square corners.
+
+   3:2 makes the picture the subject without turning the card into a tower. The
+   pictures themselves range from near-square GIFs to landscape photographs, and
+   `drawCover` crops, so this ratio is the card's decision rather than theirs.
+
+   Every one of these numbers is read BOTH by `cardHeight` and by `drawPortrait`
+   — the two have to agree or the card gets a black band underneath or a cropped
+   photo, and no test here can see that: jsdom has no canvas. */
+const HERO_H = Math.round(W / 1.5)
+const HERO_GAP = 16
+const CAP_NAME_H = 26
+const CAP_CAT_H = 20
+const HERO_NAME = "700 22px 'Poppins', sans-serif"
+const HERO_CAT = "500 14px 'Poppins', sans-serif"
 /**
  * The screen dims and strikes through *done* entries — crossing an item off a
  * checklist reads as progress there. On a shared image that inverts: the work
@@ -118,19 +136,29 @@ function loadImage(url: string, timeoutMs = 4000): Promise<HTMLImageElement | nu
   })
 }
 
+/**
+ * Fill a box with the image, cropping the overflow — never stretching it.
+ *
+ * Takes a width and a height rather than one size: the thumbnail is a square and
+ * the portrait's photo is not, and the catalog's pictures range from near-square
+ * GIFs to landscape photographs. With cover cropping it is the BOX that decides
+ * the shape, which is what makes one aspect ratio safe to pick for all of them.
+ */
 function drawCover(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement,
   x: number,
   y: number,
-  size: number,
+  w: number,
+  h: number,
+  r = 12,
 ) {
   ctx.save()
-  rrect(ctx, x, y, size, size, 12)
+  rrect(ctx, x, y, w, h, r)
   ctx.clip()
   const ar = img.naturalWidth / img.naturalHeight
-  const [dw, dh] = ar > 1 ? [size * ar, size] : [size, size / ar]
-  ctx.drawImage(img, x + (size - dw) / 2, y + (size - dh) / 2, dw, dh)
+  const [dw, dh] = ar > w / h ? [h * ar, h] : [w, w / ar]
+  ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh)
   ctx.restore()
 }
 
@@ -210,12 +238,27 @@ function drawBadge(ctx: CanvasRenderingContext2D, text: string, right: number, c
   return w
 }
 
-function cardHeight(card: ShareCard): number {
+/**
+ * The portrait's own height: photo, gap, name, and categories when there are
+ * any. Shared by the measuring and the drawing below, because they are the same
+ * layout read twice.
+ */
+export function portraitHeight(card: ShareCard): number {
+  return HERO_H + HERO_GAP + CAP_NAME_H + (card.rows[0]?.category ? CAP_CAT_H : 0)
+}
+
+export function cardHeight(card: ShareCard): number {
   const rows = card.rows.length
-  let h = PAD + 34 + 12 + 20
+  let h = PAD
+  // No title on a portrait: the caption under the photo already carries the
+  // name, and on a cardio the day name IS that name.
+  if (card.title) h += 34 + 12
+  h += 20
   if (card.durationLabel) h += 8 + 18
   h += 20
-  h += rows * ROW_H + Math.max(0, rows - 1) * ROW_GAP
+  h += card.layout === 'portrait'
+    ? portraitHeight(card)
+    : rows * ROW_H + Math.max(0, rows - 1) * ROW_GAP
   h += 18 + 18 + PAD
   return h
 }
@@ -266,10 +309,12 @@ export async function renderCard(card: ShareCard, accentId?: string | null): Pro
   let y = PAD
 
   // ── Header ────────────────────────────────────────────────────────────────
-  ctx.font = TITLE
-  ctx.fillStyle = C.text
-  ctx.fillText(ellipsize(ctx, card.title, W - PAD * 2), PAD, y + 26)
-  y += 34 + 12
+  if (card.title) {
+    ctx.font = TITLE
+    ctx.fillStyle = C.text
+    ctx.fillText(ellipsize(ctx, card.title, W - PAD * 2), PAD, y + 26)
+    y += 34 + 12
+  }
 
   let x = PAD
   if (card.gymName) {
@@ -299,11 +344,16 @@ export async function renderCard(card: ShareCard, accentId?: string | null): Pro
   }
   y += 20
 
-  // ── Rows ──────────────────────────────────────────────────────────────────
-  card.rows.forEach((row, i) => {
-    drawRow(ctx, row, media[i], y, A)
-    y += ROW_H + (i < card.rows.length - 1 ? ROW_GAP : 0)
-  })
+  // ── Body ──────────────────────────────────────────────────────────────────
+  if (card.layout === 'portrait') {
+    drawPortrait(ctx, card.rows[0], media[0], y, A)
+    y += portraitHeight(card)
+  } else {
+    card.rows.forEach((row, i) => {
+      drawRow(ctx, row, media[i], y, A)
+      y += ROW_H + (i < card.rows.length - 1 ? ROW_GAP : 0)
+    })
+  }
 
   // ── Footer ────────────────────────────────────────────────────────────────
   y += 18
@@ -318,6 +368,48 @@ export async function renderCard(card: ShareCard, accentId?: string | null): Pro
   ctx.textAlign = 'left'
 
   return toBlob(canvas)
+}
+
+/**
+ * A cardio's card: the picture across the whole width, the name and categories
+ * under it.
+ *
+ * Dimmed as a whole when the entry was not done, exactly as a skipped row is —
+ * a faded photograph reads as "this did not happen", which is the thing being
+ * said.
+ */
+function drawPortrait(
+  ctx: CanvasRenderingContext2D,
+  row: ShareRow,
+  img: HTMLImageElement | null,
+  y: number,
+  accent: CardAccent,
+) {
+  ctx.save()
+  if (!row.done) ctx.globalAlpha = SKIPPED_ALPHA
+
+  // Full bleed, square corners: it meets the edges of the PNG itself.
+  if (img) drawCover(ctx, img, 0, y, W, HERO_H, 0)
+  else fillRRect(ctx, 0, y, W, HERO_H, 0, C.row)
+
+  let cy = y + HERO_H + HERO_GAP
+  drawCheck(ctx, PAD, cy + 1, CHECK, row.done, accent.accent)
+
+  const nx = PAD + CHECK + 10
+  const avail = W - PAD - nx
+  ctx.textBaseline = 'alphabetic'
+  ctx.font = HERO_NAME
+  ctx.fillStyle = C.text
+  ctx.fillText(ellipsize(ctx, row.name, avail), nx, cy + 19)
+  cy += CAP_NAME_H
+
+  if (row.category) {
+    ctx.font = HERO_CAT
+    ctx.fillStyle = C.dim
+    ctx.fillText(ellipsize(ctx, row.category, W - PAD - nx), nx, cy + 12)
+  }
+
+  ctx.restore()
 }
 
 function drawRow(
@@ -336,7 +428,7 @@ function drawRow(
   drawCheck(ctx, PAD + 10, cy - CHECK / 2, CHECK, row.done, accent.accent)
 
   const tx = PAD + 10 + CHECK + 10
-  if (img) drawCover(ctx, img, tx, cy - THUMB / 2, THUMB)
+  if (img) drawCover(ctx, img, tx, cy - THUMB / 2, THUMB, THUMB)
   else drawPlaceholder(ctx, tx, cy - THUMB / 2, THUMB)
 
   let right = W - PAD - 12
