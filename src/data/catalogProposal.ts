@@ -406,9 +406,18 @@ async function applyInTransaction(
 ): Promise<ApplyOutcome> {
   return d.transaction(
     'rw',
-    // Array form: Dexie's typed overloads stop at 5 tables. The last four are
+    // Array form: Dexie's typed overloads stop at 5 tables. The last five are
     // here for `deleteExercise`'s cascade, not because this writes them.
-    [d.categories, d.exercises, d.days, d.weights, d.weightHistory, d.exerciseNotes, d.exercisePhotos],
+    [
+      d.categories,
+      d.exercises,
+      d.days,
+      d.weights,
+      d.weightHistory,
+      d.exerciseNotes,
+      d.exercisePhotos,
+      d.hiddenCardio,
+    ],
     async () => {
       // Read inside the transaction: the check and the write must see the same
       // catalog, or a proposal validated against a stale snapshot could apply.

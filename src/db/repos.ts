@@ -229,6 +229,34 @@ export async function listCardioExercises(d: MyOneGymDB = db): Promise<Exercise[
   return [...official, ...own].sort(byName)
 }
 
+/**
+ * Ids of the cardio exercises kept off the Cardio tab (see `HiddenCardio`).
+ *
+ * Returned raw — an id may belong to an exercise that is strength now, or to
+ * nothing at all. The mark is deliberately kept through a change of kind (the
+ * policy weights follow when an exercise becomes cardio), so it is the reader
+ * that intersects it with the cardio list, not this.
+ */
+export async function listHiddenCardioIds(d: MyOneGymDB = db): Promise<number[]> {
+  return d.hiddenCardio.toCollection().primaryKeys()
+}
+
+/**
+ * Hide a cardio exercise from the Cardio tab, or bring it back.
+ *
+ * Official ids are welcome here, unlike in every exercise write above: this is
+ * not a write to the catalog, it is a fact of the user's about an id — the same
+ * standing a weight or a note has. Idempotent in both directions.
+ */
+export async function setCardioHidden(
+  exerciseId: number,
+  hidden: boolean,
+  d: MyOneGymDB = db,
+): Promise<void> {
+  if (hidden) await d.hiddenCardio.put({ exerciseId })
+  else await d.hiddenCardio.delete(exerciseId)
+}
+
 /** The days that currently contain `exerciseId` — what the UI names in the
  *  confirmation before turning an exercise into cardio. */
 export async function daysContaining(exerciseId: number, d: MyOneGymDB = db): Promise<Day[]> {
@@ -456,7 +484,15 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
   // Array form: Dexie's typed overloads stop at 5 tables.
   await d.transaction(
     'rw',
-    [d.exercises, d.days, d.weights, d.weightHistory, d.exerciseNotes, d.exercisePhotos],
+    [
+      d.exercises,
+      d.days,
+      d.weights,
+      d.weightHistory,
+      d.exerciseNotes,
+      d.exercisePhotos,
+      d.hiddenCardio,
+    ],
     async () => {
       // Unlink first, while the record is still there to say who its peers are.
       // Because the relation is symmetric, its own list IS the list of referrers
@@ -481,6 +517,7 @@ export async function deleteExercise(id: number, d: MyOneGymDB = db): Promise<vo
       // Photos are the heaviest rows in the DB — orphans would waste storage the
       // user has no way to reach or clear.
       await d.exercisePhotos.where('exerciseId').equals(id).delete()
+      await d.hiddenCardio.delete(id)
       await d.exercises.delete(id)
     },
   )

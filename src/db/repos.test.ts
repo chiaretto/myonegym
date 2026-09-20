@@ -34,6 +34,8 @@ import {
   listDays,
   reorderDays,
   listCardioExercises,
+  listHiddenCardioIds,
+  setCardioHidden,
   listHistory,
   listPhotos,
   listSessionEntries,
@@ -1257,5 +1259,43 @@ describe('exercise videos', () => {
     const ex = await d.exercises.get(id)
     expect(ex?.name).toBe('Supino')
     expect(ex?.videos.map((v) => v.url)).toEqual([yt])
+  })
+})
+
+describe('hidden cardio', () => {
+  const officialCardio = () => officialExercises().find((e) => e.kind === 'cardio')!
+
+  it('hides and shows, idempotently in both directions', async () => {
+    const ex = await createExercise({ name: 'Escada do prédio', kind: 'cardio' }, d)
+    await setCardioHidden(ex, true, d)
+    await setCardioHidden(ex, true, d)
+    expect(await listHiddenCardioIds(d)).toEqual([ex])
+    await setCardioHidden(ex, false, d)
+    await setCardioHidden(ex, false, d)
+    expect(await listHiddenCardioIds(d)).toEqual([])
+  })
+
+  it('takes an official id — it is a fact about the id, not a write to the catalog', async () => {
+    const official = officialCardio()
+    await setCardioHidden(official.id!, true, d)
+    expect(await listHiddenCardioIds(d)).toEqual([official.id])
+    // The catalog still lists it: hiding is the tab's business, not the list's.
+    expect((await listCardioExercises(d)).some((e) => e.id === official.id)).toBe(true)
+  })
+
+  it('is dropped with the exercise it marks, and only that one', async () => {
+    const gone = await createExercise({ name: 'Escada do prédio', kind: 'cardio' }, d)
+    const stays = await createExercise({ name: 'Corrida na praia', kind: 'cardio' }, d)
+    await setCardioHidden(gone, true, d)
+    await setCardioHidden(stays, true, d)
+    await deleteExercise(gone, d)
+    expect(await listHiddenCardioIds(d)).toEqual([stays])
+  })
+
+  it('survives the exercise turning strength', async () => {
+    const ex = await createExercise({ name: 'Remo seco', kind: 'cardio' }, d)
+    await setCardioHidden(ex, true, d)
+    await updateExercise(ex, { name: 'Remo seco', kind: 'strength' }, d)
+    expect(await listHiddenCardioIds(d)).toEqual([ex])
   })
 })

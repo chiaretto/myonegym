@@ -33,3 +33,9 @@
 .cardio-start.resume { background: transparent; color: var(--text-accent);
   box-shadow: inset 0 0 0 1.5px var(--accent); }
 .cardio-row.running { border-color: var(--border-accent); background: var(--bg-accent); }
+
+/* "3 ocultos · Gerenciar" — under the list, quiet: it is a footnote about the
+   list, not a row of it. */
+.cardio-hidden-note { margin: 14px 4px 0; text-align: center; font-size: var(--fs-xs);
+  color: var(--text-muted); }
+.cardio-hidden-note a { color: var(--text-accent); text-decoration: none; font-weight: 600; }

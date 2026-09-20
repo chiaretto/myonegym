@@ -619,3 +619,47 @@ describe('v13 migration: the catalog moves to the bundle', () => {
     }
   })
 })
+
+describe('v14 migration: the hidden-cardio table arrives empty', () => {
+  let name: string
+  beforeEach(() => {
+    name = `mig14-${Date.now()}-${Math.floor(performance.now())}`
+  })
+  afterEach(async () => {
+    await Dexie.delete(name)
+  })
+
+  it('adds the table without touching what was there', async () => {
+    // A fresh database may declare its latest version alone: v13's shape, with
+    // no `hiddenCardio` in it.
+    const v13 = new Dexie(name)
+    v13.version(13).stores({
+      gyms: '++id, name, createdAt',
+      exercises: '++id, name, kind, *categoryIds',
+      weights: '++id, &[gymId+exerciseId], gymId, exerciseId',
+    })
+    await v13.open()
+    const gym = (await v13.table('gyms').add({ name: 'Academia A', createdAt: 1 })) as number
+    await v13.table('exercises').add({
+      id: USER_ID_BASE,
+      name: 'Escada do prédio',
+      kind: 'cardio',
+      categoryIds: [],
+      alternativeIds: [],
+      videos: [],
+    })
+    await v13.table('weights').add({ gymId: GLOBAL_GYM_ID, exerciseId: 1, value: 40, unit: 'KG' })
+    v13.close()
+
+    const db = new MyOneGymDB(name)
+    await db.open()
+    try {
+      expect(await db.hiddenCardio.count()).toBe(0)
+      expect((await db.gyms.get(gym))?.name).toBe('Academia A')
+      expect((await db.exercises.get(USER_ID_BASE))?.kind).toBe('cardio')
+      expect(await db.weights.count()).toBe(1)
+    } finally {
+      db.close()
+    }
+  })
+})

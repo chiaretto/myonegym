@@ -103,6 +103,26 @@ export interface Exercise {
   videos: ExerciseVideo[]
 }
 
+/**
+ * A cardio exercise the user chose to keep OFF the Cardio tab.
+ *
+ * A row of its own rather than `Exercise.hidden`, and the reason is the whole
+ * design: an **official** exercise is not a database row (see
+ * `data/officialCatalog`), so there is nowhere on it to write a field — and the
+ * official list, which grows by the publisher's decision rather than the
+ * user's, is exactly what this exists to tame. Keyed by the exercise id from
+ * either source, like a Weight or an ExerciseNote.
+ *
+ * Presence IS the fact: a row means hidden, no row means shown. Global, not
+ * per gym — what a person practises is theirs, not the building's.
+ *
+ * It hides the exercise from the **Cardio tab's list and nothing else**: the
+ * catalog, the history and Consistência never read this table.
+ */
+export interface HiddenCardio {
+  exerciseId: number
+}
+
 export interface Day {
   id?: number
   name: string

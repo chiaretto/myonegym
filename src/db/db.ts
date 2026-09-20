@@ -7,6 +7,7 @@ import type {
   ExerciseNote,
   ExercisePhoto,
   Gym,
+  HiddenCardio,
   Session,
   SessionEntry,
   Weight,
@@ -24,6 +25,7 @@ export class MyOneGymDB extends Dexie {
   sessionEntries!: Table<SessionEntry, number>
   exerciseNotes!: Table<ExerciseNote, number>
   exercisePhotos!: Table<ExercisePhoto, number>
+  hiddenCardio!: Table<HiddenCardio, number>
 
   constructor(name = 'myonegym') {
     super(name)
@@ -242,6 +244,14 @@ export class MyOneGymDB extends Dexie {
         await tx.table('exercises').clear()
         await tx.table('categories').clear()
       })
+    // v14 — cardio exercises hidden from the Cardio tab (see `HiddenCardio`).
+    // Additive, and born empty: nothing was hidden before there was a way to
+    // hide, so there is no upgrade to run. The primary key is the exercise id
+    // itself — one row per exercise is the whole model, and `put` on it is
+    // idempotent for free.
+    this.version(14).stores({
+      hiddenCardio: '&exerciseId',
+    })
   }
 }
 
@@ -322,5 +332,6 @@ export function allTables(database: MyOneGymDB = db) {
     // outside the database, so an import/reset must drop those too (see
     // `clearImages` in data/photoStore).
     database.exercisePhotos,
+    database.hiddenCardio,
   ]
 }
