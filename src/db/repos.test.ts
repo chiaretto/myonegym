@@ -899,11 +899,11 @@ describe('sessions', () => {
     expect(hist[1].session.dayName).toBe('Dia 1')
   })
 
-  it('history is ordered by completion across gyms, not grouped by gym', async () => {
+  it('history is ordered by START across gyms, not grouped by gym nor by completion', async () => {
     const { g, day } = await seedDay()
     const b = await createGym('B', d)
 
-    // Interleave: A, then B, then A again. Stamp completedAt directly so the
+    // Interleave: A, then B, then A again. Stamp the instants directly so the
     // order under test is the data's, not the clock's resolution.
     const ids: number[] = []
     for (const gym of [g, b, g]) {
@@ -911,9 +911,13 @@ describe('sessions', () => {
       await completeSession(s, d)
       ids.push(s)
     }
-    await d.sessions.update(ids[0], { completedAt: 1_000 })
-    await d.sessions.update(ids[1], { completedAt: 2_000 })
-    await d.sessions.update(ids[2], { completedAt: 3_000 })
+    // The first session ran LONGEST and was completed last of all. Ordered by
+    // completion it would top the list; it began first, so it goes last — the
+    // start is what dates a workout, and the list must not disagree with the
+    // dates it prints.
+    await d.sessions.update(ids[0], { startedAt: 1_000, completedAt: 9_000 })
+    await d.sessions.update(ids[1], { startedAt: 2_000, completedAt: 2_500 })
+    await d.sessions.update(ids[2], { startedAt: 3_000, completedAt: 3_500 })
 
     const hist = await listSessionSummaries(d)
     expect(hist.map((h) => h.session.id)).toEqual([ids[2], ids[1], ids[0]])

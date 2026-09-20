@@ -58,11 +58,13 @@ async function seedTwoGyms() {
   return { a, b, day }
 }
 
-/** Complete a session at `gym`, stamping `completedAt` so order is the data's. */
-async function completeAt(gym: number, dayId: number, completedAt: number) {
+/** Complete a session at `gym` whose workout began at `at` (done 30 min
+ *  later), so the order under test is the data's — and it is the START that
+ *  orders and dates the history (see `workoutAt`). */
+async function completeAt(gym: number, dayId: number, at: number) {
   const sid = await startSession(gym, dayId, db)
   await completeSession(sid, db)
-  await db.sessions.update(sid, { completedAt })
+  await db.sessions.update(sid, { startedAt: at, completedAt: at + 30 * 60_000 })
   return sid
 }
 

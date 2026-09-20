@@ -58,10 +58,14 @@ function dayOfThisWeek(index: number): number {
   return startOfWeek(Date.now()) + index * 86_400_000 + 12 * 3_600_000
 }
 
-async function completeAt(gym: number, dayId: number, completedAt: number) {
+/** A completed session whose workout happened at `at`: begun at `at`, done
+ *  30 minutes later. Both stamped — the START is what places it on a weekday
+ *  (see `workoutAt`), so stamping only the completion would leave every
+ *  session on today. */
+async function completeAt(gym: number, dayId: number, at: number) {
   const sid = await startSession(gym, dayId, db)
   await completeSession(sid, db)
-  await db.sessions.update(sid, { completedAt })
+  await db.sessions.update(sid, { startedAt: at, completedAt: at + 30 * 60_000 })
 }
 
 function renderHome() {
@@ -122,5 +126,23 @@ describe('Weekly summary spans every gym', () => {
 
     expect(await screen.findByText('Dia 1')).toBeInTheDocument()
     await waitFor(() => expect(doneCells()).toBe(1))
+  })
+})
+
+describe('The week track credits the day a workout STARTED', () => {
+  it('lights Monday for a session begun Monday night and completed after midnight', async () => {
+    const { a, day } = await seedTwoGyms()
+    // Monday is always at or before today, whatever the weekday.
+    const mondayNight = startOfWeek(Date.now()) + 23 * 3_600_000 + 50 * 60_000
+    const sid = await startSession(a, day, db)
+    await completeSession(sid, db)
+    await db.sessions.update(sid, { startedAt: mondayNight, completedAt: mondayNight + 30 * 60_000 })
+
+    renderHome()
+
+    await waitFor(() => expect(doneCells()).toBe(1))
+    const cells = document.querySelectorAll('.wd')
+    expect(cells[0].classList.contains('done')).toBe(true) // Monday
+    expect(cells[1].classList.contains('done')).toBe(false) // not Tuesday
   })
 })

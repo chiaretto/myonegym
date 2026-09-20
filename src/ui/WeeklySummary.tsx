@@ -10,8 +10,9 @@ import './weekly-summary.css'
  * the user had not trained for three days. The count stays the headline and the
  * track explains it.
  *
- * Everything is derived from `completedAt` on completed sessions — no new
- * persisted state, no migration.
+ * Everything is derived from the timestamps of completed sessions — the START
+ * of each, see `workoutAt` in lib/consistency — no new persisted state, no
+ * migration.
  *
  * Shared by the **Treinos** and **Cardio** tabs, and it counts the same thing on
  * both: the week is the week, whichever tab you are looking at it from. A cardio

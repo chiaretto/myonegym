@@ -52,17 +52,18 @@ export interface WeekDayCell {
 }
 
 /**
- * Build the seven cells of the current week from completion timestamps.
+ * Build the seven cells of the current week from workout timestamps (one per
+ * completed session — its START, see `workoutAt` in lib/consistency).
  *
- * `completedAt` values outside the current week are ignored, so callers may pass
- * the whole history. A past day with no session is `blank`, never a failure: no
+ * `at` values outside the current week are ignored, so callers may pass the
+ * whole history. A past day with no session is `blank`, never a failure: no
  * training day carries a weekday, so "no session here" is the only claim the data
  * supports — "you were supposed to train" is not.
  */
 export function buildWeekTrack(
-  completedAt: readonly number[],
+  at: readonly number[],
   now: number,
-  /** Completion times of the CARDIO sessions — a subset of `completedAt`, and
+  /** The CARDIO sessions — a subset of `at`, and
    *  the same extra argument `buildMonthGrid` takes. Optional: omitting it
    *  leaves every cell `cardio: false`, which is what the track showed before
    *  the star existed. */
@@ -72,8 +73,8 @@ export function buildWeekTrack(
   const todayIndex = dayIndexInWeek(now)
 
   const counts = new Array<number>(7).fill(0)
-  for (const i of weekdayIndices(completedAt, weekStart)) counts[i] += 1
-  // Counted, not just flagged: `cardioAt` is a subset of `completedAt`, so the
+  for (const i of weekdayIndices(at, weekStart)) counts[i] += 1
+  // Counted, not just flagged: `cardioAt` is a subset of `at`, so the
   // strength tally is the difference — no second input, and no matching
   // timestamps back to sessions to work out which is which.
   const cardioCounts = new Array<number>(7).fill(0)

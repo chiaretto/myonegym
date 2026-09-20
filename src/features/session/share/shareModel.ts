@@ -1,6 +1,7 @@
 import type { Category, Exercise, Gym, Session, SessionEntry, Weight } from '../../../db/types'
 import { exerciseCategoryNames } from '../../../lib/days'
 import { fmtDuration, fmtFullDate, fmtWeight } from '../../../lib/format'
+import { workoutAt } from '../../../lib/consistency'
 
 /**
  * Which flavour of the shared image to build.
@@ -112,7 +113,9 @@ export function buildShareCard({
     layout: portrait ? 'portrait' : 'list',
     ...(portrait ? {} : { title: session.dayName }),
     gymName: gym?.name,
-    dateLabel: fmtFullDate(session.completedAt ?? session.startedAt),
+    // The day the workout happened is the day it started (see `workoutAt`);
+    // a card shared for a late session must not print the next morning's date.
+    dateLabel: fmtFullDate(workoutAt(session)),
     durationLabel:
       full && session.completedAt != null
         ? fmtDuration(session.completedAt - session.startedAt)
