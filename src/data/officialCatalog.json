@@ -943,6 +943,69 @@
       "alternativeIds": [],
       "videos": [],
       "mediaFile": "escada-simulador.webp"
+    },
+    {
+      "id": 62,
+      "name": "Volei Quadra",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "volei-quadra.webp"
+    },
+    {
+      "id": 63,
+      "name": "Volei Areia",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "volei-areia.webp"
+    },
+    {
+      "id": 64,
+      "name": "Tennis",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "tennis.webp"
+    },
+    {
+      "id": 65,
+      "name": "Squash",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "squash.webp"
+    },
+    {
+      "id": 66,
+      "name": "Beach Tennis",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "beach-tennis.webp"
+    },
+    {
+      "id": 67,
+      "name": "Futsal",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "futsal.webp"
+    },
+    {
+      "id": 68,
+      "name": "Society",
+      "kind": "cardio",
+      "categoryIds": [],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "society.webp"
     }
   ]
 }

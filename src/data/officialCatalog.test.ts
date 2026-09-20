@@ -14,7 +14,7 @@ import {
 describe('officialCatalog', () => {
   it('reads the bundled file', () => {
     expect(officialCategories()).toHaveLength(12)
-    expect(officialExercises()).toHaveLength(60)
+    expect(officialExercises()).toHaveLength(67)
   })
 
   it('keeps every id inside the official range', () => {
