@@ -8,11 +8,13 @@ import {
   ValidationError,
 } from '../../db/repos'
 import { exerciseCategoryNames } from '../../lib/days'
+import { visibleCardio } from '../../lib/cardioVisibility'
 import { busySessionMessage } from '../../lib/format'
 import {
   useActiveSession,
   useCardioExercises,
   useCategoryMap,
+  useHiddenCardioIds,
   useSessionEntries,
   useSessionSummaries,
 } from '../../lib/hooks'
@@ -39,6 +41,7 @@ import { workoutAt } from '../../lib/consistency'
  */
 export function CardioPage() {
   const exercises = useCardioExercises()
+  const hidden = useHiddenCardioIds()
   const catMap = useCategoryMap()
   const summaries = useSessionSummaries()
   const activeGymId = useActiveGym((s) => s.activeGymId)
@@ -136,6 +139,22 @@ export function CardioPage() {
 
   const blocked = activeSession != null
 
+  // What the tab lists: everything the user has not hidden in Configurações →
+  // Cardio — plus the running cardio's own exercise, hidden or not, because its
+  // row is the only door to that session (see `visibleCardio`).
+  //
+  // `null` until the exercises, the hidden marks AND the running session's
+  // entries are all known. Filtering with a provisional "nothing hidden" would
+  // paint the full list and shrink it a frame later; deciding without the
+  // entries would drop the running row for a frame — or, with everything
+  // hidden, claim an empty tab over a workout in progress.
+  const awaitingRunning = activeSession === undefined ||
+    (activeSession?.kind === 'cardio' && runningEntries === undefined)
+  const listing =
+    exercises && hidden && !awaitingRunning
+      ? visibleCardio(exercises, hidden, runningExerciseId)
+      : null
+
   // The same week the Treinos tab shows, counting the same thing: a cardio is a
   // workout everywhere else in the app, so a cardio-only number here would be
   // the one place disagreeing. `null` until the history answers — deriving from
@@ -164,8 +183,9 @@ export function CardioPage() {
       </header>
       <main className="screen">
         {/* Nothing is claimed until the list has actually been read — an empty
-            state shown while loading is a lie (see app-foundation). */}
-        {exercises === undefined ? null : exercises.length === 0 ? (
+            state shown while loading is a lie (see app-foundation).
+            CHANGED: "read" now means the hidden marks too — see `listing`. */}
+        {exercises === undefined || listing === null ? null : exercises.length === 0 ? (
           <div className="empty">
             <span className="big">🏃</span>
             <h2>Nenhum cardio ainda</h2>
@@ -177,11 +197,29 @@ export function CardioPage() {
               <Icon name="plus" /> Novo exercício
             </Link>
           </div>
+        ) : listing.visible.length === 0 ? (
+          // Its own empty state, not the one above: there IS cardio registered,
+          // and inviting the user to register another answers the wrong
+          // question. The week stays — it does not depend on what the list shows.
+          <>
+            {weekCells && <WeeklySummary cells={weekCells} streak={streak} />}
+            <div className="empty">
+              <span className="big">🙈</span>
+              <h2>Todos os cardios estão ocultos</h2>
+              <p>
+                Você ocultou {listing.hiddenCount === 1 ? 'o único exercício' : `os ${listing.hiddenCount} exercícios`}{' '}
+                de cardio. Escolha quais voltam a aparecer aqui.
+              </p>
+              <Link className="btn primary" to="/settings/cardio">
+                <Icon name="eye" /> Gerenciar cardios
+              </Link>
+            </div>
+          </>
         ) : (
           <>
             {weekCells && <WeeklySummary cells={weekCells} streak={streak} />}
             <ul className="cardio-list">
-            {exercises.map((e) => {
+            {listing.visible.map((e) => {
               const cats = exerciseCategoryNames(e, catMap)
               const running = e.id === runningExerciseId
               return (
@@ -213,6 +251,14 @@ export function CardioPage() {
               )
             })}
             </ul>
+            {/* A list that shrinks without saying so is indistinguishable from an
+                exercise that vanished. */}
+            {listing.hiddenCount > 0 && (
+              <p className="cardio-hidden-note">
+                {listing.hiddenCount === 1 ? '1 oculto' : `${listing.hiddenCount} ocultos`} ·{' '}
+                <Link to="/settings/cardio">Gerenciar</Link>
+              </p>
+            )}
           </>
         )}
       </main>

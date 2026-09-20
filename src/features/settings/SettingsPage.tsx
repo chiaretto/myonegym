@@ -1,6 +1,14 @@
 import { Link } from 'react-router-dom'
 import { buildInfo, useAppUpdate } from '../../lib/appUpdate'
-import { useCategories, useDays, useExercises, useGyms } from '../../lib/hooks'
+import { visibleCardio } from '../../lib/cardioVisibility'
+import {
+  useCardioExercises,
+  useCategories,
+  useDays,
+  useExercises,
+  useGyms,
+  useHiddenCardioIds,
+} from '../../lib/hooks'
 import { useInstall } from '../../lib/install'
 import { Icon } from '../../ui/Icon'
 import { TabBar } from '../../ui/Chrome'
@@ -27,6 +35,13 @@ export function SettingsPage() {
   const cats = useCategories()
   const exs = useExercises()
   const days = useDays()
+  const cardio = useCardioExercises()
+  const hiddenCardio = useHiddenCardioIds()
+  // How many the Cardio tab lists — the number the user is here to change.
+  // Nothing until both reads answer: a count that corrects itself is a wrong
+  // count shown first.
+  const cardioShown =
+    cardio && hiddenCardio ? cardio.length - visibleCardio(cardio, hiddenCardio).hiddenCount : undefined
   const canInstall = useInstall((s) => s.canInstall)
   const isInstalled = useInstall((s) => s.isInstalled)
   const platform = useInstall((s) => s.platform)
@@ -66,6 +81,7 @@ export function SettingsPage() {
           <NavRow to="/settings/categories" icon="tags" title="Categorias" sub="Grupos musculares (editáveis)" meta={cats?.length} />
           <NavRow to="/settings/exercises" icon="barbell" title="Exercícios" sub="Nome, imagem/GIF e categoria" meta={exs?.length} />
           <NavRow to="/settings/days" icon="calendar-event" title="Dias de treino" sub="Selecione os exercícios de cada dia" meta={days?.length} />
+          <NavRow to="/settings/cardio" icon="heartbeat" title="Cardio" sub="Escolha o que aparece na aba Cardio" meta={cardioShown} />
         </div>
 
         <div className="group-label">App</div>

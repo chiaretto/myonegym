@@ -10,8 +10,10 @@ import {
   createDay,
   createExercise,
   createGym,
+  listCardioExercises,
   listSessionEntries,
   saveWeight,
+  setCardioHidden,
   startSession,
 } from '../../db/repos'
 import { useActiveGym } from '../../state/activeGym'
@@ -32,6 +34,7 @@ afterEach(async () => {
       db.weightHistory,
       db.sessions,
       db.sessionEntries,
+      db.hiddenCardio,
     ].map((t) => t.clear()),
   )
   useActiveGym.setState({ activeGymId: null })
@@ -447,5 +450,116 @@ describe('Cardio tab', () => {
     // …and it has notes/photos but nothing about load.
     expect(screen.queryByText('Peso alvo')).not.toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /Notas/ })).toBeInTheDocument()
+  })
+})
+
+describe('Cardio tab — hidden exercises', () => {
+  /** Hide every cardio exercise there is, official ones included. */
+  async function hideAll() {
+    const all = await listCardioExercises(db)
+    for (const e of all) await setCardioHidden(e.id!, true, db)
+    return all.length
+  }
+
+  it('leaves a hidden exercise out, and says how many it is hiding', async () => {
+    const { bike } = await seed()
+    await setCardioHidden(bike, true, db)
+    renderAt('/cardio')
+
+    expect(await screen.findByText('Esteira')).toBeInTheDocument()
+    expect(screen.queryByText('Bicicleta')).not.toBeInTheDocument()
+    expect(screen.getByText(/1 oculto/)).toBeInTheDocument()
+  })
+
+  it('says nothing about hidden exercises when there are none', async () => {
+    await seed()
+    renderAt('/cardio')
+    expect(await screen.findByText('Esteira')).toBeInTheDocument()
+    expect(screen.queryByText(/oculto/)).not.toBeInTheDocument()
+  })
+
+  it('hides an official exercise the same way', async () => {
+    await seed()
+    const official = officialExercises().find((e) => e.kind === 'cardio')!
+    await setCardioHidden(official.id!, true, db)
+    renderAt('/cardio')
+
+    expect(await screen.findByText('Esteira')).toBeInTheDocument()
+    expect(screen.queryByText(official.name)).not.toBeInTheDocument()
+  })
+
+  it('the footer leads to the screen that manages them', async () => {
+    const { bike } = await seed()
+    await setCardioHidden(bike, true, db)
+    const user = userEvent.setup()
+    renderAt('/cardio')
+
+    await user.click(await screen.findByRole('link', { name: 'Gerenciar' }))
+    expect(
+      await screen.findByRole('switch', { name: 'Mostrar Bicicleta na aba Cardio' }),
+    ).toHaveAttribute('aria-checked', 'false')
+  })
+
+  it('keeps the running cardio reachable even when its exercise is hidden', async () => {
+    // Without this the session has no door: a cardio has no day, so its own row
+    // is the only way back in.
+    const { esteira } = await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await waitFor(async () => expect(await db.sessions.count()).toBe(1))
+    const sid = (await db.sessions.toArray())[0].id!
+    await setCardioHidden(esteira, true, db)
+
+    cleanup()
+    renderAt('/cardio')
+    const resume = await screen.findByRole('button', { name: 'Continuar Esteira' })
+    // Shown, and still counted among the hidden.
+    expect(screen.getByText(/1 oculto/)).toBeInTheDocument()
+    await user.click(resume)
+    expect(await screen.findByRole('heading', { name: 'Treino em andamento' })).toBeInTheDocument()
+
+    // Once the session is over, hidden means hidden again.
+    await completeTheCardio(user)
+    await waitFor(async () => expect((await db.sessions.get(sid))?.status).toBe('completed'))
+    cleanup()
+    renderAt('/cardio')
+    expect(await screen.findByText('Bicicleta')).toBeInTheDocument()
+    // `waitFor`, not a bare assertion: a revisited screen paints the last known
+    // answer first (see the query cache in `lib/hooks`), and that answer still
+    // has the session running.
+    await waitFor(() => expect(screen.queryByText('Esteira')).not.toBeInTheDocument())
+  })
+
+  it('with everything hidden, says so — and does not invite a new exercise', async () => {
+    await seed()
+    const total = await hideAll()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+
+    expect(await screen.findByText('Todos os cardios estão ocultos')).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`os ${total} exercícios`))).toBeInTheDocument()
+    expect(screen.queryByText('Nenhum cardio ainda')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Novo exercício/ })).not.toBeInTheDocument()
+    // The week does not depend on what the list shows.
+    expect(await screen.findByLabelText('Resumo da semana')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('link', { name: /Gerenciar cardios/ }))
+    expect(await screen.findByRole('heading', { name: 'Cardio' })).toBeInTheDocument()
+    expect(screen.getAllByRole('switch')).toHaveLength(total)
+  })
+
+  it('still reaches a running cardio when everything is hidden', async () => {
+    await seed()
+    const user = userEvent.setup()
+    renderAt('/cardio')
+    await user.click(await screen.findByRole('button', { name: 'Iniciar Esteira' }))
+    await waitFor(async () => expect(await db.sessions.count()).toBe(1))
+    await hideAll()
+
+    cleanup()
+    renderAt('/cardio')
+    expect(await screen.findByRole('button', { name: 'Continuar Esteira' })).toBeInTheDocument()
+    expect(screen.queryByText('Todos os cardios estão ocultos')).not.toBeInTheDocument()
   })
 })

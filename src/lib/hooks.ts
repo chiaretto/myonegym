@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db } from '../db/db'
 import {
@@ -10,6 +11,7 @@ import {
   listCardioExercises,
   listExercises,
   listGyms,
+  listHiddenCardioIds,
   listHistory,
   listPhotos,
   listSessionEntries,
@@ -101,6 +103,17 @@ export function useExercises() {
  *  filtered view of `useExercises`, so it must not share that entry. */
 export function useCardioExercises() {
   return useCachedLiveQuery('cardioExercises', () => listCardioExercises(db))
+}
+
+/**
+ * Which cardio exercises are kept off the Cardio tab. A Set, because every
+ * reader asks "is this one hidden?" — and `undefined` until the table answers,
+ * like everything else here: filtering with a provisional "none" would paint
+ * the full list and shrink it a frame later.
+ */
+export function useHiddenCardioIds(): Set<number> | undefined {
+  const ids = useCachedLiveQuery('hiddenCardio', () => listHiddenCardioIds(db))
+  return useMemo(() => (ids ? new Set(ids) : undefined), [ids])
 }
 
 export function useExerciseMap(): Map<number, Exercise> {

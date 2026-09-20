@@ -25,6 +25,7 @@ import {
   ExerciseViewPage,
 } from './features/settings/ExercisesPage'
 import { DaysPage, DayFormPage } from './features/settings/DaysPage'
+import { CardioSettingsPage } from './features/settings/CardioSettingsPage'
 import { DataPage } from './features/settings/DataPage'
 import { AccountPage } from './features/settings/AccountPage'
 import { AppearancePage } from './features/settings/AppearancePage'
@@ -120,6 +121,7 @@ export function App() {
           <Route path="/settings/exercises/new" element={<ExerciseFormPage />} />
           <Route path="/settings/exercises/:id/edit" element={<ExerciseFormPage />} />
           <Route path="/settings/exercises/:id/view" element={<ExerciseViewPage />} />
+          <Route path="/settings/cardio" element={<CardioSettingsPage />} />
           <Route path="/settings/days" element={<DaysPage />} />
           <Route path="/settings/days/new" element={<DayFormPage />} />
           <Route path="/settings/days/:id/edit" element={<DayFormPage />} />

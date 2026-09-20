@@ -38,6 +38,11 @@ export const APP_TAG = 'myonegym'
 // "none" (it is how it reads a backup predating warm-ups); an older file has the
 // key, which this version ignores. Bumping would only make old files look
 // unrestorable when they are not.
+//
+// The **hidden cardio** list (`hiddenCardio`) rides along under the same rule,
+// and for the same reason: a new file's extra key is ignored by an older app,
+// and an older file's missing key reads here as "nothing hidden" — which is
+// exactly what it was.
 export const SCHEMA_VERSION = 6
 
 /**
@@ -94,6 +99,9 @@ export interface BackupDoc {
   sessionEntries: SessionEntry[]
   exerciseNotes: ExerciseNote[]
   exercisePhotos: SerializedPhoto[]
+  /** Ids of the cardio exercises kept off the Cardio tab — official and the
+   *  user's alike. Absent in files that predate it: nothing hidden. */
+  hiddenCardio?: number[]
 }
 
 /* ------------------------------------------------------------------ export */
@@ -110,6 +118,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos,
+    hiddenCardio,
   ] = await Promise.all([
     d.gyms.toArray(),
     d.categories.toArray(),
@@ -121,6 +130,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     d.sessionEntries.toArray(),
     d.exerciseNotes.toArray(),
     d.exercisePhotos.toArray(),
+    d.hiddenCardio.toCollection().primaryKeys(),
   ])
   return {
     app: APP_TAG,
@@ -137,6 +147,7 @@ export async function exportBackup(d: MyOneGymDB = db): Promise<BackupDoc> {
     sessionEntries,
     exerciseNotes,
     exercisePhotos: await serializePhotos(exercisePhotos),
+    hiddenCardio,
   }
 }
 
@@ -211,7 +222,39 @@ export function parseBackup(json: string): BackupDoc {
   normalizeKinds(obj)
   normalizeVideos(obj)
   normalizeAlternatives(obj)
+  normalizeHiddenCardio(obj)
   return obj as unknown as BackupDoc
+}
+
+/**
+ * Make the hidden-cardio list importable, whatever the file says.
+ *
+ * Absent means the file predates the feature: nothing hidden, which is exactly
+ * what it was. Beyond that, keep only what can mean something — an integer id,
+ * once, that resolves to an exercise of either source. An orphan mark has no
+ * visible effect, so it is never a reason to refuse a restore; it is just not
+ * worth carrying. Same stance as `normalizeAlternatives`.
+ *
+ * The exercise's **kind** is deliberately not checked: a mark survives its
+ * exercise turning strength (see `listHiddenCardioIds`), and a restore should
+ * bring back what the device had, not a tidier version of it.
+ *
+ * Runs after `dropOfficialRecords`, so `exercises` holds the user's rows only
+ * and the official side is answered by the bundle.
+ */
+function normalizeHiddenCardio(obj: Record<string, unknown>): void {
+  const own = new Set(
+    (obj.exercises as Record<string, unknown>[])
+      .map((ex) => ex.id)
+      .filter((id): id is number => typeof id === 'number'),
+  )
+  const raw = Array.isArray(obj.hiddenCardio) ? (obj.hiddenCardio as unknown[]) : []
+  const kept = new Set<number>()
+  for (const id of raw) {
+    if (typeof id !== 'number' || !Number.isInteger(id)) continue
+    if (isOfficialId(id) ? officialExercise(id) !== undefined : own.has(id)) kept.add(id)
+  }
+  obj.hiddenCardio = [...kept]
 }
 
 /**
@@ -429,6 +472,9 @@ export async function importBackupReplaceAll(doc: BackupDoc, d: MyOneGymDB = db)
     if (doc.sessionEntries?.length) await d.sessionEntries.bulkAdd(doc.sessionEntries)
     if (doc.exerciseNotes?.length) await d.exerciseNotes.bulkAdd(doc.exerciseNotes)
     if (photos.length) await d.exercisePhotos.bulkAdd(photos)
+    if (doc.hiddenCardio?.length) {
+      await d.hiddenCardio.bulkAdd(doc.hiddenCardio.map((exerciseId) => ({ exerciseId })))
+    }
     if ((doc.version ?? 0) < GLOBAL_WEIGHTS_VERSION) {
       await promoteWeightsToGlobal(d.gyms, d.weights, d.weightHistory)
     }

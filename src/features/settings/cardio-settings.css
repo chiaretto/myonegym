@@ -1,0 +1,38 @@
+/* Settings → Cardio: one row per cardio exercise, ending in a switch. */
+
+.cardio-set-intro { margin: 4px 4px 14px; font-size: var(--fs-sm); color: var(--text-secondary); }
+
+.cardio-set-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.cardio-set-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+  background: var(--surface-1); border: 0.5px solid var(--border);
+  border-radius: var(--r-row); }
+/* A hidden exercise reads as set aside, not as disabled: the switch beside it
+   is fully alive, so only the description dims. */
+.cardio-set-row.off .thumb,
+.cardio-set-row.off .cardio-set-body { opacity: 0.5; }
+
+/* The name WRAPS here, unlike on the tab: with the font at its largest the row
+   has vertical room and no horizontal room, and the switch must never be the
+   thing pushed off-screen. */
+.cardio-set-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.cardio-set-name { font-family: var(--font-title); font-size: var(--fs-lg); font-weight: 600;
+  overflow-wrap: anywhere; }
+.cardio-set-cat { font-size: var(--fs-xs); color: var(--text-secondary); overflow-wrap: anywhere; }
+
+/* The switch is sized in px on purpose: it is a control, not text, and scaling
+   it with the font would take from the name the width it needs most exactly
+   when the font is largest. 52×32 keeps the tap target comfortable. */
+.switch { flex: none; position: relative; width: 52px; height: 32px; padding: 0; border: 0;
+  border-radius: 999px; background: var(--surface-3); cursor: pointer;
+  transition: background 0.15s ease; }
+.switch.on { background: var(--accent); }
+.switch-knob { position: absolute; top: 3px; left: 3px; width: 26px; height: 26px;
+  border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease; }
+.switch.on .switch-knob { transform: translateX(20px); }
+.switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .switch, .switch-knob { transition: none; }
+}

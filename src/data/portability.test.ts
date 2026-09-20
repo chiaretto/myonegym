@@ -19,6 +19,8 @@ import {
   getExercise,
   getNote,
   listCardioExercises,
+  listHiddenCardioIds,
+  setCardioHidden,
   listDays,
   listExercises,
   listHistory,
@@ -450,6 +452,7 @@ describe('full backup is a complete snapshot', () => {
     const sid = await startSession(g, day, d)
     await setEntryDone((await listSessionEntries(sid, d))[0].id!, true, d)
     await completeSession(sid, d)
+    await setCardioHidden(officialExercises().find((e) => e.kind === 'cardio')!.id!, true, d)
     return { g, ex, day, sid }
   }
 
@@ -1083,5 +1086,76 @@ describe('restoring a backup made before the catalog moved to the bundle', () =>
     // The weight survives: deleting a user's record over an id that did not
     // match is the one outcome here with no way back.
     expect(await d.weights.where('exerciseId').equals(9998).count()).toBe(1)
+  })
+})
+
+describe('hidden cardio in the backup', () => {
+  const officialCardio = () => officialExercises().find((e) => e.kind === 'cardio')!
+
+  async function freshDb() {
+    const other = new MyOneGymDB(`ptest-hidden-${Date.now()}-${n++}`)
+    await other.open()
+    return other
+  }
+
+  it('round-trips official and user marks alike', async () => {
+    const own = await createExercise({ name: 'Escada do prédio', kind: 'cardio' }, d)
+    const official = officialCardio().id!
+    await setCardioHidden(own, true, d)
+    await setCardioHidden(official, true, d)
+
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+    const target = await freshDb()
+    try {
+      await importBackupReplaceAll(doc, target)
+      expect((await listHiddenCardioIds(target)).sort()).toEqual([official, own].sort())
+    } finally {
+      target.close()
+    }
+  })
+
+  it('reads a file that predates the field as nothing hidden', async () => {
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d)))
+    delete raw.hiddenCardio
+    const doc = parseBackup(JSON.stringify(raw))
+    expect(doc.hiddenCardio).toEqual([])
+    await importBackupReplaceAll(doc, d)
+    expect(await listHiddenCardioIds(d)).toEqual([])
+  })
+
+  it('replaces what the device had hidden', async () => {
+    const [first, second] = officialExercises().filter((e) => e.kind === 'cardio')
+    await setCardioHidden(first.id!, true, d)
+    const doc = parseBackup(JSON.stringify(await exportBackup(d)))
+
+    const target = await freshDb()
+    try {
+      await setCardioHidden(second.id!, true, target)
+      await importBackupReplaceAll(doc, target)
+      expect(await listHiddenCardioIds(target)).toEqual([first.id])
+    } finally {
+      target.close()
+    }
+  })
+
+  it('drops orphans, duplicates and junk without refusing the file', async () => {
+    const own = await createExercise({ name: 'Escada do prédio', kind: 'cardio' }, d)
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d)))
+    // 9999 is in the official range and answers to nothing; 99999 is a user id
+    // the file does not carry.
+    raw.hiddenCardio = [own, own, 9999, 99999, 'x', 1.5, null]
+    expect(parseBackup(JSON.stringify(raw)).hiddenCardio).toEqual([own])
+  })
+
+  it('treats a non-list as nothing hidden', async () => {
+    const raw = JSON.parse(JSON.stringify(await exportBackup(d)))
+    raw.hiddenCardio = 'tudo'
+    expect(parseBackup(JSON.stringify(raw)).hiddenCardio).toEqual([])
+  })
+
+  it('is erased by resetAll', async () => {
+    await setCardioHidden(officialCardio().id!, true, d)
+    await resetAll(d)
+    expect(await listHiddenCardioIds(d)).toEqual([])
   })
 })
