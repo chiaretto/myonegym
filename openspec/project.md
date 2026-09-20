@@ -46,6 +46,11 @@ no server** — all data lives in the browser.
 - **Weight (Peso)** — target load for a **strength** exercise; value + unit
   (KG/LB/#). **Global** by default; a gym may hold an **exception** that wins
   inside it. Cardio exercises have none.
+- **Hidden cardio (Cardio oculto)** — a mark, keyed by exercise id, that keeps a
+  cardio exercise off the **Cardio tab's list** and nowhere else. A table of its
+  own (`hiddenCardio`) rather than a field, because an official exercise has no
+  row to write a field on. Global, travels in the backup; the exercise that owns
+  a running cardio is listed regardless.
 
 ## Key Design Decisions (to review)
 
