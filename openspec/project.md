@@ -79,6 +79,16 @@ no server** — all data lives in the browser.
    would rewrite itself the moment one of them changes kind or is deleted.
    Cardio counts as a workout in every Consistência aggregate — the calendar's
    star says *which kind* it was, not *whether it counted*.
+
+   **The day of a workout is the day it started.** Every screen that places a
+   session on a day — calendar, week track, streaks, history list, share
+   card, "Feito ontem" — reads `startedAt`, through `workoutAt` in
+   `lib/consistency`, never the field directly. `completedAt` answers two
+   things only: the duration and whether the session is complete. A workout
+   begun at 23:40 and finished at 00:15 is the workout of the day it began;
+   reading the completion put it on the next day, broke streaks that had not
+   broken and starred days with no workout. `relativeDate` counts calendar
+   days for the same reason.
 5. **The catalog has two sources, and the official one is code.** Categories and
    exercises come from a bundled file (`src/data/officialCatalog.json`, read by
    `src/data/officialCatalog.ts`) **and** from the user's own records. Every

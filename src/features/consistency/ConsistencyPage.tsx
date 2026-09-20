@@ -6,12 +6,13 @@ import {
   dayStreak,
   firstSessionMonth,
   monthBefore,
-  monthOf,
   monthlyTotals,
+  monthOf,
   sameMonth,
-  weekStreak,
-  weeklyTotals,
   type MonthRef,
+  weeklyTotals,
+  weekStreak,
+  workoutAt,
 } from '../../lib/consistency'
 import { fmtDayMonth, fmtDuration, relativeDate } from '../../lib/format'
 import { useSessionSummaries } from '../../lib/hooks'
@@ -66,12 +67,14 @@ export function ConsistencyPage() {
   // number (not even zero) before then. See app-foundation's empty-state spec.
   const loaded = summaries !== undefined
   const completed = (summaries ?? []).filter((s) => s.session.completedAt != null)
-  const timestamps = completed.map((s) => s.session.completedAt!)
+  // One instant per workout, and it is the START (see `workoutAt`): a session
+  // begun at 23:40 belongs to that day, whatever the clock said at "concluir".
+  const timestamps = completed.map((s) => workoutAt(s.session))
   // A subset of `timestamps`: cardio counts in every aggregate like any other
   // workout, and this is only what decides where the star goes.
   const cardioAt = completed
     .filter((s) => s.session.kind === 'cardio')
-    .map((s) => s.session.completedAt!)
+    .map((s) => workoutAt(s.session))
 
   const current = monthOf(now)
   const floor = firstSessionMonth(timestamps)
@@ -86,7 +89,7 @@ export function ConsistencyPage() {
   }
 
   const cells = buildMonthGrid(timestamps, ref, now, cardioAt)
-  const monthSessions = completed.filter((s) => sameMonth(monthOf(s.session.completedAt!), ref))
+  const monthSessions = completed.filter((s) => sameMonth(monthOf(workoutAt(s.session)), ref))
   const visible = expanded ? monthSessions : monthSessions.slice(0, COLLAPSED_COUNT)
   const hiddenCount = monthSessions.length - COLLAPSED_COUNT
 
@@ -220,7 +223,7 @@ export function ConsistencyPage() {
             )}
             <ul className="session-list">
               {visible.map(({ session, total, done, gymName }) => {
-                const ts = session.completedAt!
+                const ts = workoutAt(session)
                 const full = total > 0 && done === total
                 return (
                   <li key={session.id}>
@@ -229,7 +232,7 @@ export function ConsistencyPage() {
                         <div className="session-name">{session.dayName}</div>
                         <div className="session-sub">
                           {relativeDate(ts)} · {fmtDayMonth(ts)}
-                          {` · ${fmtDuration(ts - session.startedAt)}`}
+                          {` · ${fmtDuration(session.completedAt! - session.startedAt)}`}
                           {' · '}
                           <span className={gymName == null ? 'session-gym missing' : 'session-gym'}>
                             {gymName ?? REMOVED_GYM}

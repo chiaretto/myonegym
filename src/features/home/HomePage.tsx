@@ -36,6 +36,7 @@ import { TabBar } from '../../ui/Chrome'
 import { WeeklySummary } from '../../ui/WeeklySummary'
 import { GymSelector } from '../gym/GymSelector'
 import './home.css'
+import { workoutAt } from '../../lib/consistency'
 
 export function HomePage() {
   const days = useDays()
@@ -80,10 +81,10 @@ export function HomePage() {
   // number and in the streak like any other workout.
   const cardioAt = completed
     .filter((s) => s.session.kind === 'cardio')
-    .map((s) => s.session.completedAt!)
+    .map((s) => workoutAt(s.session))
   const weekCells = summaries
     ? buildWeekTrack(
-        completed.map((s) => s.session.completedAt!),
+        completed.map((s) => workoutAt(s.session)),
         now,
         cardioAt,
       )

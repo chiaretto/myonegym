@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { App } from '../../App'
+import { fmtDayMonth } from '../../lib/format'
 import { db } from '../../db/db'
 import {
   completeSession,
@@ -46,20 +47,45 @@ async function seed() {
   return { gym, day }
 }
 
-/** Complete a session stamped at `completedAt`. */
-async function completeAt(gym: number, dayId: number, completedAt: number) {
+const HALF_HOUR = 30 * 60_000
+
+/**
+ * A completed session whose workout happened at `at`: STARTED at `at`, done
+ * 30 minutes later. Both instants are stamped — the day a workout lands on is
+ * decided by its start (see `workoutAt`), so a seed that stamped only the
+ * completion would leave the start at "now" and date every session today.
+ * The completion is the one pushed away from `at`, never the start: a seed at
+ * "now − 24 h" run at 00:20 must not drift into the day before.
+ */
+async function completeAt(gym: number, dayId: number, at: number) {
   const sid = await startSession(gym, dayId, db)
   await completeSession(sid, db)
-  await db.sessions.update(sid, { completedAt })
+  await db.sessions.update(sid, { startedAt: at, completedAt: at + HALF_HOUR })
   return sid
 }
 
-/** Complete a CARDIO stamped at `completedAt`. */
-async function completeCardioAt(gym: number, exerciseId: number, completedAt: number) {
+/** Same, for a CARDIO. */
+async function completeCardioAt(gym: number, exerciseId: number, at: number) {
   const { sessionId } = await startCardioSession(gym, exerciseId, db)
   await completeSession(sessionId, db)
-  await db.sessions.update(sessionId, { completedAt })
+  await db.sessions.update(sessionId, { startedAt: at, completedAt: at + HALF_HOUR })
   return sessionId
+}
+
+/** A session that STRADDLES midnight: begun at `startedAt`, done 35 min later. */
+async function completeAcrossMidnight(gym: number, dayId: number, startedAt: number) {
+  const sid = await startSession(gym, dayId, db)
+  await completeSession(sid, db)
+  await db.sessions.update(sid, { startedAt, completedAt: startedAt + 35 * 60_000 })
+  return sid
+}
+
+/** Local timestamp for `daysAgo` days before today, at `h`:`m`. */
+function daysAgoAt(daysAgo: number, h: number, m = 0): number {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  d.setHours(h, m, 0, 0)
+  return d.getTime()
 }
 
 /** Local timestamp for day `d` of the current month (guarded to a valid day). */
@@ -266,5 +292,82 @@ describe('Consistência — long-range blocks', () => {
     // The names this tab has been called before, none of which may linger.
     expect(screen.queryByRole('link', { name: /Sessões/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /Consistência/ })).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * The midnight cases need "yesterday" to be on the calendar the screen opens
+ * on — the current month. On the 1st it is not, so these skip rather than
+ * assert a cell that is not drawn.
+ */
+const yesterdayOnCalendar = it.skipIf(new Date().getDate() === 1)
+
+describe('Consistência — a workout belongs to the day it STARTED', () => {
+  yesterdayOnCalendar('marks the calendar on the day the session began, not the day it ended', async () => {
+    const { gym, day } = await seed()
+    // Began 23:40 yesterday, done 00:15 today.
+    await completeAcrossMidnight(gym, day, daysAgoAt(1, 23, 40))
+    const yesterday = new Date(daysAgoAt(1, 12)).getDate()
+
+    renderScreen()
+
+    await waitFor(() => {
+      const done = document.querySelector('.cal-grid')!.querySelectorAll('.cal-cell.done')
+      expect(done).toHaveLength(1)
+      expect(done[0].textContent).toBe(String(yesterday))
+    })
+    // The list item is dated the same day, and the duration is still the real one.
+    const [card] = cards()
+    expect(card.textContent).toContain('Ontem')
+    expect(card.textContent).toContain(fmtDayMonth(daysAgoAt(1, 12)))
+    expect(card.textContent).toContain('35 min')
+    expect(card.textContent).not.toContain('Hoje')
+  })
+
+  yesterdayOnCalendar('stars a cardio on the day it began', async () => {
+    const { gym } = await seed()
+    const esteira = await createExercise({ name: 'Esteira', kind: 'cardio' }, db)
+    const { sessionId } = await startCardioSession(gym, esteira, db)
+    await completeSession(sessionId, db)
+    const startedAt = daysAgoAt(1, 23, 55)
+    await db.sessions.update(sessionId, { startedAt, completedAt: startedAt + 25 * 60_000 })
+    const yesterday = new Date(daysAgoAt(1, 12)).getDate()
+
+    renderScreen()
+
+    await waitFor(() => {
+      const done = document.querySelector('.cal-grid')!.querySelectorAll('.cal-cell.done')
+      expect(done).toHaveLength(1)
+      expect(done[0].classList.contains('cardio')).toBe(true)
+      expect(done[0].textContent).toBe(String(yesterday))
+    })
+  })
+
+  it('keeps the day streak alive across a late session', async () => {
+    const { gym, day } = await seed()
+    // The day before yesterday at 10:00, and yesterday begun at 23:50, done
+    // after midnight. Read by completion, yesterday would be empty and the
+    // streak would be 1 (today's "phantom" workout) instead of 2.
+    await completeAt(gym, day, daysAgoAt(2, 10))
+    await completeAcrossMidnight(gym, day, daysAgoAt(1, 23, 50))
+
+    renderScreen()
+
+    const dayTile = (await screen.findByText('Dias em sequência')).closest('.stat-tile')!
+    await waitFor(() => expect(within(dayTile as HTMLElement).getByText('2')).toBeInTheDocument())
+  })
+
+  it('the opened session says the day it was done, with its duration', async () => {
+    const { gym, day } = await seed()
+    const sid = await completeAcrossMidnight(gym, day, daysAgoAt(1, 23, 40))
+
+    render(
+      <MemoryRouter initialEntries={[`/session/${sid}`]}>
+        <App />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText(/Feito ontem · 35 min/)).toBeInTheDocument()
+    expect(screen.queryByText(/Concluído hoje/)).not.toBeInTheDocument()
   })
 })

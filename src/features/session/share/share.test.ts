@@ -55,6 +55,15 @@ describe('buildShareCard', () => {
     }
   })
 
+  it('dates the card by the day the workout STARTED, not the day it ended', () => {
+    // Began 23:40 on the 16th, done 00:15 on the 17th: the card says the 16th.
+    const lateStart = new Date(2026, 6, 16, 23, 40).getTime()
+    const late: Session = { ...session, startedAt: lateStart, completedAt: lateStart + 35 * 60_000 }
+    const card = build('full', { session: late })
+    expect(card.dateLabel).toBe('16 jul 2026')
+    expect(card.durationLabel).toBe('35 min')
+  })
+
   it('includes weights and duration on the detailed variant', () => {
     const card = build('full')
     expect(card.rows.map((r) => r.weight)).toEqual(['22,5 KG', '40 KG'])

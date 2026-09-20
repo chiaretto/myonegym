@@ -12,9 +12,24 @@ export function fmtWeight(value: number, unit: Unit): string {
 
 const DAY = 86_400_000
 
-/** Relative pt-BR date label, e.g. "Hoje", "Há 2 semanas". */
+/** Local midnight of the day containing `ts`. */
+function startOfDay(ts: number): number {
+  const d = new Date(ts)
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+/**
+ * Relative pt-BR date label, e.g. "Hoje", "Ontem", "Há 2 semanas".
+ *
+ * Counted in CALENDAR days, not 24-hour blocks: a workout begun at 23:40 and
+ * looked at 00:30 is "Ontem" — that is the day the calendar marks it on, and
+ * the label must not disagree. (Elapsed time would have said "Hoje" until
+ * 23:40 the next day.) Rounded, so a DST day of 23 or 25 hours still counts
+ * as one day.
+ */
 export function relativeDate(ts: number, now = Date.now()): string {
-  const days = Math.floor((now - ts) / DAY)
+  const days = Math.round((startOfDay(now) - startOfDay(ts)) / DAY)
   if (days <= 0) return 'Hoje'
   if (days === 1) return 'Ontem'
   if (days < 7) return `Há ${days} dias`

@@ -24,6 +24,7 @@ import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import { WeeklySummary } from '../../ui/WeeklySummary'
 import './cardio.css'
+import { workoutAt } from '../../lib/consistency'
 
 /**
  * The Cardio tab: the loose half of training.
@@ -146,10 +147,10 @@ export function CardioPage() {
   // one vocabulary.
   const cardioAt = completed
     .filter((s) => s.session.kind === 'cardio')
-    .map((s) => s.session.completedAt!)
+    .map((s) => workoutAt(s.session))
   const weekCells = summaries
     ? buildWeekTrack(
-        completed.map((s) => s.session.completedAt!),
+        completed.map((s) => workoutAt(s.session)),
         now,
         cardioAt,
       )

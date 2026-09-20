@@ -1,14 +1,35 @@
+import type { Session } from '../db/types'
 import { dayIndexInWeek, startOfWeek } from './week'
 
 /**
- * Aggregations for the Consistency screen (`/sessions`), all derived from
- * completed-session timestamps — no persisted state of its own.
+ * Aggregations for the Consistency screen (`/sessions`), all derived from the
+ * timestamps of completed sessions — no persisted state of its own.
  *
- * Every function takes the whole history (`completedAt` values across ALL
- * gyms) and a `now`, so callers decide the clock and the tests own time.
- * Date arithmetic goes through `Date#setDate`/`setMonth` rather than
- * millisecond math, so DST transitions cannot shift a "day" or a "week".
+ * Every function takes the whole history (one instant per completed session,
+ * across ALL gyms — see `workoutAt` for which instant) and a `now`, so callers
+ * decide the clock and the tests own time. Date arithmetic goes through
+ * `Date#setDate`/`setMonth` rather than millisecond math, so DST transitions
+ * cannot shift a "day" or a "week".
  */
+
+/**
+ * WHEN a workout happened — the one instant that places it on a day.
+ *
+ * It is the instant the session **started**. A workout begun at 23:40 and
+ * completed at 00:15 is the workout of the day it began: that is the day the
+ * person went to train, the day the streak should credit, the day the
+ * calendar should mark. Reading the completion instant instead put every late
+ * workout on the next day — a streak that broke without breaking, a star on a
+ * day with no workout.
+ *
+ * The completion instant keeps its two real jobs — the duration (completion
+ * minus start) and the completed *state* — and answers "when was it" nowhere.
+ * Every screen that needs a day goes through here rather than reading a
+ * field, so the next one cannot decide differently.
+ */
+export function workoutAt(session: Pick<Session, 'startedAt'>): number {
+  return session.startedAt
+}
 
 /** Calendar month reference. `month` is 0-based, like `Date#getMonth`. */
 export interface MonthRef {
@@ -55,11 +76,11 @@ function prevWeekStart(weekStart: number): number {
 
 /** Sessions per day-of-month (1-based) for the given month. */
 export function dayCountsForMonth(
-  completedAt: readonly number[],
+  at: readonly number[],
   ref: MonthRef,
 ): Map<number, number> {
   const counts = new Map<number, number>()
-  for (const ts of completedAt) {
+  for (const ts of at) {
     const d = new Date(ts)
     if (d.getFullYear() !== ref.year || d.getMonth() !== ref.month) continue
     counts.set(d.getDate(), (counts.get(d.getDate()) ?? 0) + 1)
@@ -106,14 +127,14 @@ export interface MonthCell {
  * stores no expectation that any given day should have had a workout.
  */
 export function buildMonthGrid(
-  completedAt: readonly number[],
+  at: readonly number[],
   ref: MonthRef,
   now: number,
-  /** Completion times of the CARDIO sessions — a subset of `completedAt`. */
+  /** The CARDIO sessions — a subset of `at`. */
   cardioAt: readonly number[] = [],
 ): MonthCell[] {
-  const counts = dayCountsForMonth(completedAt, ref)
-  // Counted, not just flagged: `cardioAt` is a subset of `completedAt`, so the
+  const counts = dayCountsForMonth(at, ref)
+  // Counted, not just flagged: `cardioAt` is a subset of `at`, so the
   // strength tally is the difference — no second input, and no matching
   // timestamps back to sessions to work out which is which.
   const cardioCounts = dayCountsForMonth(cardioAt, ref)
@@ -154,14 +175,14 @@ export interface WeekTotal {
 }
 
 /** Totals of the last `weeks` weeks, oldest first, ending at the week of `now`. */
-export function weeklyTotals(completedAt: readonly number[], now: number, weeks = 12): WeekTotal[] {
+export function weeklyTotals(at: readonly number[], now: number, weeks = 12): WeekTotal[] {
   const starts: number[] = [startOfWeek(now)]
   while (starts.length < weeks) starts.push(prevWeekStart(starts[starts.length - 1]))
   starts.reverse()
 
   const index = new Map(starts.map((ws, i) => [ws, i]))
   const counts = new Array<number>(weeks).fill(0)
-  for (const ts of completedAt) {
+  for (const ts of at) {
     const i = index.get(startOfWeek(ts))
     if (i !== undefined) counts[i] += 1
   }
@@ -175,7 +196,7 @@ export interface MonthTotal {
 
 /** Totals of the last `months` months, oldest first, ending at the month of `now`. */
 export function monthlyTotals(
-  completedAt: readonly number[],
+  at: readonly number[],
   now: number,
   months = 12,
 ): MonthTotal[] {
@@ -184,7 +205,7 @@ export function monthlyTotals(
   const key = (r: MonthRef) => r.year * 12 + r.month
   const index = new Map(refs.map((r, i) => [key(r), i]))
   const counts = new Array<number>(months).fill(0)
-  for (const ts of completedAt) {
+  for (const ts of at) {
     const i = index.get(key(monthOf(ts)))
     if (i !== undefined) counts[i] += 1
   }
@@ -197,8 +218,8 @@ export function monthlyTotals(
  * Home week track's `currentStreak` beyond the current week; both walk from
  * today and only break on a *past* empty day.
  */
-export function dayStreak(completedAt: readonly number[], now: number): number {
-  const days = new Set(completedAt.map(startOfDay))
+export function dayStreak(at: readonly number[], now: number): number {
+  const days = new Set(at.map(startOfDay))
   let cursor = startOfDay(now)
   if (!days.has(cursor)) cursor = startOfDay(addDays(cursor, -1))
   let streak = 0
@@ -215,8 +236,8 @@ export function dayStreak(completedAt: readonly number[], now: number): number {
  * NOT break the streak while it is still in progress — on Monday morning the
  * user has not "failed" the week yet.
  */
-export function weekStreak(completedAt: readonly number[], now: number): number {
-  const weeks = new Set(completedAt.map(startOfWeek))
+export function weekStreak(at: readonly number[], now: number): number {
+  const weeks = new Set(at.map(startOfWeek))
   let cursor = startOfWeek(now)
   if (!weeks.has(cursor)) cursor = prevWeekStart(cursor)
   let streak = 0
@@ -227,9 +248,9 @@ export function weekStreak(completedAt: readonly number[], now: number): number 
   return streak
 }
 
-/** Month of the earliest completion — the calendar's navigation floor — or
+/** Month of the earliest workout — the calendar's navigation floor — or
  *  null when there is no history. */
-export function firstSessionMonth(completedAt: readonly number[]): MonthRef | null {
-  if (completedAt.length === 0) return null
-  return monthOf(Math.min(...completedAt))
+export function firstSessionMonth(at: readonly number[]): MonthRef | null {
+  if (at.length === 0) return null
+  return monthOf(Math.min(...at))
 }

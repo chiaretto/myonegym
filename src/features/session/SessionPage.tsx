@@ -24,6 +24,7 @@ import { useConfirm, useToast } from '../../ui/Feedback'
 import { Icon } from '../../ui/Icon'
 import { Media } from '../../ui/Media'
 import './session.css'
+import { workoutAt } from '../../lib/consistency'
 
 export function SessionPage() {
   const { id } = useParams()
@@ -223,7 +224,10 @@ export function SessionPage() {
           <>
             {session.completedAt != null && (
               <div className="session-done-ts">
-                <Icon name="check" size={12} /> Concluído {relativeDate(session.completedAt).toLowerCase()} ·{' '}
+                {/* "Feito ontem", dated by the START: it is the day the calendar and
+                    the history put this workout on, and "Concluído hoje" over a
+                    star on yesterday would contradict them (see `workoutAt`). */}
+                <Icon name="check" size={12} /> Feito {relativeDate(workoutAt(session)).toLowerCase()} ·{' '}
                 {fmtDuration(session.completedAt - session.startedAt)}
               </div>
             )}

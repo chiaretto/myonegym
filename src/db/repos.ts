@@ -1087,13 +1087,17 @@ export async function listSessionEntries(
  * happens and which target weights apply, not what the user can see of their own
  * past. A person training at two gyms has one history.
  *
- * Sorting is chronological across gyms, not grouped by gym — `completedAt`
- * descending, with the id as a tiebreak so sessions finished in the same
- * millisecond keep a stable order.
+ * Sorting is chronological across gyms, not grouped by gym — by the instant
+ * each session STARTED, descending, with the id as a tiebreak so sessions begun
+ * in the same millisecond keep a stable order. The start, not the completion:
+ * it is the instant that puts a workout on a day (see `workoutAt` in
+ * lib/consistency), and a list ordered by one instant and dated by another
+ * could put "Tuesday's" workout above "Wednesday's" with the labels saying the
+ * opposite.
  */
 export async function listSessionSummaries(d: MyOneGymDB = db): Promise<SessionSummary[]> {
   const sessions = (await d.sessions.filter((s) => s.status === 'completed').toArray()).sort(
-    (a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0) || (b.id ?? 0) - (a.id ?? 0),
+    (a, b) => b.startedAt - a.startedAt || (b.id ?? 0) - (a.id ?? 0),
   )
 
   // One read for the whole gym table, not one per session: the list is tiny and

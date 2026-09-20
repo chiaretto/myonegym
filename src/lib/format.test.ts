@@ -25,6 +25,18 @@ describe('relativeDate', () => {
     expect(relativeDate(now, now)).toBe('Hoje')
     expect(relativeDate(now - 15 * 86_400_000, now)).toBe('Há 2 semanas')
   })
+
+  it('counts calendar days, not 24-hour blocks', () => {
+    // 23:40 yesterday, seen at 00:30: less than an hour ago, but yesterday.
+    const seenAt = new Date(2026, 8, 20, 0, 30).getTime()
+    const lateLastNight = new Date(2026, 8, 19, 23, 40).getTime()
+    expect(relativeDate(lateLastNight, seenAt)).toBe('Ontem')
+    // 00:05 today, seen at 23:55: almost a full day, still today.
+    const earlyToday = new Date(2026, 8, 20, 0, 5).getTime()
+    expect(relativeDate(earlyToday, new Date(2026, 8, 20, 23, 55).getTime())).toBe('Hoje')
+    // Two calendar days back at 23:59 is "Há 2 dias" even 24 h + 2 min ago.
+    expect(relativeDate(new Date(2026, 8, 18, 23, 59).getTime(), seenAt)).toBe('Há 2 dias')
+  })
 })
 
 describe('fmtClock', () => {
