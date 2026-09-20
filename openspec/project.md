@@ -121,11 +121,19 @@ no server** — all data lives in the browser.
 9. **Full-backup import replaces all** local data (with an overwrite warning).
    Importing *shared exercises* JSON instead merges/adds without touching gyms or
    weights.
-10. **One screen talks to the network, and only if asked.** The *Assistente (IA)*
+10. **Two screens talk to the network, and only if asked.** The *Assistente (IA)*
    sends categories, exercises and days to the Gemini API to reorganize them.
    It is opt-in (needs a token the user supplies), it never sends gyms, weights,
    notes, photos or sessions, and its client is loaded on demand so the offline
-   bundle does not carry it. Everything else in the app remains local-only.
+   bundle does not carry it. The *Google Drive* group of Configurações → Backup
+   sends the **full backup** — the same document "Exportar backup" writes — to
+   the hidden `appDataFolder` of the user's own Drive, and brings it back
+   through the same import as a picked file. It is opt-in too (a Google
+   account the user connects there, and nowhere else: there is no sign-in
+   screen and nothing asks for one), and **nothing happens without a tap** —
+   no sync, no background check, no request on opening a screen. The dates
+   the two buttons show are records of this device, not of the cloud.
+   Everything else in the app remains local-only.
 11. **The accent colour is the user's, and it is governed by a list.** The app is
    dark-only, but the accent is chosen in Settings → Aparência from a curated
    set of 16 (`src/state/accents.ts`) — brand red by default. There is exactly
@@ -171,6 +179,23 @@ no server** — all data lives in the browser.
   sobre qualquer rota; parado, é o botão na mídia do exercício em sessão. Um dos
   dois, nunca os dois. `localStorage` e não o banco: descanso é preferência de
   momento, não histórico — nada disso entra no backup.
+- O **login Google é um redirecionamento, feito pelo app** (`src/lib/googleAuth.ts`):
+  fluxo OAuth implícito, `response_type=token`, o token lido do fragmento da URL
+  na volta. Sem `gsi/client`, sem `gapi`, sem script de terceiros — o popup da
+  biblioteca do Google não conclui em PWA instalado no iOS, e o fluxo com código
+  exigiria um backend. Três consequências a respeitar:
+  - A volta do Google é um **boot**: `initGoogleAuth()` roda em `main.tsx` antes
+    da primeira renderização, confere o `state`, guarda o token, **limpa o
+    fragmento** e reescreve a URL para a tela de onde o usuário saiu. O token
+    vive em `sessionStorage` (uma hora, morre com a aba); o que persiste é a
+    identidade e as datas, em `state/googleAccount.ts`, fora do backup e fora
+    do `resetAll`, como a chave do Assistente.
+  - A ação pendente é **retomada** na volta (`useSignInReturn`), uma vez só —
+    mas nunca pulando uma confirmação: um restore retomado reabre o diálogo.
+  - O client ID (`VITE_GOOGLE_CLIENT_ID`, ver `.env.example`) é público, mas é
+    uma **identidade**: a `appDataFolder` é por client, e trocá-lo esconde todo
+    backup já feito. Só `localhost` e domínios valem como origem no Google, não
+    IP de LAN.
 - The version and build stamp the app shows come from `scripts/buildInfo.ts`,
   shared by `vite.config.ts` and `vitest.config.ts`. Never write a version
   literal into a component.
