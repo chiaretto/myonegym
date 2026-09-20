@@ -41,8 +41,8 @@
 - [x] 3.6 **Fora da lista, necessário:** `relativeDate` (`lib/format.ts`) contava blocos de 24 h, então "Feito ontem" dizia "hoje" para um treino das 23h40 visto às 00h30 — o mesmo erro, no rótulo. Passou a contar **dias de calendário** (arredondado, à prova de horário de verão), com teste. Vale também para "iniciado hoje" e para a linha do tempo de pesos
 
 **Quality Gate:**
-- [ ] Testes de integração passam
-- [ ] Nenhum teste reprovado por seed incoerente foi "corrigido" mudando a expectativa
+- [x] Testes de integração passam
+- [x] Nenhum teste reprovado por seed incoerente foi "corrigido" mudando a expectativa — os seeds passaram a gravar o início; nenhuma expectativa de dia mudou
 
 ---
 
