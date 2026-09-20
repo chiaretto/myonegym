@@ -1,0 +1,11 @@
+/* Settings → Backup → Google Drive, and the account screen behind it. */
+
+/* The Google avatar inside a list-row icon slot or the account hero. */
+.avatar { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.account-hero .avatar-wrap { width: 5em; height: 5em; border-radius: 50%; overflow: hidden;
+  background: var(--bg-accent); color: var(--text-accent); display: grid; place-items: center;
+  font-size: 1em; }
+.account-hero .avatar-wrap .ti { font-size: 3em; }
+.account-hero .account-name { font-size: var(--fs-lg); font-weight: 700; color: var(--text-primary); }
+.account-hero .account-email { font-size: var(--fs-sm); color: var(--text-secondary); margin-top: -6px;
+  overflow-wrap: anywhere; }

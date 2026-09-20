@@ -39,6 +39,12 @@ export function fmtFullDate(ts: number): string {
     .replace(/ de /g, ' ')
 }
 
+/** Absolute pt-BR date and time, "19/09/2026 14:03". For a record that must
+ *  say exactly when — a build, a backup — where a relative label would rot. */
+export function fmtDateTime(ts: number): string {
+  return new Date(ts).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(',', '')
+}
+
 /** Duration between two timestamps as "48 min" / "1 h 5 min". */
 export function fmtDuration(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60_000))

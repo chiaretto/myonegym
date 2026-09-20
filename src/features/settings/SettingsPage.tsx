@@ -91,17 +91,19 @@ export function SettingsPage() {
 
         <div className="group-label">Dados</div>
         <div className="group">
-          <NavRow to="/settings/data" icon="database" title="Backup" sub="Gerar exemplo · exportar · importar backup" />
+          <NavRow to="/settings/data" icon="database" title="Backup" sub="Exportar · importar · Google Drive · gerar exemplo" />
         </div>
 
         {/* CHANGED: the old copy said "todos os dados ficam apenas neste
             dispositivo", which stopped being true the moment the assistant
-            could send the catalog to the Gemini API. The carve-out is named
-            instead of quietly dropped — the claim still holds for everything
-            else, and that is worth keeping. */}
+            could send the catalog to the Gemini API — and again when a backup
+            could be sent to Google Drive. Both carve-outs are named instead of
+            quietly dropped: each is opt-in and happens only on a tap, so the
+            claim still holds for everything else, and that is worth keeping. */}
         <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', padding: '16px 8px 0' }}>
-          Seus dados ficam neste dispositivo (IndexedDB). Sem login e sem servidor — só o
-          Assistente (IA), se você usar, envia categorias, exercícios e dias para a API do Gemini.
+          Seus dados ficam neste dispositivo (IndexedDB), sem servidor. Só saem daqui se você pedir:
+          o Assistente (IA) envia categorias, exercícios e dias para a API do Gemini, e o backup no
+          Google Drive vai para uma pasta oculta do seu próprio Drive.
         </p>
       </main>
 

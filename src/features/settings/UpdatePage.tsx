@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { buildInfo, useAppUpdate } from '../../lib/appUpdate'
+import { fmtDateTime } from '../../lib/format'
 import { ActionBar } from '../../ui/ActionBar'
 import { BackBar } from '../../ui/Chrome'
 import { Icon } from '../../ui/Icon'
@@ -12,7 +13,7 @@ const appIcon = `${import.meta.env.BASE_URL}pwa-192x192.png`
 /** "01/09/2026 11:22". Date **and** time: several builds can land on one day.
  *  The comma pt-BR puts between the two goes — this reads as one stamp. */
 export function fmtStamp(date: Date): string {
-  return date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(',', '')
+  return fmtDateTime(date.getTime())
 }
 
 /** Just the clock, for "última verificação" — the date is almost always today. */

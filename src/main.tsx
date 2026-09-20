@@ -7,9 +7,11 @@ import './styles/global.css'
 import { App } from './App'
 import { maintainPhotoStorage } from './db/repos'
 import { initAppUpdate } from './lib/appUpdate'
+import { initGoogleAuth } from './lib/googleAuth'
 import { scheduleBootSplashDismissal } from './lib/bootSplash'
 import { initInstall } from './lib/install'
 import { requestPersistentStorage } from './lib/storage'
+import { useGoogleAccount } from './state/googleAccount'
 import { applyAccent, applyFontScale, useSettings } from './state/settings'
 
 // Apply the saved font size and accent colour BEFORE first paint so the app
@@ -30,6 +32,12 @@ initInstall()
 // back to the foreground, which is what an installed PWA never gets from a
 // navigation.
 initAppUpdate()
+
+// A sign-in coming back from Google is a fresh boot with the token in the URL
+// fragment. It has to be read — and scrubbed — before anything renders or can
+// see it; the URL is rewritten to the screen the user left, so the router
+// below boots straight onto it (see lib/googleAuth).
+initGoogleAuth(useGoogleAccount.getState().profile?.email)
 
 // Best-effort: ask the browser to keep our IndexedDB data around.
 void requestPersistentStorage()
