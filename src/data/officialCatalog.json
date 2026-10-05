@@ -5,7 +5,8 @@
   "exportedAt": 1788559785346,
   "retiredCategoryIds": [],
   "retiredExerciseIds": [
-    10
+    10,
+    72
   ],
   "categories": [
     {
@@ -55,6 +56,10 @@
     {
       "name": "Panturrilha",
       "id": 12
+    },
+    {
+      "id": 13,
+      "name": "Antebraço"
     }
   ],
   "exercises": [
@@ -68,7 +73,8 @@
         5
       ],
       "alternativeIds": [
-        45
+        45,
+        69
       ],
       "videos": [],
       "mediaFile": "supino-reto-com-barra.webp"
@@ -89,8 +95,9 @@
       "mediaFile": "supino-inclinado-com-barra.webp"
     },
     {
-      "name": "Crucifixo Reto (voador Peck deck)",
       "id": 3,
+      "name": "Crucifixo Reto (voador Peck deck)",
+      "kind": "strength",
       "categoryIds": [
         1,
         5
@@ -98,7 +105,6 @@
       "alternativeIds": [
         40
       ],
-      "kind": "strength",
       "videos": [
         {
           "url": "https://youtube.com/shorts/N3uGDQow2Ss?is=_Q7qcXcNEnMIX-OO"
@@ -309,8 +315,12 @@
       "alternativeIds": [],
       "videos": [
         {
-          "url": "https://www.youtube.com/watch?v=IcG3iMJPOps&list=LL&index=1",
+          "url": "https://youtube.com/shorts/IcG3iMJPOps",
           "title": "Execução"
+        },
+        {
+          "url": "https://youtube.com/shorts/_Ye3OrwO9ag",
+          "title": "Execução2"
         }
       ],
       "mediaFile": "desenvolvimento-com-halteres.webp"
@@ -358,7 +368,12 @@
         3
       ],
       "alternativeIds": [],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/-nWCLMDCCzI",
+          "title": "Variações"
+        }
+      ],
       "mediaFile": "remada-alta-com-barra.webp"
     },
     {
@@ -473,6 +488,14 @@
         {
           "url": "https://www.youtube.com/shorts/auDOkCF-jsw",
           "title": "Execução"
+        },
+        {
+          "url": "https://www.youtube.com/shorts/KMaKmbjoGG4",
+          "title": "Variações"
+        },
+        {
+          "url": "https://www.youtube.com/shorts/Ve3duIVlFVM",
+          "title": "Execução 2"
         }
       ],
       "mediaFile": "leg-press-45.webp"
@@ -619,18 +642,23 @@
       "mediaFile": "supino-inclinado-com-halteres.webp"
     },
     {
-      "name": "Crossover na Polia",
+      "id": 40,
+      "name": "Peito Crossover na Polia - 3x1",
+      "kind": "strength",
       "categoryIds": [
         1,
         5
       ],
-      "id": 40,
       "alternativeIds": [
         3
       ],
-      "kind": "strength",
-      "videos": [],
-      "mediaFile": "crossover-na-polia.webp"
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/a4gpZtVPxj0",
+          "title": "Variações"
+        }
+      ],
+      "mediaFile": "peito-crossover-na-polia-3x1.webp"
     },
     {
       "name": "Natação",
@@ -655,7 +683,12 @@
         9
       ],
       "alternativeIds": [],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.instagram.com/reel/DeF4-5UMkZW/?stkn=MXkyOXlvN2FveTg4YQ%3D%3D",
+          "title": "Aquecimento"
+        }
+      ],
       "mediaFile": "corrida-externa.webp"
     },
     {
@@ -694,7 +727,8 @@
         5
       ],
       "alternativeIds": [
-        1
+        1,
+        69
       ],
       "id": 45,
       "kind": "strength",
@@ -809,7 +843,12 @@
         7
       ],
       "alternativeIds": [],
-      "videos": [],
+      "videos": [
+        {
+          "url": "https://www.instagram.com/reel/DeF4-5UMkZW/",
+          "title": "Aquecimento"
+        }
+      ],
       "mediaFile": "corrida-interna.webp"
     },
     {
@@ -1006,6 +1045,49 @@
       "alternativeIds": [],
       "videos": [],
       "mediaFile": "society.webp"
+    },
+    {
+      "id": 69,
+      "name": "Supino Reto com Halteres",
+      "kind": "strength",
+      "categoryIds": [
+        1,
+        4,
+        5
+      ],
+      "alternativeIds": [
+        1,
+        45
+      ],
+      "videos": [],
+      "mediaFile": "supino-reto-com-halteres.webp"
+    },
+    {
+      "id": 70,
+      "name": "Abdominal Máquina",
+      "kind": "strength",
+      "categoryIds": [
+        6
+      ],
+      "alternativeIds": [],
+      "videos": [],
+      "mediaFile": "abdominal-maquina.webp"
+    },
+    {
+      "id": 71,
+      "name": "Antebraço - 4x1",
+      "kind": "strength",
+      "categoryIds": [
+        13
+      ],
+      "alternativeIds": [],
+      "videos": [
+        {
+          "url": "https://www.youtube.com/shorts/lrJ4SYN0Zew",
+          "title": "Exeução"
+        }
+      ],
+      "mediaFile": "antebraco-4x1.webp"
     }
   ]
 }
